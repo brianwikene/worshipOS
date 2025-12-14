@@ -56,61 +56,33 @@ app.get("/health", async (req, res) => {
 // ---- SERVICES ENDPOINT (UPDATED WITH CAMPUS SUPPORT) ----
 app.get("/services", async (req, res) => {
   try {
-    const { org_id, start_date, end_date } = req.query;
+    const groupsMap = new Map();
 
-    if (!org_id) {
-      return res.status(400).json({ error: "org_id is required" });
-    }
-
-    // Updated query to include campus and context information
-    const result = await pool.query(
-      `
-      SELECT
-        sg.id as group_id,
-        sg.group_date,
-        sg.name as group_name,
-        c.name as context_name,
-        si.id as instance_id,
-        si.service_time,
-        si.campus_id,
-        camp.name as campus_name
-      FROM service_groups sg
-      LEFT JOIN contexts c ON sg.context_id = c.id
-      JOIN service_instances si ON si.service_group_id = sg.id
-      LEFT JOIN campuses camp ON si.campus_id = camp.id
-      WHERE sg.org_id = $1
-        AND ($2::date IS NULL OR sg.group_date >= $2::date)
-        AND ($3::date IS NULL OR sg.group_date <= $3::date)
-      ORDER BY sg.group_date ASC, si.service_time ASC
-      `,
-      [org_id, start_date ?? null, end_date ?? null]
-    );
-
-    // Group by service_group_id
-    const grouped = result.rows.reduce((acc, row) => {
-      const existingGroup = acc.find((g) => g.id === row.group_id);
-
-      const instance = {
-        id: row.instance_id,
-        service_time: row.service_time,
-        campus_id: row.campus_id,
-        campus_name: row.campus_name,
-      };
-
-      if (existingGroup) {
-        existingGroup.instances.push(instance);
-      } else {
-        acc.push({
+    result.rows.forEach((row) => {
+      // If we haven't seen this group_id yet, initialize it
+      if (!groupsMap.has(row.group_id)) {
+        groupsMap.set(row.group_id, {
           id: row.group_id,
           group_date: row.group_date,
           name: row.group_name,
           context_name: row.context_name || "Unknown",
-          instances: [instance],
+          instances: [], // Start with empty array
         });
       }
 
-      return acc;
-    }, []);
+      // 2. Add the instance to the correct group
+      const group = groupsMap.get(row.group_id);
+
+      group.instances.push({
+        id: row.instance_id,
+        service_time: row.service_time,
+        campus_id: row.campus_id,
+        campus_name: row.campus_name,
+      });
+    });
+
+    // 3. Convert the Map values back to an array for the JSON response
+    const grouped = Array.from(groupsMap.values());
 
     res.json(grouped);
   } catch (err) {
@@ -154,6 +126,75 @@ app.get("/service-instances/:id", async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error("GET /service-instances/:id failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- PEOPLE ENDPOINT ----
+app.get("/people", async (req, res) => {
+  try {
+    const { org_id } = req.query;
+
+    if (!org_id) {
+      return res.status(400).json({ error: "org_id is required" });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT id, display_name
+      FROM people
+      WHERE org_id = $1
+      ORDER BY display_name ASC
+      `,
+      [org_id]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /people failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- PERSON DETAIL ENDPOINT (WITH CONTACTS & ADDRESSES) ----
+app.get("/people/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const query = `
+      SELECT
+        p.id,
+        p.display_name,
+
+        -- Bundle all contact methods into a JSON array
+        COALESCE(
+          (SELECT json_agg(cm ORDER BY cm.is_primary DESC, cm.type)
+           FROM contact_methods cm
+           WHERE cm.person_id = p.id),
+          '[]'
+        ) as contact_methods,
+
+        -- Bundle all addresses into a JSON array
+        COALESCE(
+          (SELECT json_agg(a ORDER BY a.created_at DESC)
+           FROM addresses a
+           WHERE a.person_id = p.id),
+          '[]'
+        ) as addresses
+
+      FROM people p
+      WHERE p.id = $1
+    `;
+
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Person not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("GET /people/:id failed:", err);
     res.status(500).json({ error: err.message });
   }
 });
