@@ -16,6 +16,8 @@ const pool = new Pool({
 const app = express();
 app.use(express.json());
 
+//
+
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "http://localhost:5173");
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
@@ -53,7 +55,7 @@ app.get("/health", async (req, res) => {
   }
 });
 
-// ---- SERVICES ENDPOINT (UPDATED WITH CAMPUS SUPPORT) ----
+// ---- SAMPLE DATA ENDPOINT ----
 app.get("/services", async (req, res) => {
   try {
     const { org_id, start_date, end_date } = req.query;
@@ -62,57 +64,52 @@ app.get("/services", async (req, res) => {
       return res.status(400).json({ error: "org_id is required" });
     }
 
-    // Updated query to include campus and context information
     const result = await pool.query(
       `
-      SELECT
-        sg.id as group_id,
+      select
+        sg.id as service_group_id,
         sg.group_date,
-        sg.name as group_name,
-        c.name as context_name,
-        si.id as instance_id,
+        sg.name as service_name,
+        sg.context_id,
+
+        si.id as service_instance_id,
         si.service_time,
-        si.campus_id,
-        camp.name as campus_name
-      FROM service_groups sg
-      LEFT JOIN contexts c ON sg.context_id = c.id
-      JOIN service_instances si ON si.service_group_id = sg.id
-      LEFT JOIN campuses camp ON si.campus_id = camp.id
-      WHERE sg.org_id = $1
-        AND ($2::date IS NULL OR sg.group_date >= $2::date)
-        AND ($3::date IS NULL OR sg.group_date <= $3::date)
-      ORDER BY sg.group_date ASC, si.service_time ASC
+        si.campus_id
+      from service_groups sg
+      join service_instances si
+        on si.service_group_id = sg.id
+      where sg.org_id = $1
+        and ($2::date is null or sg.group_date >= $2::date)
+        and ($3::date is null or sg.group_date <= $3::date)
+      order by
+        sg.group_date desc,
+        sg.name asc,
+        si.service_time asc
       `,
       [org_id, start_date ?? null, end_date ?? null]
     );
 
-    // Group by service_group_id
-    const grouped = result.rows.reduce((acc, row) => {
-      const existingGroup = acc.find((g) => g.id === row.group_id);
+    const groups = new Map();
 
-      const instance = {
-        id: row.instance_id,
-        service_time: row.service_time,
-        campus_id: row.campus_id,
-        campus_name: row.campus_name,
-      };
-
-      if (existingGroup) {
-        existingGroup.instances.push(instance);
-      } else {
-        acc.push({
-          id: row.group_id,
+    for (const row of result.rows) {
+      if (!groups.has(row.service_group_id)) {
+        groups.set(row.service_group_id, {
+          service_group_id: row.service_group_id,
           group_date: row.group_date,
-          name: row.group_name,
-          context_name: row.context_name || "Unknown",
-          instances: [instance],
+          service_name: row.service_name,
+          context_id: row.context_id,
+          instances: [],
         });
       }
 
-      return acc;
-    }, []);
+      groups.get(row.service_group_id).instances.push({
+        service_instance_id: row.service_instance_id,
+        service_time: row.service_time,
+        campus_id: row.campus_id,
+      });
+    }
 
-    res.json(grouped);
+    res.json(Array.from(groups.values()));
   } catch (err) {
     console.error("GET /services failed:", err);
     res.status(500).json({ error: err.message });
@@ -131,17 +128,13 @@ app.get("/service-instances/:id", async (req, res) => {
         si.id as service_instance_id,
         si.service_time,
         si.campus_id,
-        camp.name as campus_name,
         sg.id as service_group_id,
         sg.group_date,
         sg.name as service_name,
         sg.context_id,
-        c.name as context_name,
         sg.org_id
       FROM service_instances si
       JOIN service_groups sg ON si.service_group_id = sg.id
-      LEFT JOIN contexts c ON sg.context_id = c.id
-      LEFT JOIN campuses camp ON si.campus_id = camp.id
       WHERE si.id = $1
       `,
       [id]
