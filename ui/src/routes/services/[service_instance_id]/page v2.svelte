@@ -38,26 +38,13 @@
   });
 
   function formatDate(dateStr: string): string {
-    if (!dateStr) return 'Date not available';
-    
-    try {
-      // Handle both YYYY-MM-DD and ISO timestamp formats
-      const date = new Date(dateStr);
-      
-      if (isNaN(date.getTime())) {
-        return 'Invalid date';
-      }
-      
-      return date.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        timeZone: 'UTC' // Important: Use UTC to avoid timezone shifts
-      });
-    } catch (e) {
-      return 'Date error';
-    }
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
   }
 
   function formatTime(timeStr: string): string {

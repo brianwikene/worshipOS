@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 3M2jqF8e1KaAWgaq8nHRDgVZb90R8L2BLrAuuxDz1XaSra8AD7R7cpsjjHwBC0T
+\restrict pXl64AT9cePvjlQBuimxvY8r74wg3PIJHigEfWM4hCdfhszaKs4dPYuNgq7C7BF
 
 -- Dumped from database version 16.11 (Debian 16.11-1.pgdg13+1)
 -- Dumped by pg_dump version 16.11 (Debian 16.11-1.pgdg13+1)
@@ -31,6 +31,147 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 
 COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
 
+
+--
+-- Name: auto_deactivate_family_member(); Type: FUNCTION; Schema: public; Owner: worship
+--
+
+CREATE FUNCTION public.auto_deactivate_family_member() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  -- If end_date is set and is in the past, set is_active to false
+  IF NEW.end_date IS NOT NULL AND NEW.end_date <= CURRENT_DATE THEN
+    NEW.is_active := false;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.auto_deactivate_family_member() OWNER TO worship;
+
+--
+-- Name: FUNCTION auto_deactivate_family_member(); Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON FUNCTION public.auto_deactivate_family_member() IS 'Automatically sets is_active=false when end_date passes';
+
+
+--
+-- Name: get_checkable_children(uuid); Type: FUNCTION; Schema: public; Owner: worship
+--
+
+CREATE FUNCTION public.get_checkable_children(p_family_id uuid) RETURNS TABLE(person_id uuid, display_name text, relationship text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    p.id,
+    p.display_name,
+    fm.relationship
+  FROM family_members fm
+  JOIN people p ON p.id = fm.person_id
+  WHERE fm.family_id = p_family_id
+    AND fm.is_active = true
+    AND fm.relationship IN ('child', 'foster_child')
+    AND (fm.end_date IS NULL OR fm.end_date > CURRENT_DATE)
+  ORDER BY p.display_name;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_checkable_children(p_family_id uuid) OWNER TO worship;
+
+--
+-- Name: FUNCTION get_checkable_children(p_family_id uuid); Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON FUNCTION public.get_checkable_children(p_family_id uuid) IS 'Returns only active children eligible for check-in';
+
+
+--
+-- Name: get_family_roster(uuid); Type: FUNCTION; Schema: public; Owner: worship
+--
+
+CREATE FUNCTION public.get_family_roster(p_family_id uuid) RETURNS TABLE(person_id uuid, display_name text, relationship text, is_active boolean, is_temporary boolean, start_date date, end_date date, is_primary_contact boolean)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    p.id,
+    p.display_name,
+    fm.relationship,
+    fm.is_active,
+    fm.is_temporary,
+    fm.start_date,
+    fm.end_date,
+    fm.is_primary_contact
+  FROM family_members fm
+  JOIN people p ON p.id = fm.person_id
+  WHERE fm.family_id = p_family_id
+  ORDER BY 
+    CASE fm.relationship
+      WHEN 'parent' THEN 1
+      WHEN 'guardian' THEN 2
+      WHEN 'spouse' THEN 3
+      WHEN 'child' THEN 4
+      WHEN 'foster_child' THEN 5
+      ELSE 6
+    END,
+    p.display_name;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_family_roster(p_family_id uuid) OWNER TO worship;
+
+--
+-- Name: FUNCTION get_family_roster(p_family_id uuid); Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON FUNCTION public.get_family_roster(p_family_id uuid) IS 'Returns all family members with relationship details, ordered by relationship type';
+
+
+--
+-- Name: get_service_roster(uuid); Type: FUNCTION; Schema: public; Owner: worship
+--
+
+CREATE FUNCTION public.get_service_roster(p_service_instance_id uuid) RETURNS TABLE(ministry_area text, role_name text, role_id uuid, person_id uuid, person_name text, status text, is_lead boolean, is_required boolean, notes text)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    r.ministry_area,
+    r.name as role_name,
+    r.id as role_id,
+    sa.person_id,
+    p.display_name as person_name,
+    COALESCE(sa.status, 'unfilled') as status,
+    COALESCE(sa.is_lead, false) as is_lead,
+    srr.is_required,
+    sa.notes
+  FROM service_instances si
+  JOIN service_groups sg ON sg.id = si.service_group_id
+  JOIN service_role_requirements srr ON srr.context_id = sg.context_id
+  JOIN roles r ON r.id = srr.role_id
+  LEFT JOIN service_assignments sa ON sa.service_instance_id = si.id AND sa.role_id = r.id
+  LEFT JOIN people p ON p.id = sa.person_id
+  WHERE si.id = p_service_instance_id
+  ORDER BY 
+    r.ministry_area,
+    srr.display_order,
+    sa.is_lead DESC NULLS LAST,
+    r.name;
+END;
+$$;
+
+
+ALTER FUNCTION public.get_service_roster(p_service_instance_id uuid) OWNER TO worship;
 
 SET default_tablespace = '';
 
@@ -107,6 +248,111 @@ CREATE TABLE public.contexts (
 ALTER TABLE public.contexts OWNER TO worship;
 
 --
+-- Name: families; Type: TABLE; Schema: public; Owner: worship
+--
+
+CREATE TABLE public.families (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    org_id uuid NOT NULL,
+    name text NOT NULL,
+    primary_address_id uuid,
+    notes text,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.families OWNER TO worship;
+
+--
+-- Name: TABLE families; Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON TABLE public.families IS 'Represents households/family units';
+
+
+--
+-- Name: COLUMN families.name; Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON COLUMN public.families.name IS 'Display name for the family unit';
+
+
+--
+-- Name: COLUMN families.primary_address_id; Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON COLUMN public.families.primary_address_id IS 'Optional link to primary family address';
+
+
+--
+-- Name: family_members; Type: TABLE; Schema: public; Owner: worship
+--
+
+CREATE TABLE public.family_members (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    org_id uuid NOT NULL,
+    family_id uuid NOT NULL,
+    person_id uuid NOT NULL,
+    relationship text NOT NULL,
+    start_date date,
+    end_date date,
+    is_temporary boolean DEFAULT false NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    is_primary_contact boolean DEFAULT false NOT NULL,
+    notes text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT valid_dates CHECK (((end_date IS NULL) OR (end_date >= start_date)))
+);
+
+
+ALTER TABLE public.family_members OWNER TO worship;
+
+--
+-- Name: TABLE family_members; Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON TABLE public.family_members IS 'Links people to families with relationship context';
+
+
+--
+-- Name: COLUMN family_members.relationship; Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON COLUMN public.family_members.relationship IS 'parent, child, foster_child, guardian, spouse, etc.';
+
+
+--
+-- Name: COLUMN family_members.start_date; Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON COLUMN public.family_members.start_date IS 'When person joined family (useful for foster care)';
+
+
+--
+-- Name: COLUMN family_members.end_date; Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON COLUMN public.family_members.end_date IS 'When placement ended (triggers is_active=false)';
+
+
+--
+-- Name: COLUMN family_members.is_temporary; Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON COLUMN public.family_members.is_temporary IS 'True for foster/temporary placements';
+
+
+--
+-- Name: COLUMN family_members.is_primary_contact; Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON COLUMN public.family_members.is_primary_contact IS 'Primary contact for family matters';
+
+
+--
 -- Name: orgs; Type: TABLE; Schema: public; Owner: worship
 --
 
@@ -161,11 +407,36 @@ CREATE TABLE public.roles (
     org_id uuid NOT NULL,
     name text NOT NULL,
     load_weight integer DEFAULT 10 NOT NULL,
+    ministry_area text,
+    description text,
     CONSTRAINT chk_roles_load_weight_positive CHECK ((load_weight > 0))
 );
 
 
 ALTER TABLE public.roles OWNER TO worship;
+
+--
+-- Name: service_assignments; Type: TABLE; Schema: public; Owner: worship
+--
+
+CREATE TABLE public.service_assignments (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    org_id uuid NOT NULL,
+    service_instance_id uuid NOT NULL,
+    role_id uuid NOT NULL,
+    person_id uuid,
+    status text DEFAULT 'pending'::text NOT NULL,
+    is_lead boolean DEFAULT false,
+    assigned_at timestamp with time zone DEFAULT now() NOT NULL,
+    assigned_by uuid,
+    confirmed_at timestamp with time zone,
+    notes text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.service_assignments OWNER TO worship;
 
 --
 -- Name: service_groups; Type: TABLE; Schema: public; Owner: worship
@@ -288,6 +559,62 @@ CREATE TABLE public.songs (
 ALTER TABLE public.songs OWNER TO worship;
 
 --
+-- Name: v_family_summary; Type: VIEW; Schema: public; Owner: worship
+--
+
+CREATE VIEW public.v_family_summary AS
+ SELECT f.id AS family_id,
+    f.org_id,
+    f.name AS family_name,
+    f.is_active,
+    count(DISTINCT fm.person_id) FILTER (WHERE (fm.is_active = true)) AS active_members,
+    count(DISTINCT fm.person_id) FILTER (WHERE ((fm.relationship = ANY (ARRAY['child'::text, 'foster_child'::text])) AND (fm.is_active = true))) AS active_children,
+    count(DISTINCT fm.person_id) FILTER (WHERE ((fm.relationship = 'foster_child'::text) AND (fm.is_active = true))) AS active_foster_children,
+    array_agg(DISTINCT p.display_name ORDER BY p.display_name) FILTER (WHERE (fm.is_primary_contact = true)) AS primary_contacts
+   FROM ((public.families f
+     LEFT JOIN public.family_members fm ON ((fm.family_id = f.id)))
+     LEFT JOIN public.people p ON (((p.id = fm.person_id) AND (fm.is_primary_contact = true))))
+  GROUP BY f.id, f.org_id, f.name, f.is_active;
+
+
+ALTER VIEW public.v_family_summary OWNER TO worship;
+
+--
+-- Name: VIEW v_family_summary; Type: COMMENT; Schema: public; Owner: worship
+--
+
+COMMENT ON VIEW public.v_family_summary IS 'Quick overview of family composition';
+
+
+--
+-- Name: v_service_assignment_summary; Type: VIEW; Schema: public; Owner: worship
+--
+
+CREATE VIEW public.v_service_assignment_summary AS
+ SELECT si.id AS service_instance_id,
+    sg.group_date,
+    sg.name AS service_name,
+    si.service_time,
+    c.name AS campus_name,
+    count(DISTINCT srr.role_id) AS total_positions,
+    count(DISTINCT sa.id) FILTER (WHERE (sa.person_id IS NOT NULL)) AS filled_positions,
+    count(DISTINCT sa.id) FILTER (WHERE (sa.status = 'confirmed'::text)) AS confirmed_assignments,
+    count(DISTINCT sa.id) FILTER (WHERE (sa.status = 'pending'::text)) AS pending_confirmations,
+    count(DISTINCT sa.id) FILTER (WHERE (sa.status = 'declined'::text)) AS declined_assignments,
+    count(DISTINCT srr.role_id) FILTER (WHERE (NOT (EXISTS ( SELECT 1
+           FROM public.service_assignments sa2
+          WHERE ((sa2.service_instance_id = si.id) AND (sa2.role_id = srr.role_id) AND (sa2.person_id IS NOT NULL)))))) AS unfilled_positions
+   FROM ((((public.service_instances si
+     JOIN public.service_groups sg ON ((sg.id = si.service_group_id)))
+     LEFT JOIN public.campuses c ON ((c.id = si.campus_id)))
+     LEFT JOIN public.service_role_requirements srr ON ((srr.context_id = sg.context_id)))
+     LEFT JOIN public.service_assignments sa ON (((sa.service_instance_id = si.id) AND (sa.role_id = srr.role_id))))
+  GROUP BY si.id, sg.group_date, sg.name, si.service_time, c.name;
+
+
+ALTER VIEW public.v_service_assignment_summary OWNER TO worship;
+
+--
 -- Name: v_services_display; Type: VIEW; Schema: public; Owner: worship
 --
 
@@ -365,6 +692,30 @@ ALTER TABLE ONLY public.contexts
 
 
 --
+-- Name: families families_pkey; Type: CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.families
+    ADD CONSTRAINT families_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: family_members family_members_pkey; Type: CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.family_members
+    ADD CONSTRAINT family_members_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: family_members fm_org_family_person_uniq; Type: CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.family_members
+    ADD CONSTRAINT fm_org_family_person_uniq UNIQUE (org_id, family_id, person_id);
+
+
+--
 -- Name: orgs orgs_pkey; Type: CONSTRAINT; Schema: public; Owner: worship
 --
 
@@ -410,6 +761,22 @@ ALTER TABLE ONLY public.roles
 
 ALTER TABLE ONLY public.roles
     ADD CONSTRAINT roles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: service_assignments sa_org_instance_role_person_uniq; Type: CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.service_assignments
+    ADD CONSTRAINT sa_org_instance_role_person_uniq UNIQUE (org_id, service_instance_id, role_id, person_id);
+
+
+--
+-- Name: service_assignments service_assignments_pkey; Type: CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.service_assignments
+    ADD CONSTRAINT service_assignments_pkey PRIMARY KEY (id);
 
 
 --
@@ -499,6 +866,48 @@ CREATE INDEX idx_contacts_person ON public.contact_methods USING btree (person_i
 
 
 --
+-- Name: idx_families_active; Type: INDEX; Schema: public; Owner: worship
+--
+
+CREATE INDEX idx_families_active ON public.families USING btree (org_id, is_active);
+
+
+--
+-- Name: idx_families_org; Type: INDEX; Schema: public; Owner: worship
+--
+
+CREATE INDEX idx_families_org ON public.families USING btree (org_id);
+
+
+--
+-- Name: idx_family_members_active; Type: INDEX; Schema: public; Owner: worship
+--
+
+CREATE INDEX idx_family_members_active ON public.family_members USING btree (family_id, is_active);
+
+
+--
+-- Name: idx_family_members_family; Type: INDEX; Schema: public; Owner: worship
+--
+
+CREATE INDEX idx_family_members_family ON public.family_members USING btree (family_id);
+
+
+--
+-- Name: idx_family_members_person; Type: INDEX; Schema: public; Owner: worship
+--
+
+CREATE INDEX idx_family_members_person ON public.family_members USING btree (person_id);
+
+
+--
+-- Name: idx_family_members_relationship; Type: INDEX; Schema: public; Owner: worship
+--
+
+CREATE INDEX idx_family_members_relationship ON public.family_members USING btree (family_id, relationship);
+
+
+--
 -- Name: idx_people_org; Type: INDEX; Schema: public; Owner: worship
 --
 
@@ -524,6 +933,34 @@ CREATE INDEX idx_person_role_capabilities_role ON public.person_role_capabilitie
 --
 
 CREATE INDEX idx_roles_org ON public.roles USING btree (org_id);
+
+
+--
+-- Name: idx_service_assignments_instance; Type: INDEX; Schema: public; Owner: worship
+--
+
+CREATE INDEX idx_service_assignments_instance ON public.service_assignments USING btree (service_instance_id);
+
+
+--
+-- Name: idx_service_assignments_person; Type: INDEX; Schema: public; Owner: worship
+--
+
+CREATE INDEX idx_service_assignments_person ON public.service_assignments USING btree (person_id);
+
+
+--
+-- Name: idx_service_assignments_role; Type: INDEX; Schema: public; Owner: worship
+--
+
+CREATE INDEX idx_service_assignments_role ON public.service_assignments USING btree (role_id);
+
+
+--
+-- Name: idx_service_assignments_status; Type: INDEX; Schema: public; Owner: worship
+--
+
+CREATE INDEX idx_service_assignments_status ON public.service_assignments USING btree (service_instance_id, status);
 
 
 --
@@ -597,6 +1034,13 @@ CREATE INDEX idx_song_variants_song ON public.song_variants USING btree (org_id,
 
 
 --
+-- Name: family_members trigger_auto_deactivate_family_member; Type: TRIGGER; Schema: public; Owner: worship
+--
+
+CREATE TRIGGER trigger_auto_deactivate_family_member BEFORE INSERT OR UPDATE ON public.family_members FOR EACH ROW EXECUTE FUNCTION public.auto_deactivate_family_member();
+
+
+--
 -- Name: addresses addresses_org_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: worship
 --
 
@@ -642,6 +1086,46 @@ ALTER TABLE ONLY public.contact_methods
 
 ALTER TABLE ONLY public.contexts
     ADD CONSTRAINT contexts_org_id_fkey FOREIGN KEY (org_id) REFERENCES public.orgs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: families families_org_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.families
+    ADD CONSTRAINT families_org_id_fkey FOREIGN KEY (org_id) REFERENCES public.orgs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: families families_primary_address_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.families
+    ADD CONSTRAINT families_primary_address_id_fkey FOREIGN KEY (primary_address_id) REFERENCES public.addresses(id) ON DELETE SET NULL;
+
+
+--
+-- Name: family_members family_members_family_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.family_members
+    ADD CONSTRAINT family_members_family_id_fkey FOREIGN KEY (family_id) REFERENCES public.families(id) ON DELETE CASCADE;
+
+
+--
+-- Name: family_members family_members_org_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.family_members
+    ADD CONSTRAINT family_members_org_id_fkey FOREIGN KEY (org_id) REFERENCES public.orgs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: family_members family_members_person_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.family_members
+    ADD CONSTRAINT family_members_person_id_fkey FOREIGN KEY (person_id) REFERENCES public.people(id) ON DELETE CASCADE;
 
 
 --
@@ -706,6 +1190,46 @@ ALTER TABLE ONLY public.person_role_capabilities
 
 ALTER TABLE ONLY public.roles
     ADD CONSTRAINT roles_org_id_fkey FOREIGN KEY (org_id) REFERENCES public.orgs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: service_assignments service_assignments_assigned_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.service_assignments
+    ADD CONSTRAINT service_assignments_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES public.people(id) ON DELETE SET NULL;
+
+
+--
+-- Name: service_assignments service_assignments_org_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.service_assignments
+    ADD CONSTRAINT service_assignments_org_id_fkey FOREIGN KEY (org_id) REFERENCES public.orgs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: service_assignments service_assignments_person_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.service_assignments
+    ADD CONSTRAINT service_assignments_person_id_fkey FOREIGN KEY (person_id) REFERENCES public.people(id) ON DELETE SET NULL;
+
+
+--
+-- Name: service_assignments service_assignments_role_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.service_assignments
+    ADD CONSTRAINT service_assignments_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: service_assignments service_assignments_service_instance_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: worship
+--
+
+ALTER TABLE ONLY public.service_assignments
+    ADD CONSTRAINT service_assignments_service_instance_id_fkey FOREIGN KEY (service_instance_id) REFERENCES public.service_instances(id) ON DELETE CASCADE;
 
 
 --
@@ -824,5 +1348,5 @@ ALTER TABLE ONLY public.songs
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 3M2jqF8e1KaAWgaq8nHRDgVZb90R8L2BLrAuuxDz1XaSra8AD7R7cpsjjHwBC0T
+\unrestrict pXl64AT9cePvjlQBuimxvY8r74wg3PIJHigEfWM4hCdfhszaKs4dPYuNgq7C7BF
 
