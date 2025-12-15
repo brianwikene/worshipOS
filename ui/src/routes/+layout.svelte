@@ -20,8 +20,11 @@
         <a href="/people" class:active={$page.url.pathname.startsWith('/people')}>
           People
         </a>
-        <a href="/families" class:active={$page.url.pathname.startsWith('/people')}>
+        <a href="/families" class:active={$page.url.pathname.startsWith('/families')}>
           Families
+        </a>
+        <a href="/songs" class:active={$page.url.pathname.startsWith('/songs')}>
+          Songs
         </a>
         <nav>
 
