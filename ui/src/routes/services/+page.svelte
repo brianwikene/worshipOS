@@ -1,5 +1,14 @@
 <script lang="ts">
+  import { page } from '$app/stores';
   import { onMount } from 'svelte';
+
+  type ViewMode = 'upcoming' | 'past';
+  let view: ViewMode = 'upcoming';
+
+$: {
+  const v = $page.url.searchParams.get('view');
+  view = v === 'past' ? 'past' : 'upcoming';
+}
 
   // Updated interface to include the ministry breakdown array
   interface Assignments {
@@ -52,21 +61,19 @@
   });
 
   function formatDate(dateStr: string): string {
-    if (!dateStr) return 'Date not available';
-    try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return dateStr;
-      return date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        timeZone: 'UTC'
-      });
-    } catch (e) {
-      return dateStr;
-    }
+  if (!dateStr) return 'Date not available';
+  try {
+    const date = parseDateOnlyLocal(dateStr);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch {
+    return dateStr;
   }
+}
 
   function formatTime(timeStr: string): string {
     const [hours, minutes] = timeStr.split(':');
@@ -75,6 +82,70 @@
     const displayHour = hour % 12 || 12;
     return `${displayHour}:${minutes} ${ampm}`;
   }
+
+  function startOfTodayLocal(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function isUpcoming(dateStr: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const serviceDate = new Date(dateStr);
+  serviceDate.setHours(0, 0, 0, 0);
+
+  return serviceDate >= today;
+}
+
+function parseDateOnlyLocal(dateStr: string): Date {
+  // Handles "YYYY-MM-DD" as a local calendar date (not UTC midnight)
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr);
+  if (!m) return new Date(dateStr); // fallback for full ISO timestamps
+
+  const year = Number(m[1]);
+  const monthIndex = Number(m[2]) - 1; // 0-based
+  const day = Number(m[3]);
+
+  return new Date(year, monthIndex, day); // local midnight
+}
+
+function isPastGroupDate(groupDateStr: string): boolean {
+  const today = startOfTodayLocal();
+  const d = parseDateOnlyLocal(groupDateStr);
+  d.setHours(0, 0, 0, 0);
+  return d < today;
+}
+
+function sortInstances(instances: ServiceInstance[], mode: ViewMode): ServiceInstance[] {
+  return [...instances].sort((a, b) => {
+    // service_time is "HH:MM:SS" and group_date is outside, so we mostly sort by time within a day.
+    // If you later have service_start_at, use that instead.
+    const ta = a.service_time ?? '00:00:00';
+    const tb = b.service_time ?? '00:00:00';
+    return mode === 'upcoming' ? ta.localeCompare(tb) : tb.localeCompare(ta);
+  });
+}
+
+let visibleServices: ServiceGroup[] = [];
+
+$: visibleServices = services
+  .filter(service =>
+    view === 'past'
+      ? isPastGroupDate(service.group_date)
+      : !isPastGroupDate(service.group_date)
+  )
+  .sort((a, b) => {
+    // Upcoming: soonest first | Past: most recent first
+    return view === 'past'
+      ? b.group_date.localeCompare(a.group_date)
+      : a.group_date.localeCompare(b.group_date);
+  })
+  .map(service => ({
+    ...service,
+    instances: sortInstances(service.instances, view)
+  }));
 
   // Logic for the main status banner color
   function getStatusColor(assignments: Assignments): string {
@@ -100,6 +171,10 @@
         <h1>Services</h1>
         <p>Upcoming worship services</p>
       </div>
+      <nav class="view-toggle">
+  <a class:selected={view === 'upcoming'} href="/services?view=upcoming">Upcoming</a>
+  <a class:selected={view === 'past'} href="/services?view=past">Past</a>
+</nav>
       <button class="refresh-btn" on:click={() => window.location.reload()}>
         Refresh
       </button>
@@ -113,13 +188,13 @@
       <p>Error: {error}</p>
       <button on:click={() => window.location.reload()}>Retry</button>
     </div>
-  {:else if services.length === 0}
+  {:else if visibleServices.length === 0}
     <div class="empty">
-      <p>No upcoming services scheduled.</p>
+     <p>{view === 'past' ? 'No past services found.' : 'No upcoming services scheduled.'}</p>
     </div>
   {:else}
     <div class="services-list">
-      {#each services as service}
+      {#each visibleServices as service}
         <div class="service-block">
           <div class="service-header-group">
             <div class="service-title-row">
@@ -146,7 +221,12 @@
                         <span class="icon">⚠️</span>
                         No campus assigned
                       </div>
+
                     {/if}
+                    {#if view === 'past'}
+                    <div class="mode-badge">PAST</div>
+                    {/if}
+
                   </div>
 
                   {#if instance.assignments && instance.assignments.total_positions > 0}
@@ -246,6 +326,36 @@
     transition: all 0.2s;
   }
   .refresh-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
+
+.view-toggle {
+  display: inline-flex;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.view-toggle a {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.875rem;
+  text-decoration: none;
+  color: #374151;
+  background: white;
+}
+
+.view-toggle a.selected {
+  background: #111827;
+  color: white;
+}
+
+.mode-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #ffc20e;
+  color: #000000;
+}
 
   /* LOADING & ERROR STATES */
   .loading, .error, .empty { text-align: center; padding: 3rem; background: #f9fafb; border-radius: 8px; margin-top: 2rem; color: #6b7280; }
