@@ -48,7 +48,7 @@
   let songs: Song[] = [];
   let loading = true;
   let error = '';
-  
+
   // Add song modal
   let showAddSongModal = false;
   let availableSongs: AvailableSong[] = [];
@@ -62,7 +62,7 @@
   const API_BASE = 'http://localhost:3000';
 
   onMount(async () => {
-    const serviceId = $page.params.service_instance_id;
+    const serviceId = $page.params.id;
     await loadServiceDetail(serviceId);
     await loadAvailableSongs();
   });
@@ -129,9 +129,9 @@
 
     try {
       addingSong = true;
-      
-      const nextOrder = songs.length > 0 
-        ? Math.max(...songs.map(s => s.display_order)) + 1 
+
+      const nextOrder = songs.length > 0
+        ? Math.max(...songs.map(s => s.display_order)) + 1
         : 1;
 
       const res = await fetch(`${API_BASE}/service-instances/${service.id}/songs`, {
@@ -178,10 +178,10 @@
     if (!dateStr) return '';
     try {
       const date = new Date(dateStr);
-      return date.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
         day: 'numeric',
         timeZone: 'UTC'
       });
@@ -356,10 +356,10 @@
                             <span class="required-badge">Required</span>
                           {/if}
                         </div>
-                        
+
                         {#if assignment.person_id}
                           <div class="person-info">
-                            <span class="status-dot {getStatusColor(assignment.status)}" 
+                            <span class="status-dot {getStatusColor(assignment.status)}"
                                   title={getStatusLabel(assignment.status)}>
                             </span>
                             <span class="person-name">{assignment.person_name}</span>
@@ -422,7 +422,7 @@
             </div>
           {:else}
             {#each filteredSongs as song}
-              <div 
+              <div
                 class="song-select-item"
                 class:selected={selectedSongId === song.id}
                 on:click={() => selectSong(song)}
@@ -453,7 +453,7 @@
         {#if selectedSong}
           <div class="song-details-form">
             <h3>Song Details</h3>
-            
+
             <div class="form-group">
               <label for="key">Key (optional override)</label>
               <input
@@ -481,8 +481,8 @@
         <button class="secondary-btn" on:click={closeAddSongModal}>
           Cancel
         </button>
-        <button 
-          class="primary-btn" 
+        <button
+          class="primary-btn"
           on:click={addSongToService}
           disabled={!selectedSongId || addingSong}
         >

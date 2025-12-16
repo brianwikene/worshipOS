@@ -131,7 +131,7 @@
 
           <div class="instances-grid">
             {#each service.instances as instance}
-              <a href={`/services/${instance.id}`} class="instance-link">
+              <a href={`/service-instances/${instance.id}`} class="instance-link">
                 <div class="instance-card">
 
                   <div class="instance-header">
