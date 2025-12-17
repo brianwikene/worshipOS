@@ -44,24 +44,33 @@ app.get("/", (req, res) => {
 // ---- HEALTH CHECK ----
 app.get("/health", async (req, res) => {
   try {
-    const result = await pool.query("select now() as now");
+    await pool.query("select 1");
     res.json({
       ok: true,
-      db_time: result.rows[0].now,
+      status: "healthy",
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ ok: false, error: err.message });
+    res.status(503).json({
+      ok: false,
+      status: "db_unreachable",
+      message:
+        process.env.NODE_ENV !== "production"
+          ? "Database is not reachable. If you are using Colima/Docker, try:\n\n" +
+            "  colima start\n" +
+            "  docker ps\n\n" +
+            "Then restart the API."
+          : "Service unavailable",
+    });
   }
 });
 
 // ---- SERVICES ENDPOINT (FIXED: Resolved nested aggregate error) ----
 app.get("/services", async (req, res) => {
   try {
-    const { org_id, start_date, end_date } = req.query;
+    const { church_id, start_date, end_date } = req.query;
 
-    if (!org_id) {
-      return res.status(400).json({ error: "org_id is required" });
+    if (!church_id) {
+      return res.status(400).json({ error: "church_id is required" });
     }
 
     const result = await pool.query(
@@ -131,12 +140,12 @@ app.get("/services", async (req, res) => {
       LEFT JOIN contexts c ON sg.context_id = c.id
       JOIN service_instances si ON si.service_group_id = sg.id
       LEFT JOIN campuses camp ON si.campus_id = camp.id
-      WHERE sg.org_id = $1
+      WHERE sg.church_id = $1
         AND ($2::date IS NULL OR sg.group_date >= $2::date)
         AND ($3::date IS NULL OR sg.group_date <= $3::date)
       ORDER BY sg.group_date ASC, si.service_time ASC
       `,
-      [org_id, start_date || null, end_date || null]
+      [church_id, start_date || null, end_date || null]
     );
 
     // Group instances by service group
@@ -166,6 +175,32 @@ app.get("/services", async (req, res) => {
     res.json(Array.from(groupsMap.values()));
   } catch (err) {
     console.error("GET /services failed:", err);
+
+    // Postgres: undefined_table (missing relation)
+    if (err?.code === "42P01" && process.env.NODE_ENV !== "production") {
+      return res.status(500).json({
+        error: err.message,
+        hint:
+          "DB schema is missing a table. Start infra + run migrations.\n\n" +
+          "  colima start\n" +
+          "  docker-compose up -d\n" +
+          '  psql "postgres://worship:worship@127.0.0.1:5432/worshipos" -f api/migrations/001_extensions.sql\n' +
+          '  psql "postgres://worship:worship@127.0.0.1:5432/worshipos" -f api/migrations/002_service_groups.sql\n' +
+          '  psql "postgres://worship:worship@127.0.0.1:5432/worshipos" -f api/migrations/003_contexts.sql\n' +
+          '  psql "postgres://worship:worship@127.0.0.1:5432/worshipos" -f api/migrations/004_service_groups_context_id.sql\n' +
+          '  psql "postgres://worship:worship@127.0.0.1:5432/worshipos" -f api/migrations/005_core_services_schema.sql\n',
+      });
+    }
+    if (err?.code === "42703" && process.env.NODE_ENV !== "production") {
+      return res.status(500).json({
+        error: err.message,
+        hint:
+          "DB schema is missing a column. Run latest migrations.\n\n" +
+          '  psql "postgres://worship:worship@127.0.0.1:5432/worshipos" -f api/migrations/005_core_services_schema.sql\n',
+      });
+    }
+
+    // Default behavior
     res.status(500).json({ error: err.message });
   }
 });
