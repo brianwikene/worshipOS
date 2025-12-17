@@ -36,7 +36,7 @@ app.get("/", (req, res) => {
         "",
         "Available endpoints:",
         "GET /health - Health check",
-        "GET /services?org_id=ORG_ID",
+        "GET /services?church_id=church_id",
       ].join("\n")
     );
 });
@@ -184,7 +184,6 @@ app.get("/services", async (req, res) => {
           "DB schema is missing a table. Start infra + run migrations.\n\n" +
           "  colima start\n" +
           "  docker-compose up -d\n" +
-          '  psql "postgres://worship:worship@127.0.0.1:5432/worshipos" -f api/migrations/001_extensions.sql\n' +
           '  psql "postgres://worship:worship@127.0.0.1:5432/worshipos" -f api/migrations/002_service_groups.sql\n' +
           '  psql "postgres://worship:worship@127.0.0.1:5432/worshipos" -f api/migrations/003_contexts.sql\n' +
           '  psql "postgres://worship:worship@127.0.0.1:5432/worshipos" -f api/migrations/004_service_groups_context_id.sql\n' +
@@ -223,7 +222,7 @@ app.get("/service-instances/:id", async (req, res) => {
         sg.name as service_name,
         sg.context_id,
         c.name as context_name,
-        sg.org_id
+        sg.church_id
       FROM service_instances si
       JOIN service_groups sg ON si.service_group_id = sg.id
       LEFT JOIN contexts c ON sg.context_id = c.id
@@ -261,7 +260,7 @@ app.get("/service-instances/:id", async (req, res) => {
         sg.name as service_name,
         sg.context_id,
         c.name as context_name,
-        sg.org_id
+        sg.church_id
       FROM service_instances si
       JOIN service_groups sg ON si.service_group_id = sg.id
       LEFT JOIN contexts c ON sg.context_id = c.id
@@ -285,10 +284,10 @@ app.get("/service-instances/:id", async (req, res) => {
 // ---- PEOPLE ENDPOINT (Updated to include has_contact_info) ----
 app.get("/people", async (req, res) => {
   try {
-    const { org_id } = req.query;
+    const { church_id } = req.query;
 
-    if (!org_id) {
-      return res.status(400).json({ error: "org_id is required" });
+    if (!church_id) {
+      return res.status(400).json({ error: "church_id is required" });
     }
 
     // UPDATED QUERY:
@@ -304,10 +303,10 @@ app.get("/people", async (req, res) => {
           WHERE cm.person_id = p.id
         ) as has_contact_info
       FROM people p
-      WHERE p.org_id = $1
+      WHERE p.church_id = $1
       ORDER BY p.display_name ASC
       `,
-      [org_id]
+      [church_id]
     );
 
     res.json(result.rows);
@@ -358,10 +357,10 @@ app.get("/people/:id", async (req, res) => {
 // ---- GET ALL FAMILIES ----
 app.get("/families", async (req, res) => {
   try {
-    const { org_id } = req.query;
+    const { church_id } = req.query;
 
-    if (!org_id) {
-      return res.status(400).json({ error: "org_id is required" });
+    if (!church_id) {
+      return res.status(400).json({ error: "church_id is required" });
     }
 
     const result = await pool.query(
@@ -389,11 +388,11 @@ app.get("/families", async (req, res) => {
       FROM families f
       LEFT JOIN family_members fm ON fm.family_id = f.id
       LEFT JOIN people p ON p.id = fm.person_id AND fm.is_primary_contact = true
-      WHERE f.org_id = $1
+      WHERE f.church_id = $1
       GROUP BY f.id, f.name, f.notes, f.is_active
       ORDER BY f.name
       `,
-      [org_id]
+      [church_id]
     );
 
     res.json(result.rows);
@@ -416,7 +415,7 @@ app.get("/families/:id", async (req, res) => {
         f.name,
         f.notes,
         f.is_active,
-        f.org_id,
+        f.church_id,
         a.street,
         a.city,
         a.state,
@@ -481,19 +480,19 @@ app.get("/families/:id", async (req, res) => {
 // CREATE: Add new person
 app.post("/people", async (req, res) => {
   try {
-    const { org_id, display_name, family_id } = req.body;
+    const { church_id, display_name, family_id } = req.body;
 
-    if (!org_id || !display_name) {
+    if (!church_id || !display_name) {
       return res
         .status(400)
-        .json({ error: "org_id and display_name are required" });
+        .json({ error: "church_id and display_name are required" });
     }
 
     const result = await pool.query(
-      `INSERT INTO people (org_id, display_name)
+      `INSERT INTO people (church_id, display_name)
        VALUES ($1, $2)
        RETURNING *`,
-      [org_id, display_name]
+      [church_id, display_name]
     );
 
     const person = result.rows[0];
@@ -501,9 +500,9 @@ app.post("/people", async (req, res) => {
     // If family_id provided, add to family
     if (family_id) {
       await pool.query(
-        `INSERT INTO family_members (org_id, family_id, person_id, relationship)
+        `INSERT INTO family_members (church_id, family_id, person_id, relationship)
          VALUES ($1, $2, $3, 'other')`,
-        [org_id, family_id, person.id]
+        [church_id, family_id, person.id]
       );
     }
 
@@ -575,17 +574,17 @@ app.delete("/people/:id", async (req, res) => {
 // CREATE: New family
 app.post("/families", async (req, res) => {
   try {
-    const { org_id, name, notes } = req.body;
+    const { church_id, name, notes } = req.body;
 
-    if (!org_id || !name) {
-      return res.status(400).json({ error: "org_id and name are required" });
+    if (!church_id || !name) {
+      return res.status(400).json({ error: "church_id and name are required" });
     }
 
     const result = await pool.query(
-      `INSERT INTO families (org_id, name, notes)
+      `INSERT INTO families (church_id, name, notes)
        VALUES ($1, $2, $3)
        RETURNING *`,
-      [org_id, name, notes || null]
+      [church_id, name, notes || null]
     );
 
     res.status(201).json(result.rows[0]);
@@ -626,7 +625,7 @@ app.put("/families/:id", async (req, res) => {
 app.post("/families/:family_id/members", async (req, res) => {
   try {
     const { family_id } = req.params;
-    const { org_id, person_id, relationship, is_primary_contact } = req.body;
+    const { church_id, person_id, relationship, is_primary_contact } = req.body;
 
     if (!person_id || !relationship) {
       return res
@@ -635,10 +634,16 @@ app.post("/families/:family_id/members", async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO family_members (org_id, family_id, person_id, relationship, is_primary_contact)
+      `INSERT INTO family_members (church_id, family_id, person_id, relationship, is_primary_contact)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [org_id, family_id, person_id, relationship, is_primary_contact || false]
+      [
+        church_id,
+        family_id,
+        person_id,
+        relationship,
+        is_primary_contact || false,
+      ]
     );
 
     res.status(201).json(result.rows[0]);
@@ -682,18 +687,19 @@ app.delete("/families/:family_id/members/:person_id", async (req, res) => {
 // CREATE: Add new role
 app.post("/roles", async (req, res) => {
   try {
-    const { org_id, name, ministry_area, description, load_weight } = req.body;
+    const { church_id, name, ministry_area, description, load_weight } =
+      req.body;
 
-    if (!org_id || !name) {
-      return res.status(400).json({ error: "org_id and name are required" });
+    if (!church_id || !name) {
+      return res.status(400).json({ error: "church_id and name are required" });
     }
 
     const result = await pool.query(
-      `INSERT INTO roles (org_id, name, ministry_area, description, load_weight)
+      `INSERT INTO roles (church_id, name, ministry_area, description, load_weight)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [
-        org_id,
+        church_id,
         name,
         ministry_area || null,
         description || null,
@@ -761,17 +767,17 @@ app.delete("/roles/:id", async (req, res) => {
 // GET: All roles with optional filtering
 app.get("/roles", async (req, res) => {
   try {
-    const { org_id, ministry_area } = req.query;
+    const { church_id, ministry_area } = req.query;
 
-    if (!org_id) {
-      return res.status(400).json({ error: "org_id is required" });
+    if (!church_id) {
+      return res.status(400).json({ error: "church_id is required" });
     }
 
     let query = `
       SELECT * FROM roles
-      WHERE org_id = $1
+      WHERE church_id = $1
     `;
-    const params = [org_id];
+    const params = [church_id];
 
     if (ministry_area) {
       query += ` AND ministry_area = $2`;
@@ -823,19 +829,19 @@ app.put(
   async (req, res) => {
     try {
       const { context_id, role_id } = req.params;
-      const { org_id, min_needed, max_needed, display_order } = req.body;
+      const { church_id, min_needed, max_needed, display_order } = req.body;
 
       const result = await pool.query(
         `INSERT INTO service_role_requirements
-        (org_id, context_id, role_id, min_needed, max_needed, display_order)
+        (church_id, context_id, role_id, min_needed, max_needed, display_order)
        VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (org_id, context_id, role_id)
+       ON CONFLICT (church_id, context_id, role_id)
        DO UPDATE SET
          min_needed = EXCLUDED.min_needed,
          max_needed = EXCLUDED.max_needed,
          display_order = EXCLUDED.display_order
        RETURNING *`,
-        [org_id, context_id, role_id, min_needed, max_needed, display_order]
+        [church_id, context_id, role_id, min_needed, max_needed, display_order]
       );
 
       res.json(result.rows[0]);
@@ -889,7 +895,7 @@ app.delete(
 app.post("/service-instances/:instance_id/assignments", async (req, res) => {
   try {
     const { instance_id } = req.params;
-    const { org_id, role_id, person_id, status, is_lead, notes } = req.body;
+    const { church_id, role_id, person_id, status, is_lead, notes } = req.body;
 
     if (!role_id) {
       return res.status(400).json({ error: "role_id is required" });
@@ -897,11 +903,11 @@ app.post("/service-instances/:instance_id/assignments", async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO service_assignments
-        (org_id, service_instance_id, role_id, person_id, status, is_lead, notes)
+        (church_id, service_instance_id, role_id, person_id, status, is_lead, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
       [
-        org_id,
+        church_id,
         instance_id,
         role_id,
         person_id,
@@ -978,17 +984,19 @@ app.delete("/assignments/:id", async (req, res) => {
 // CREATE: Add song
 app.post("/songs", async (req, res) => {
   try {
-    const { org_id, title, artist, key, bpm, ccli_number, notes } = req.body;
+    const { church_id, title, artist, key, bpm, ccli_number, notes } = req.body;
 
-    if (!org_id || !title) {
-      return res.status(400).json({ error: "org_id and title are required" });
+    if (!church_id || !title) {
+      return res
+        .status(400)
+        .json({ error: "church_id and title are required" });
     }
 
     const result = await pool.query(
-      `INSERT INTO songs (org_id, title, artist, key, bpm, ccli_number, notes)
+      `INSERT INTO songs (church_id, title, artist, key, bpm, ccli_number, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [org_id, title, artist, key, bpm, ccli_number, notes]
+      [church_id, title, artist, key, bpm, ccli_number, notes]
     );
 
     res.status(201).json(result.rows[0]);
@@ -1031,14 +1039,14 @@ app.put("/songs/:id", async (req, res) => {
 // GET: All songs
 app.get("/songs", async (req, res) => {
   try {
-    const { org_id, search } = req.query;
+    const { church_id, search } = req.query;
 
-    if (!org_id) {
-      return res.status(400).json({ error: "org_id is required" });
+    if (!church_id) {
+      return res.status(400).json({ error: "church_id is required" });
     }
 
-    let query = `SELECT * FROM songs WHERE org_id = $1`;
-    const params = [org_id];
+    let query = `SELECT * FROM songs WHERE church_id = $1`;
+    const params = [church_id];
 
     if (search) {
       query += ` AND (title ILIKE $2 OR artist ILIKE $2)`;
