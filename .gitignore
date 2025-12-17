@@ -1,0 +1,37 @@
+# Node.js and dependencies
+node_modules/
+/package-lock.json
+/npm-shrinkwrap.json
+*.log
+*.gz
+
+# Svelte/SvelteKit specific ignores
+.svelte-kit/
+.env
+.env.*
+/build
+/dist
+/exports
+
+# VS Code directory (optional)
+.vscode/
+
+# IDE/OS specific files
+.DS_Store
+*.suo
+*.user
+*.class
+*.cache
+*.komodotools
+.idea/
+
+# Environment files
+# Secrets and environment variables should NEVER be committed to version control
+.env
+.env.local
+
+# PostgreSQL related files (if any local database files are generated)
+*.sql
+*.sqlite
+*.sqlite-journal
+/data/*.db

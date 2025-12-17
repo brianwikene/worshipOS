@@ -26,7 +26,7 @@
   let formCcli = '';
   let formNotes = '';
 
-  const ORG_ID = 'a8c2c7ab-836a-4ef1-a373-562e20babb76';
+  const CHURCH_ID = 'a8c2c7ab-836a-4ef1-a373-562e20babb76';
   const API_BASE = 'http://localhost:3000';
 
   onMount(() => {
@@ -36,10 +36,10 @@
   async function loadSongs() {
     try {
       loading = true;
-      const url = searchQuery 
-        ? `${API_BASE}/songs?org_id=${ORG_ID}&search=${encodeURIComponent(searchQuery)}`
-        : `${API_BASE}/songs?org_id=${ORG_ID}`;
-      
+      const url = searchQuery
+        ? `${API_BASE}/songs?church_id=${CHURCH_ID}&search=${encodeURIComponent(searchQuery)}`
+        : `${API_BASE}/songs?church_id=${CHURCH_ID}`;
+
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText}`);
       songs = await res.json();
@@ -86,7 +86,7 @@
       }
 
       const songData = {
-        org_id: ORG_ID,
+        church_id: CHURCH_ID,
         title: formTitle,
         artist: formArtist || null,
         key: formKey || null,
@@ -95,10 +95,10 @@
         notes: formNotes || null
       };
 
-      const url = editingSong 
+      const url = editingSong
         ? `${API_BASE}/songs/${editingSong.id}`
         : `${API_BASE}/songs`;
-      
+
       const method = editingSong ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -157,8 +157,8 @@
     </div>
 
     <div class="search-bar">
-      <input 
-        type="text" 
+      <input
+        type="text"
         placeholder="Search songs by title or artist..."
         bind:value={searchQuery}
         on:keyup={(e) => e.key === 'Enter' && handleSearch()}
@@ -245,9 +245,9 @@
       <form on:submit|preventDefault={saveSong}>
         <div class="form-group">
           <label for="title">Title *</label>
-          <input 
+          <input
             id="title"
-            type="text" 
+            type="text"
             bind:value={formTitle}
             placeholder="Way Maker"
             required
@@ -256,9 +256,9 @@
 
         <div class="form-group">
           <label for="artist">Artist</label>
-          <input 
+          <input
             id="artist"
-            type="text" 
+            type="text"
             bind:value={formArtist}
             placeholder="Sinach"
           />
@@ -267,9 +267,9 @@
         <div class="form-row">
           <div class="form-group">
             <label for="key">Key</label>
-            <input 
+            <input
               id="key"
-              type="text" 
+              type="text"
               bind:value={formKey}
               placeholder="G"
               maxlength="5"
@@ -278,9 +278,9 @@
 
           <div class="form-group">
             <label for="bpm">BPM</label>
-            <input 
+            <input
               id="bpm"
-              type="number" 
+              type="number"
               bind:value={formBpm}
               placeholder="72"
               min="40"
@@ -291,9 +291,9 @@
 
         <div class="form-group">
           <label for="ccli">CCLI Number</label>
-          <input 
+          <input
             id="ccli"
-            type="text" 
+            type="text"
             bind:value={formCcli}
             placeholder="7115744"
           />
@@ -301,7 +301,7 @@
 
         <div class="form-group">
           <label for="notes">Notes</label>
-          <textarea 
+          <textarea
             id="notes"
             bind:value={formNotes}
             placeholder="Song structure, arrangement notes, etc."

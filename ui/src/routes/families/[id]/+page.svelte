@@ -20,7 +20,7 @@
     name: string;
     notes: string | null;
     is_active: boolean;
-    org_id: string;
+    church_id: string;
     street: string | null;
     city: string | null;
     state: string | null;
@@ -52,14 +52,14 @@
 
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return '';
-    
+
     try {
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr;
-      
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
+
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
         day: 'numeric',
         timeZone: 'UTC'
       });
@@ -81,23 +81,23 @@
   }
 
   function getRelationshipLabel(relationship: string): string {
-    return relationship.split('_').map(word => 
+    return relationship.split('_').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   }
 
-  $: parents = family?.members.filter(m => 
+  $: parents = family?.members.filter(m =>
     ['parent', 'guardian'].includes(m.relationship) && m.is_active
   ) || [];
-  
-  $: children = family?.members.filter(m => 
+
+  $: children = family?.members.filter(m =>
     m.relationship === 'child' && m.is_active
   ) || [];
-  
-  $: fosterChildren = family?.members.filter(m => 
+
+  $: fosterChildren = family?.members.filter(m =>
     m.relationship === 'foster_child' && m.is_active
   ) || [];
-  
+
   $: inactiveMembers = family?.members.filter(m => !m.is_active) || [];
 </script>
 
@@ -120,7 +120,7 @@
             <span class="inactive-badge">Inactive</span>
           {/if}
         </div>
-        
+
         {#if family.street}
           <div class="address">
             <span class="icon">📍</span>

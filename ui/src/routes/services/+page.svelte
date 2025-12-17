@@ -45,12 +45,12 @@ $: {
   let services: ServiceGroup[] = [];
   let loading = true;
   let error = '';
-  const ORG_ID = 'a8c2c7ab-836a-4ef1-a373-562e20babb76';
+  const CHURCH_ID = 'a8c2c7ab-836a-4ef1-a373-562e20babb76';
   const API_BASE = 'http://localhost:3000';
 
   onMount(async () => {
     try {
-      const res = await fetch(`${API_BASE}/services?org_id=${ORG_ID}`);
+      const res = await fetch(`${API_BASE}/services?church_id=${CHURCH_ID}`);
       if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText}`);
       services = await res.json();
     } catch (e) {
@@ -170,6 +170,7 @@ $: visibleServices = services
       <div class="title-section">
         <h1>Services</h1>
         <p>Upcoming worship services</p>
+        <p>church_id: {church_id}</p>
       </div>
       <nav class="view-toggle">
   <a class:selected={view === 'upcoming'} href="/services?view=upcoming">Upcoming</a>

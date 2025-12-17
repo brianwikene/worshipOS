@@ -58,7 +58,7 @@
   let songNotes = '';
   let addingSong = false;
 
-  const ORG_ID = 'a8c2c7ab-836a-4ef1-a373-562e20babb76';
+  const CHURCH_ID = 'a8c2c7ab-836a-4ef1-a373-562e20babb76';
   const API_BASE = 'http://localhost:3000';
 
   onMount(async () => {
@@ -96,7 +96,7 @@
 
   async function loadAvailableSongs() {
     try {
-      const res = await fetch(`${API_BASE}/songs?org_id=${ORG_ID}`);
+      const res = await fetch(`${API_BASE}/songs?church_id=${CHURCH_ID}`);
       if (!res.ok) throw new Error('Failed to load songs');
       availableSongs = await res.json();
     } catch (e) {
