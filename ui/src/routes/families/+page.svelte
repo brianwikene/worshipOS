@@ -1,35 +1,35 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+import { onMount } from 'svelte';
+import { apiJson } from '$lib/api';
 
-  interface Family {
-    id: string;
-    name: string;
-    notes: string | null;
-    is_active: boolean;
-    active_members: number;
-    active_children: number;
-    active_foster_children: number;
-    primary_contacts: Array<{id: string, display_name: string}> | null;
+interface Family {
+  id: string;
+  name: string;
+  notes: string | null;
+  is_active: boolean;
+  active_members: number;
+  active_children: number;
+  active_foster_children: number;
+  primary_contacts: Array<{id: string, display_name: string}> | null;
+}
+
+let families: Family[] = [];
+let loading = true;
+let error = '';
+
+// You can DELETE these two lines - apiJson handles them for you!
+// const CHURCH_ID = 'a8c2c7ab-836a-4ef1-a373-562e20babb76';
+// const API_BASE = 'http://localhost:3000';
+
+onMount(async () => {
+  try {
+    families = await apiJson<Family[]>('/families');
+  } catch (e) {
+    error = e instanceof Error ? e.message : 'Failed to load families';
+  } finally {
+    loading = false;
   }
-
-  let families: Family[] = [];
-  let loading = true;
-  let error = '';
-
-  const CHURCH_ID = 'a8c2c7ab-836a-4ef1-a373-562e20babb76';
-  const API_BASE = 'http://localhost:3000';
-
-  onMount(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/families`);
-      if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText}`);
-      families = await res.json();
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load families';
-    } finally {
-      loading = false;
-    }
-  });
+});
 </script>
 
 <div class="container">

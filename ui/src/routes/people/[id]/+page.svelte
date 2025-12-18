@@ -1,9 +1,47 @@
 <script lang="ts">
-  export let data;
-  $: person = data.person;
+  import { page } from '$app/stores';
+  import { onMount } from 'svelte';
+  import { apiJson } from '$lib/api';
+
+  interface ContactMethod {
+    type: string;
+    value: string;
+    label: string | null;
+    is_primary: boolean;
+  }
+
+  interface Address {
+    street: string | null;
+    city: string | null;
+    state: string | null;
+    postal_code: string | null;
+    label: string | null;
+  }
+
+  interface Person {
+    id: string;
+    display_name: string;
+    contact_methods: ContactMethod[];
+    addresses: Address[];
+  }
+
+  let person: Person | null = null;
+  let loading = true;
+  let error = '';
+
+  onMount(async () => {
+    const personId = $page.params.id;
+
+    try {
+      person = await apiJson<Person>(`/people/${personId}`);
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to load person details';
+    } finally {
+      loading = false;
+    }
+  });
 
   // --- HELPER FUNCTIONS ---
-
   function formatType(type: string) {
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
@@ -28,8 +66,16 @@
 <div class="container">
   <a href="/people" class="back-link">← Back to People</a>
 
-  <div class="profile-card">
-    <div class="profile-header">
+  {#if loading}
+    <div class="loading">Loading person details...</div>
+  {:else if error}
+    <div class="error">
+      <p>Error: {error}</p>
+      <button on:click={() => window.location.reload()}>Retry</button>
+    </div>
+  {:else if person}
+    <div class="profile-card">
+      <div class="profile-header">
       <div class="avatar-large">
         {person.display_name.charAt(0).toUpperCase()}
       </div>
@@ -80,6 +126,7 @@
       {/if}
     </div>
   </div>
+  {/if}
 </div>
 
 <style>

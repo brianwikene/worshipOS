@@ -550,7 +550,7 @@ app.get("/service-instances/:instance_id/roster", async (req, res) => {
        JOIN roles r ON r.id = srr.role_id
        LEFT JOIN service_assignments sa ON sa.service_instance_id = si.id AND sa.role_id = r.id
        LEFT JOIN people p ON p.id = sa.person_id
-       HERE si.id = $1
+       WHERE si.id = $1
          AND sg.church_id = $2
        ORDER BY
          r.ministry_area NULLS LAST,
@@ -593,7 +593,7 @@ app.get("/people", async (req, res) => {
       WHERE p.church_id = $1
       ORDER BY p.display_name ASC
       `,
-      [church_id]
+      [churchId]
     );
 
     res.json(result.rows);
@@ -644,7 +644,7 @@ app.get("/people/:id", async (req, res) => {
 // ---- GET ALL FAMILIES ----
 app.get("/families", async (req, res) => {
   try {
-    const churchId = req.churchId;
+    const churchId = req.churchId;  // ← camelCase
     const { search } = req.query;
 
     const result = await pool.query(
@@ -676,7 +676,7 @@ app.get("/families", async (req, res) => {
       GROUP BY f.id, f.name, f.notes, f.is_active
       ORDER BY f.name
       `,
-      [church_id]
+      [churchId]  // ← Change this!
     );
 
     res.json(result.rows);

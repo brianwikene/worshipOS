@@ -5,7 +5,7 @@ import { getActiveChurchId } from '$lib/tenant';
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
-async function apiFetch(
+export async function apiFetch(
   path: string,
   init: RequestInit = {}
 ): Promise<Response> {

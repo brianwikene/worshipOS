@@ -15,16 +15,20 @@
   const API_BASE = 'http://localhost:3000';
 
   onMount(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/people`);
-      if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText}`);
-      people = await res.json();
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load people';
-    } finally {
-      loading = false;
-    }
-  });
+  try {
+    const res = await fetch(`${API_BASE}/people`, {
+      headers: {
+        'X-Church-Id': CHURCH_ID
+      }
+    });
+    if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText}`);
+    people = await res.json();
+  } catch (e) {
+    error = e instanceof Error ? e.message : 'Failed to load people';
+  } finally {
+    loading = false;
+  }
+});
 
   function getInitial(name: string): string {
     return name.charAt(0).toUpperCase();

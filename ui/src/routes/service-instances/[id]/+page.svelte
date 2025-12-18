@@ -50,6 +50,9 @@
   let songs: Song[] = [];
   let loading = true;
   let error = '';
+  let assignmentsByMinistry: Record<string, Assignment[]> = {};
+  let filteredSongs: AvailableSong[] = [];
+  let selectedSong: AvailableSong | undefined = undefined;
 
   // Add song modal
   let showAddSongModal = false;
@@ -67,115 +70,74 @@ onMount(async () => {
     await loadServiceDetail(serviceId);
     await loadAvailableSongs();
   });
-</script>
 
+async function loadServiceDetail(serviceId: string) {
+  try {
+    loading = true;
 
-  async function loadServiceDetail(serviceId: string) {
-    try {
-      loading = true;
+    service = await apiJson<ServiceDetail>(`/service-instances/${serviceId}`);
+    assignments = await apiJson<Assignment[]>(`/service-instances/${serviceId}/roster`);
+    songs = await apiJson<Song[]>(`/service-instances/${serviceId}/songs`);
 
-      // Load service basic info
-      const serviceRes = await fetch(`${API_BASE}/service-instances/${serviceId}`);
-      if (!serviceRes.ok) throw new Error('Failed to load service');
-      service = await serviceRes.json();
+    error = '';
+  } catch (e) {
+    error = e instanceof Error ? e.message : 'Failed to load service details';
+  } finally {
+    loading = false;
+  }
+}
 
-      // Load assignments (roster)
-      const assignmentsRes = await fetch(`${API_BASE}/service-instances/${serviceId}/roster`);
-      if (!assignmentsRes.ok) throw new Error('Failed to load assignments');
-      assignments = await assignmentsRes.json();
+async function loadAvailableSongs() {
+  try {
+    availableSongs = await apiJson<AvailableSong[]>('/songs');
+  } catch (e) {
+    console.error('Failed to load available songs:', e);
+  }
+}
 
-      // Load songs
-      const songsRes = await fetch(`${API_BASE}/service-instances/${serviceId}/songs`);
-      if (!songsRes.ok) throw new Error('Failed to load songs');
-      songs = await songsRes.json();
-
-      error = '';
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load service details';
-    } finally {
-      loading = false;
-    }
+async function addSongToService() {
+  if (!selectedSongId || !service) {
+    alert('Please select a song');
+    return;
   }
 
-  async function loadAvailableSongs() {
-    try {
-      const res = await fetch(`${API_BASE}/songs`);
-      if (!res.ok) throw new Error('Failed to load songs');
-      availableSongs = await res.json();
-    } catch (e) {
-      console.error('Failed to load available songs:', e);
-    }
+  try {
+    addingSong = true;
+
+    const nextOrder =
+      songs.length > 0 ? Math.max(...songs.map((s) => s.display_order)) + 1 : 1;
+
+    await apiFetch(`/service-instances/${service.id}/songs`, {
+      method: 'POST',
+      body: JSON.stringify({
+        song_id: selectedSongId,
+        display_order: nextOrder,
+        key: songKey || null,
+        notes: songNotes || null
+      })
+    });
+
+    closeAddSongModal();
+    await loadServiceDetail(service.id);
+  } catch (e) {
+    alert(e instanceof Error ? e.message : 'Failed to add song');
+  } finally {
+    addingSong = false;
   }
+}
 
-  function openAddSongModal() {
-    showAddSongModal = true;
-    selectedSongId = '';
-    songKey = '';
-    songNotes = '';
-    searchQuery = '';
+async function removeSong(songInstanceId: string) {
+  if (!confirm('Remove this song from the service?')) return;
+
+  try {
+    await apiFetch(`/service-instance-songs/${songInstanceId}`, { method: 'DELETE' });
+
+    if (service) await loadServiceDetail(service.id);
+  } catch (e) {
+    alert(e instanceof Error ? e.message : 'Failed to remove song');
   }
+}
 
-  function closeAddSongModal() {
-    showAddSongModal = false;
-  }
-
-  function selectSong(song: AvailableSong) {
-    selectedSongId = song.id;
-    songKey = song.key || '';
-  }
-
-  async function addSongToService() {
-    if (!selectedSongId || !service) {
-      alert('Please select a song');
-      return;
-    }
-
-    try {
-      addingSong = true;
-
-      const nextOrder = songs.length > 0
-        ? Math.max(...songs.map(s => s.display_order)) + 1
-        : 1;
-
-      const res = await fetch(`${API_BASE}/service-instances/${service.id}/songs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          song_id: selectedSongId,
-          display_order: nextOrder,
-          key: songKey || null,
-          notes: songNotes || null
-        })
-      });
-
-      if (!res.ok) throw new Error('Failed to add song');
-
-      closeAddSongModal();
-      await loadServiceDetail(service.id);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to add song');
-    } finally {
-      addingSong = false;
-    }
-  }
-
-  async function removeSong(songInstanceId: string) {
-    if (!confirm('Remove this song from the service?')) return;
-
-    try {
-      const res = await fetch(`${API_BASE}/service-instance-songs/${songInstanceId}`, {
-        method: 'DELETE'
-      });
-
-      if (!res.ok) throw new Error('Failed to remove song');
-
-      if (service) {
-        await loadServiceDetail(service.id);
-      }
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to remove song');
-    }
-  }
 
   function formatDate(dateStr: string): string {
     if (!dateStr) return '';
@@ -400,8 +362,8 @@ onMount(async () => {
 
 <!-- Add Song Modal -->
 {#if showAddSongModal}
-  <div class="modal-overlay" on:click={closeAddSongModal}>
-    <div class="modal add-song-modal" on:click|stopPropagation>
+<div class="modal-overlay" role="button" tabindex="0" on:click={closeAddSongModal} on:keydown={(e) => e.key === 'Escape' && closeAddSongModal()}>
+    <div class="modal add-song-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddSongModal()}>
       <div class="modal-header">
         <h2>Add Song to Service</h2>
         <button class="close-btn" on:click={closeAddSongModal}>×</button>
@@ -410,11 +372,7 @@ onMount(async () => {
       <div class="modal-body">
         <!-- Search -->
         <div class="search-box">
-          <input
-            type="text"
-            placeholder="Search songs..."
-            bind:value={searchQuery}
-          />
+          <input type="text" placeholder="Search songs..." bind:value={searchQuery} />
         </div>
 
         <!-- Song List -->
@@ -425,11 +383,7 @@ onMount(async () => {
             </div>
           {:else}
             {#each filteredSongs as song}
-              <div
-                class="song-select-item"
-                class:selected={selectedSongId === song.id}
-                on:click={() => selectSong(song)}
-              >
+              <div class="song-select-item" class:selected={selectedSongId === song.id} on:click={() => selectSong(song)}>
                 <div class="song-select-info">
                   <div class="song-select-title">{song.title}</div>
                   {#if song.artist}
@@ -459,22 +413,12 @@ onMount(async () => {
 
             <div class="form-group">
               <label for="key">Key (optional override)</label>
-              <input
-                id="key"
-                type="text"
-                bind:value={songKey}
-                placeholder={selectedSong.key || 'e.g., G'}
-              />
+              <input id="key" type="text" bind:value={songKey} placeholder={selectedSong.key || 'e.g., G'} />
             </div>
 
             <div class="form-group">
               <label for="notes">Notes (optional)</label>
-              <textarea
-                id="notes"
-                bind:value={songNotes}
-                placeholder="e.g., Skip verse 2, extended intro"
-                rows="2"
-              ></textarea>
+              <textarea id="notes" bind:value={songNotes} placeholder="e.g., Skip verse 2, extended intro" rows="2"></textarea>
             </div>
           </div>
         {/if}
@@ -484,11 +428,7 @@ onMount(async () => {
         <button class="secondary-btn" on:click={closeAddSongModal}>
           Cancel
         </button>
-        <button
-          class="primary-btn"
-          on:click={addSongToService}
-          disabled={!selectedSongId || addingSong}
-        >
+        <button class="primary-btn" on:click={addSongToService} disabled={!selectedSongId || addingSong}>
           {addingSong ? 'Adding...' : 'Add Song'}
         </button>
       </div>

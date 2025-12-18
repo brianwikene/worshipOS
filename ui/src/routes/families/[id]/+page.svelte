@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
+  import { apiJson } from '$lib/api';
 
   interface FamilyMember {
     membership_id: string;
@@ -32,17 +33,14 @@
   let loading = true;
   let error = '';
 
-  const API_BASE = 'http://localhost:3000';
+  // DELETE this line - not needed anymore
+  // const API_BASE = 'http://localhost:3000';
 
   onMount(async () => {
     const familyId = $page.params.id;
 
     try {
-      const res = await fetch(`${API_BASE}/families/${familyId}`);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch: ${res.statusText}`);
-      }
-      family = await res.json();
+      family = await apiJson<Family>(`/families/${familyId}`);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load family details';
     } finally {
