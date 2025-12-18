@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { apiJson } from '$lib/api';
 
   interface Person {
     id: string;
@@ -11,24 +12,15 @@
   let loading = true;
   let error = '';
 
-  const CHURCH_ID = 'a8c2c7ab-836a-4ef1-a373-562e20babb76';
-  const API_BASE = 'http://localhost:3000';
-
   onMount(async () => {
-  try {
-    const res = await fetch(`${API_BASE}/people`, {
-      headers: {
-        'X-Church-Id': CHURCH_ID
-      }
-    });
-    if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText}`);
-    people = await res.json();
-  } catch (e) {
-    error = e instanceof Error ? e.message : 'Failed to load people';
-  } finally {
-    loading = false;
-  }
-});
+    try {
+      people = await apiJson<Person[]>('/people');
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to load people';
+    } finally {
+      loading = false;
+    }
+  });
 
   function getInitial(name: string): string {
     return name.charAt(0).toUpperCase();
