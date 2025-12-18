@@ -16,7 +16,7 @@
 
   onMount(async () => {
     try {
-      const res = await fetch(`${API_BASE}/people?church_id=${CHURCH_ID}`);
+      const res = await fetch(`${API_BASE}/people`);
       if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText}`);
       people = await res.json();
     } catch (e) {

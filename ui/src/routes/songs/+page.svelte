@@ -37,8 +37,8 @@
     try {
       loading = true;
       const url = searchQuery
-        ? `${API_BASE}/songs?church_id=${CHURCH_ID}&search=${encodeURIComponent(searchQuery)}`
-        : `${API_BASE}/songs?church_id=${CHURCH_ID}`;
+        ? `${API_BASE}/songs&search=${encodeURIComponent(searchQuery)}`
+        : `${API_BASE}/songs`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText}`);

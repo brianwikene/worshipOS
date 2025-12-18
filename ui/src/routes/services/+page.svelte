@@ -1,9 +1,16 @@
 <script lang="ts">
-  import { page } from '$app/stores';
   import { onMount } from 'svelte';
+  import { apiJson } from '$lib/api';
+  import { page } from '$app/stores';
+  import { getActiveChurchId } from '$lib/tenant';
 
   type ViewMode = 'upcoming' | 'past';
   let view: ViewMode = 'upcoming';
+
+  let activeChurchId = '';
+  let services: any[] = [];
+  let error: string | null = null;
+  let loading = true;
 
 $: {
   const v = $page.url.searchParams.get('view');
@@ -41,24 +48,6 @@ $: {
     context_name: string;
     instances: ServiceInstance[];
   }
-
-  let services: ServiceGroup[] = [];
-  let loading = true;
-  let error = '';
-  const CHURCH_ID = 'a8c2c7ab-836a-4ef1-a373-562e20babb76';
-  const API_BASE = 'http://localhost:3000';
-
-  onMount(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/services?church_id=${CHURCH_ID}`);
-      if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText}`);
-      services = await res.json();
-    } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load services';
-    } finally {
-      loading = false;
-    }
-  });
 
   function formatDate(dateStr: string): string {
   if (!dateStr) return 'Date not available';
@@ -128,6 +117,28 @@ function sortInstances(instances: ServiceInstance[], mode: ViewMode): ServiceIns
   });
 }
 
+async function loadServices() {
+  loading = true;
+  error = null;
+
+  try {
+    // If your backend supports view filtering:
+    // services = await apiJson<ServiceGroup[]>(`/services?view=${view}`);
+    // Otherwise keep it simple:
+    services = await apiJson<ServiceGroup[]>('/services');
+  } catch (e: any) {
+    error = e?.message ?? 'Failed to load services';
+    services = [];
+  } finally {
+    loading = false;
+  }
+}
+
+onMount(async () => {
+  activeChurchId = getActiveChurchId();
+  await loadServices();
+});
+
 let visibleServices: ServiceGroup[] = [];
 
 $: visibleServices = services
@@ -170,7 +181,7 @@ $: visibleServices = services
       <div class="title-section">
         <h1>Services</h1>
         <p>Upcoming worship services</p>
-        <p>church_id: {church_id}</p>
+        <p>church_id: {activeChurchId}</p>
       </div>
       <nav class="view-toggle">
   <a class:selected={view === 'upcoming'} href="/services?view=upcoming">Upcoming</a>

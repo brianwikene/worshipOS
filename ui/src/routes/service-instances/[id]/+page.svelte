@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { get } from 'svelte/store';
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
+  import { apiJson, apiFetch } from '$lib/api';
 
   interface Assignment {
     id: string;
@@ -58,14 +60,15 @@
   let songNotes = '';
   let addingSong = false;
 
-  const CHURCH_ID = 'a8c2c7ab-836a-4ef1-a373-562e20babb76';
-  const API_BASE = 'http://localhost:3000';
+onMount(async () => {
+    const { params } = get(page);
+    const serviceId = params.id;
 
-  onMount(async () => {
-    const serviceId = $page.params.id;
     await loadServiceDetail(serviceId);
     await loadAvailableSongs();
   });
+</script>
+
 
   async function loadServiceDetail(serviceId: string) {
     try {
@@ -96,7 +99,7 @@
 
   async function loadAvailableSongs() {
     try {
-      const res = await fetch(`${API_BASE}/songs?church_id=${CHURCH_ID}`);
+      const res = await fetch(`${API_BASE}/songs`);
       if (!res.ok) throw new Error('Failed to load songs');
       availableSongs = await res.json();
     } catch (e) {

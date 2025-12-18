@@ -1,37 +1,119 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
+  import { apiJson } from '$lib/api';
+  import { getActiveChurchId, setActiveChurchId, listTenants } from '$lib/tenant';
 
-  const isDev = import.meta.env.DEV;
+  type Service = {
+    id: string;
+    name?: string;
+    title?: string;
+    starts_at?: string;
+    start_time?: string;
+  };
 
-  const tenants = [
-    { name: 'Vineyard Test', church_id: 'a8c2c7ab-836a-4ef1-a373-562e20babb76' },
-    { name: 'Bethany Test',  church_id: '84c66cbb-1f13-4ed2-8416-076755b5dc49' }
-  ];
+  const tenants = listTenants();
 
-  function enter(church_id: string) {
-    localStorage.setItem('dev_church_id', church_id);
-    goto('/services');
+  let activeChurchId = '';
+  let loading = true;
+  let error: string | null = null;
+  let services: Service[] = [];
+
+  function displayServiceName(s: Service) {
+    return s.name ?? s.title ?? '(untitled service)';
   }
+
+  function displayServiceTime(s: Service) {
+    const raw = s.starts_at ?? s.start_time;
+    if (!raw) return '';
+    try {
+      return new Date(raw).toLocaleString();
+    } catch {
+      return String(raw);
+    }
+  }
+
+  async function load() {
+    loading = true;
+    error = null;
+
+    try {
+      // Update this path to match your API route
+      services = await apiJson<Service[]>('/services');
+    } catch (e: any) {
+      error = e?.message ?? 'Failed to load services';
+      services = [];
+    } finally {
+      loading = false;
+    }
+  }
+
+  function onTenantChange(e: Event) {
+    const id = (e.target as HTMLSelectElement).value;
+    activeChurchId = id;
+    setActiveChurchId(id);
+
+    // simplest + reliable: reload so everything refetches under new tenant
+    window.location.reload();
+  }
+
+  onMount(async () => {
+    activeChurchId = getActiveChurchId();
+    await load();
+  });
 </script>
 
-{#if isDev}
-  <main style="padding: 2rem;">
-    <h1>WorshipOS Dev Launcher</h1>
-    <p>Select a tenant to simulate.</p>
+<svelte:head>
+  <title>WorshipOS</title>
+</svelte:head>
 
-    <ul>
-      {#each tenants as t}
-        <li style="margin: .75rem 0;">
-          <button on:click={() => enter(t.church_id)}>
-            Enter {t.name}
-          </button>
-          <div style="font-size: .9rem; opacity: .7;">{t.church_id}</div>
-        </li>
-      {/each}
-    </ul>
-  </main>
-{:else}
-  <main style="padding: 2rem;">
-    <h1>WorshipOS</h1>
-  </main>
-{/if}
+<main style="padding: 1rem; max-width: 900px; margin: 0 auto;">
+  <header style="display:flex; gap:1rem; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+    <h1 style="margin:0;">WorshipOS</h1>
+
+    <div style="display:flex; gap:.75rem; align-items:center; flex-wrap:wrap;">
+      <label style="display:flex; gap:.5rem; align-items:center;">
+        <span style="opacity:.8;">Tenant</span>
+        <select bind:value={activeChurchId} on:change={onTenantChange}>
+          {#each tenants as t}
+            <option value={t.id}>{t.name}</option>
+          {/each}
+        </select>
+      </label>
+
+      <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.85rem; opacity:.75;">
+        {activeChurchId}
+      </span>
+    </div>
+  </header>
+
+  <section style="margin-top: 1.25rem;">
+    <div style="display:flex; gap:.75rem; align-items:center;">
+      <h2 style="margin:0;">Services</h2>
+      <button on:click={load} disabled={loading}>Refresh</button>
+    </div>
+
+    {#if loading}
+      <p style="opacity:.75; margin-top:.75rem;">Loading…</p>
+    {:else if error}
+      <p style="margin-top:.75rem; color: #b00020;">
+        {error}
+      </p>
+      <p style="opacity:.75;">
+        Sanity check: your browser should be sending <code>X-Church-Id</code> on every request, and the API should reject requests missing it.
+      </p>
+    {:else if services.length === 0}
+      <p style="opacity:.75; margin-top:.75rem;">No services found for this tenant.</p>
+    {:else}
+      <ul style="margin-top:.75rem; padding-left: 1.25rem;">
+        {#each services as s (s.id)}
+          <li style="margin:.35rem 0;">
+            <strong>{displayServiceName(s)}</strong>
+            {#if displayServiceTime(s)}
+              <span style="opacity:.75;"> — {displayServiceTime(s)}</span>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  </section>
+</main>

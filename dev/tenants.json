@@ -1,0 +1,8 @@
+{
+  "defaultChurchId": "84c66cbb-1f13-4ed2-8416-076755b5dc49",
+  "tenants": [
+    { "id": "84c66cbb-1f13-4ed2-8416-076755b5dc49", "slug": "bethany_test", "name": "Bethany (Test)" },
+    { "id": "a8c2c7ab-836a-4ef1-a373-562e20babb76", "slug": "vineyard_test", "name": "Vineyard (Test)" }
+  ]
+}
+

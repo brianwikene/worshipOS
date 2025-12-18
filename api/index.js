@@ -13,6 +13,24 @@ const pool = new Pool({
   password: process.env.PGPASSWORD || "worship",
 });
 
+// ---- TENANT MIDDLEWARE (DEV) ----
+// Keep this inline for now to avoid module/import issues while stabilizing.
+function tenantMiddleware(req, res, next) {
+  // Don't require tenant for non-tenant endpoints
+  if (req.path === "/" || req.path === "/health") return next();
+
+  const headerId = req.get("X-Church-Id");
+  const queryId = req.query?.church_id; // temporary fallback
+  const churchId = headerId || queryId;
+
+  if (!churchId) {
+    return res.status(400).json({ error: "church_id is required" });
+  }
+
+  req.churchId = churchId;
+  next();
+}
+
 // ---- APP SETUP ----
 const app = express();
 app.use(express.json());
@@ -20,11 +38,25 @@ app.use(express.json());
 // Use the cors package for better browser compatibility
 app.use(
   cors({
-    origin: "http://localhost:5173", // Allow your frontend
+    origin: "http://localhost:5173",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
+    allowedHeaders: ["Content-Type", "X-Church-Id"],
   })
 );
+
+async function assertInstanceInChurch(pool, instanceId, churchId) {
+  const check = await pool.query(
+    `
+    SELECT 1
+    FROM service_instances si
+    JOIN service_groups sg ON sg.id = si.service_group_id
+    WHERE si.id = $1 AND sg.church_id = $2
+    `,
+    [instanceId, churchId]
+  );
+
+  return check.rowCount > 0;
+}
 
 // ---- ROUTE not specified ----
 app.get("/", (req, res) => {
@@ -64,89 +96,45 @@ app.get("/health", async (req, res) => {
   }
 });
 
+
+app.use(tenantMiddleware);
+
 // ---- SERVICES ENDPOINT (FIXED: Resolved nested aggregate error) ----
 app.get("/services", async (req, res) => {
   try {
-    const { church_id, start_date, end_date } = req.query;
-
-    if (!church_id) {
-      return res.status(400).json({ error: "church_id is required" });
-    }
+    const churchId = req.churchId;
+    const { start_date, end_date } = req.query;
 
     const result = await pool.query(
-      `
-      SELECT
-        sg.id as group_id,
-        TO_CHAR(sg.group_date, 'YYYY-MM-DD') as group_date,
-        sg.name as group_name,
-        c.name as context_name,
-        si.id as instance_id,
-        si.service_time,
-        si.campus_id,
-        camp.name as campus_name,
-
-        -- Assignment summary data
-        COALESCE(
-          (SELECT json_build_object(
-            'total_positions', COUNT(DISTINCT srr.role_id),
-            'filled_positions', COUNT(DISTINCT sa.id) FILTER (WHERE sa.person_id IS NOT NULL),
-            'confirmed', COUNT(DISTINCT sa.id) FILTER (WHERE sa.status = 'confirmed'),
-            'pending', COUNT(DISTINCT sa.id) FILTER (WHERE sa.status = 'pending' AND sa.person_id IS NOT NULL),
-            'unfilled', COUNT(DISTINCT srr.role_id) FILTER (
-              WHERE NOT EXISTS (
-                SELECT 1 FROM service_assignments sa2
-                WHERE sa2.service_instance_id = si.id
-                AND sa2.role_id = srr.role_id
-                AND sa2.person_id IS NOT NULL
-              )
-            ),
-            'by_ministry', (
-              SELECT COALESCE(json_agg(ministry_stats), '[]'::json)
-              FROM (
-                SELECT
-                  r_inner.ministry_area,
-                  COUNT(DISTINCT srr_inner.role_id) as total,
-                  COUNT(DISTINCT sa_inner.id) FILTER (WHERE sa_inner.person_id IS NOT NULL) as filled,
-                  COUNT(DISTINCT sa_inner.id) FILTER (WHERE sa_inner.status = 'confirmed') as confirmed,
-                  -- ADDED: Count pending assignments per ministry
-                  COUNT(DISTINCT sa_inner.id) FILTER (WHERE sa_inner.status = 'pending' AND sa_inner.person_id IS NOT NULL) as pending
-                FROM service_role_requirements srr_inner
-                JOIN roles r_inner ON r_inner.id = srr_inner.role_id
-                LEFT JOIN service_assignments sa_inner
-                  ON sa_inner.service_instance_id = si.id
-                  AND sa_inner.role_id = r_inner.id
-                WHERE srr_inner.context_id = sg.context_id
-                  AND r_inner.ministry_area IS NOT NULL
-                GROUP BY r_inner.ministry_area
-              ) ministry_stats
-            )
-    )
-          FROM service_role_requirements srr
-          LEFT JOIN service_assignments sa ON sa.service_instance_id = si.id AND sa.role_id = srr.role_id
-          WHERE srr.context_id = sg.context_id
-        ),
-        -- Fallback object if the subquery returns null
-        json_build_object(
-          'total_positions', 0,
-          'filled_positions', 0,
-          'confirmed', 0,
-          'pending', 0,
-          'unfilled', 0,
-          'by_ministry', '[]'::json
-        )
-      ) as assignments
-
-      FROM service_groups sg
-      LEFT JOIN contexts c ON sg.context_id = c.id
-      JOIN service_instances si ON si.service_group_id = sg.id
-      LEFT JOIN campuses camp ON si.campus_id = camp.id
-      WHERE sg.church_id = $1
-        AND ($2::date IS NULL OR sg.group_date >= $2::date)
-        AND ($3::date IS NULL OR sg.group_date <= $3::date)
-      ORDER BY sg.group_date ASC, si.service_time ASC
-      `,
-      [church_id, start_date || null, end_date || null]
-    );
+  `
+  SELECT
+    sg.id as group_id,
+    TO_CHAR(sg.group_date, 'YYYY-MM-DD') as group_date,
+    sg.name as group_name,
+    c.name as context_name,
+    si.id as instance_id,
+    si.service_time,
+    si.campus_id,
+    camp.name as campus_name,
+    json_build_object(
+      'total_positions', 0,
+      'filled_positions', 0,
+      'confirmed', 0,
+      'pending', 0,
+      'unfilled', 0,
+      'by_ministry', '[]'::json
+    ) as assignments
+  FROM service_groups sg
+  LEFT JOIN contexts c ON sg.context_id = c.id
+  JOIN service_instances si ON si.service_group_id = sg.id
+  LEFT JOIN campuses camp ON si.campus_id = camp.id
+  WHERE sg.church_id = $1
+    AND ($2::date IS NULL OR sg.group_date >= $2::date)
+    AND ($3::date IS NULL OR sg.group_date <= $3::date)
+  ORDER BY sg.group_date ASC, si.service_time ASC
+  `,
+  [churchId, start_date || null, end_date || null]
+);
 
     // Group instances by service group
     const groupsMap = new Map();
@@ -172,10 +160,8 @@ app.get("/services", async (req, res) => {
       });
     });
 
-    res.json(Array.from(groupsMap.values()));
+    return res.json(Array.from(groupsMap.values()));
   } catch (err) {
-    console.error("GET /services failed:", err);
-
     // Postgres: undefined_table (missing relation)
     if (err?.code === "42P01" && process.env.NODE_ENV !== "production") {
       return res.status(500).json({
@@ -190,6 +176,8 @@ app.get("/services", async (req, res) => {
           '  psql "postgres://worship:worship@127.0.0.1:5432/worshipos" -f api/migrations/005_core_services_schema.sql\n',
       });
     }
+
+    // Postgres: undefined_column
     if (err?.code === "42703" && process.env.NODE_ENV !== "production") {
       return res.status(500).json({
         error: err.message,
@@ -199,96 +187,395 @@ app.get("/services", async (req, res) => {
       });
     }
 
-    // Default behavior
+    console.error("GET /services failed:", err);
+    return res.status(500).json({ error: "Failed to load services" });
+  }
+});
+
+
+// ---- SERVICE INSTANCE ENDPOINT
+app.get("/service-instances/:id", async (req, res) => {
+  try {
+    const churchId = req.churchId;
+    const { id } = req.params;
+    const result = await pool.query(
+      `
+      SELECT si.*
+      FROM service_instances si
+      JOIN service_groups sg ON sg.id = si.service_group_id
+      WHERE si.id = $1
+        AND sg.church_id = $2
+      `,
+      [id, churchId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error("GET /service-instances/:id failed:", err);
+    return res.status(500).json({ error: "Failed to load service" });
+  }
+});
+
+// ==========================================
+// SERVICE ASSIGNMENTS (Instance-level)
+// ==========================================
+
+// CREATE: Assign person to role for service
+app.post("/service-instances/:instance_id/assignments", async (req, res) => {
+  try {
+    const churchId = req.churchId;
+    const { instance_id } = req.params;
+    const { role_id, person_id, status, is_lead, notes } = req.body;
+
+    if (!role_id) return res.status(400).json({ error: "role_id is required" });
+
+    const ok = await assertInstanceInChurch(pool, instance_id, churchId);
+    if (!ok) return res.status(404).json({ error: "Service instance not found" });
+
+    const result = await pool.query(
+      `INSERT INTO service_assignments
+        (church_id, service_instance_id, role_id, person_id, status, is_lead, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        churchId,
+        instance_id,
+        role_id,
+        person_id,
+        status || "pending",
+        is_lead || false,
+        notes,
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("POST /service-instances/:instance_id/assignments failed:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ---- SERVICE INSTANCE DETAIL ----
-app.get("/service-instances/:id", async (req, res) => {
+
+// UPDATE: Change assignment
+app.put("/assignments/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const { person_id, status, is_lead, notes } = req.body;
 
-    // Get the service instance with its group info
     const result = await pool.query(
-      `
-      SELECT
-        si.id as service_instance_id,
-        si.service_time,
-        si.campus_id,
-        camp.name as campus_name,
-        sg.id as service_group_id,
-        sg.group_date,
-        sg.name as service_name,
-        sg.context_id,
-        c.name as context_name,
-        sg.church_id
-      FROM service_instances si
-      JOIN service_groups sg ON si.service_group_id = sg.id
-      LEFT JOIN contexts c ON sg.context_id = c.id
-      LEFT JOIN campuses camp ON si.campus_id = camp.id
-      WHERE si.id = $1
-      `,
-      [id]
+      `UPDATE service_assignments
+       SET person_id = COALESCE($1, person_id),
+           status = COALESCE($2, status),
+           is_lead = COALESCE($3, is_lead),
+           notes = COALESCE($4, notes),
+           updated_at = now()
+       WHERE id = $5
+       RETURNING *`,
+      [person_id, status, is_lead, notes, id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Service instance not found" });
+      return res.status(404).json({ error: "Assignment not found" });
     }
 
     res.json(result.rows[0]);
   } catch (err) {
-    console.error("GET /service-instances/:id failed:", err);
+    console.error("PUT /assignments/:id failed:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ---- SERVICE INSTANCE DETAIL ----
-app.get("/service-instances/:id", async (req, res) => {
+// DELETE: Remove assignment
+app.delete("/assignments/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
     const result = await pool.query(
-      `
-      SELECT
-        si.id as service_instance_id,
-        si.service_time,
-        si.campus_id,
-        camp.name as campus_name,
-        sg.id as service_group_id,
-        sg.group_date,
-        sg.name as service_name,
-        sg.context_id,
-        c.name as context_name,
-        sg.church_id
-      FROM service_instances si
-      JOIN service_groups sg ON si.service_group_id = sg.id
-      LEFT JOIN contexts c ON sg.context_id = c.id
-      LEFT JOIN campuses camp ON si.campus_id = camp.id
-      WHERE si.id = $1
-      `,
+      `DELETE FROM service_assignments WHERE id = $1 RETURNING *`,
       [id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Service instance not found" });
+      return res.status(404).json({ error: "Assignment not found" });
+    }
+
+    res.json({ message: "Assignment removed", assignment: result.rows[0] });
+  } catch (err) {
+    console.error("DELETE /assignments/:id failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// SONGS CRUD
+// ==========================================
+
+// CREATE: Add song
+app.post("/songs", async (req, res) => {
+  try {
+    const { church_id, title, artist, key, bpm, ccli_number, notes } = req.body;
+
+    if (!church_id || !title) {
+      return res
+        .status(400)
+        .json({ error: "church_id and title are required" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO songs (church_id, title, artist, key, bpm, ccli_number, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [church_id, title, artist, key, bpm, ccli_number, notes]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("POST /songs failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// UPDATE: Edit song
+app.put("/songs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, artist, key, bpm, ccli_number, notes } = req.body;
+
+    const result = await pool.query(
+      `UPDATE songs
+       SET title = COALESCE($1, title),
+           artist = COALESCE($2, artist),
+           key = COALESCE($3, key),
+           bpm = COALESCE($4, bpm),
+           ccli_number = COALESCE($5, ccli_number),
+           notes = COALESCE($6, notes)
+       WHERE id = $7
+       RETURNING *`,
+      [title, artist, key, bpm, ccli_number, notes, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Song not found" });
     }
 
     res.json(result.rows[0]);
   } catch (err) {
-    console.error("GET /service-instances/:id failed:", err);
+    console.error("PUT /songs/:id failed:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
+// GET: All songs
+app.get("/songs", async (req, res) => {
+  try {
+    const churchId = req.churchId;
+    const { search } = req.query;
+
+    let query = `SELECT * FROM songs WHERE church_id = $1`;
+    const params = [churchId];
+
+    if (search) {
+      query += ` AND (title ILIKE $2 OR artist ILIKE $2)`;
+      params.push(`%${search}%`);
+    }
+
+    query += ` ORDER BY title`;
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /songs failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE: Remove song
+app.delete("/songs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `DELETE FROM songs WHERE id = $1 RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Song not found" });
+    }
+
+    res.json({ message: "Song deleted", song: result.rows[0] });
+  } catch (err) {
+    console.error("DELETE /songs/:id failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// SERVICE INSTANCE - ADD SONGS
+// ==========================================
+
+app.post("/service-instances/:instance_id/songs", async (req, res) => {
+  try {
+    const churchId = req.churchId;
+    const { instance_id } = req.params;
+    const { song_id, display_order, key, notes } = req.body;
+    
+    if (!song_id) {return res.status(400).json({ error: "song_id is required" });}
+
+    const ok = await assertInstanceInChurch(pool, instance_id, churchId);
+    if (!ok) return res.status(404).json({ error: "Service instance not found" });
+
+    const result = await pool.query(
+      `INSERT INTO service_instance_songs
+         (service_instance_id, song_id, display_order, key, notes)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+      [instance_id, song_id, display_order, key, notes]
+    );
+
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("POST /service-instances/:instance_id/songs failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ==========================================
+// SERVICE INSTANCE - GET SONGS
+// ==========================================
+
+app.get("/service-instances/:instance_id/songs", async (req, res) => {
+  try {
+    const churchId = req.churchId;
+    const { instance_id } = req.params;
+
+    const result = await pool.query(
+      `SELECT
+        sis.*,
+        s.title,
+        s.artist,
+        s.key as default_key,
+        s.bpm,
+        s.ccli_number
+       FROM service_instance_songs sis
+       JOIN service_instances si ON si.id = sis.service_instance_id
+       JOIN service_groups sg ON sg.id = si.service_group_id
+       JOIN songs s ON s.id = sis.song_id
+       WHERE sis.service_instance_id = $1
+         AND sg.church_id = $2
+       ORDER BY sis.display_order`,
+      [instance_id, churchId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /service-instances/:instance_id/songs failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// REMOVE song from service
+app.delete("/service-instance-songs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `DELETE FROM service_instance_songs WHERE id = $1 RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Song not found in service" });
+    }
+
+    res.json({ message: "Song removed from service", song: result.rows[0] });
+  } catch (err) {
+    console.error("DELETE /service-instance-songs/:id failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// COPY SERVICE (Week to Week Inheritance)
+// ==========================================
+
+app.post("/service-instances/:source_id/copy", async (req, res) => {
+  try {
+    const { source_id } = req.params;
+    const { target_date, target_time } = req.body;
+
+    // This would copy assignments, songs, segments from one service to another
+    // Implementation depends on your exact needs
+
+    res.json({ message: "Service copied", source_id, target_date });
+  } catch (err) {
+    console.error("POST /service-instances/:source_id/copy failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// SERVICE ROSTER ENDPOINT
+// Add this to your index.js
+// ==========================================
+
+// GET: Service roster (assignments for detail page)
+app.get("/service-instances/:instance_id/roster", async (req, res) => {
+  try {
+    const churchId = req.churchId;
+    const { instance_id } = req.params;
+    
+    const result = await pool.query(
+      `SELECT
+        sa.id,
+        sa.role_id,
+        r.name as role_name,
+        r.ministry_area,
+        sa.person_id,
+        p.display_name as person_name,
+        sa.status,
+        sa.is_lead,
+        (srr.min_needed > 0) as is_required,
+        sa.notes
+       FROM service_instances si
+       JOIN service_groups sg ON sg.id = si.service_group_id
+       JOIN service_role_requirements srr ON srr.context_id = sg.context_id
+       JOIN roles r ON r.id = srr.role_id
+       LEFT JOIN service_assignments sa ON sa.service_instance_id = si.id AND sa.role_id = r.id
+       LEFT JOIN people p ON p.id = sa.person_id
+       HERE si.id = $1
+         AND sg.church_id = $2
+       ORDER BY
+         r.ministry_area NULLS LAST,
+         srr.display_order,
+         sa.is_lead DESC NULLS LAST,
+         r.name`,
+      [instance_id, churchId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /service-instances/:instance_id/roster failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
 
 // ---- PEOPLE ENDPOINT (Updated to include has_contact_info) ----
 app.get("/people", async (req, res) => {
   try {
-    const { church_id } = req.query;
-
-    if (!church_id) {
-      return res.status(400).json({ error: "church_id is required" });
-    }
+    const churchId = req.churchId;
+    const { search } = req.query;
 
     // UPDATED QUERY:
     // We stick to a simple EXISTS check for performance.
@@ -357,11 +644,8 @@ app.get("/people/:id", async (req, res) => {
 // ---- GET ALL FAMILIES ----
 app.get("/families", async (req, res) => {
   try {
-    const { church_id } = req.query;
-
-    if (!church_id) {
-      return res.status(400).json({ error: "church_id is required" });
-    }
+    const churchId = req.churchId;
+    const { search } = req.query;
 
     const result = await pool.query(
       `
@@ -767,17 +1051,11 @@ app.delete("/roles/:id", async (req, res) => {
 // GET: All roles with optional filtering
 app.get("/roles", async (req, res) => {
   try {
-    const { church_id, ministry_area } = req.query;
+    const churchId = req.churchId;
+    const { ministry_area } = req.query;
 
-    if (!church_id) {
-      return res.status(400).json({ error: "church_id is required" });
-    }
-
-    let query = `
-      SELECT * FROM roles
-      WHERE church_id = $1
-    `;
-    const params = [church_id];
+    let query = `SELECT * FROM roles WHERE church_id = $1`;
+    const params = [churchId];
 
     if (ministry_area) {
       query += ` AND ministry_area = $2`;
@@ -887,384 +1165,6 @@ app.delete(
   }
 );
 
-// ==========================================
-// SERVICE ASSIGNMENTS (Instance-level)
-// ==========================================
-
-// CREATE: Assign person to role for service
-app.post("/service-instances/:instance_id/assignments", async (req, res) => {
-  try {
-    const { instance_id } = req.params;
-    const { church_id, role_id, person_id, status, is_lead, notes } = req.body;
-
-    if (!role_id) {
-      return res.status(400).json({ error: "role_id is required" });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO service_assignments
-        (church_id, service_instance_id, role_id, person_id, status, is_lead, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
-      [
-        church_id,
-        instance_id,
-        role_id,
-        person_id,
-        status || "pending",
-        is_lead || false,
-        notes,
-      ]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error(
-      "POST /service-instances/:instance_id/assignments failed:",
-      err
-    );
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// UPDATE: Change assignment
-app.put("/assignments/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { person_id, status, is_lead, notes } = req.body;
-
-    const result = await pool.query(
-      `UPDATE service_assignments
-       SET person_id = COALESCE($1, person_id),
-           status = COALESCE($2, status),
-           is_lead = COALESCE($3, is_lead),
-           notes = COALESCE($4, notes),
-           updated_at = now()
-       WHERE id = $5
-       RETURNING *`,
-      [person_id, status, is_lead, notes, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Assignment not found" });
-    }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error("PUT /assignments/:id failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// DELETE: Remove assignment
-app.delete("/assignments/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await pool.query(
-      `DELETE FROM service_assignments WHERE id = $1 RETURNING *`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Assignment not found" });
-    }
-
-    res.json({ message: "Assignment removed", assignment: result.rows[0] });
-  } catch (err) {
-    console.error("DELETE /assignments/:id failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ==========================================
-// SONGS CRUD
-// ==========================================
-
-// CREATE: Add song
-app.post("/songs", async (req, res) => {
-  try {
-    const { church_id, title, artist, key, bpm, ccli_number, notes } = req.body;
-
-    if (!church_id || !title) {
-      return res
-        .status(400)
-        .json({ error: "church_id and title are required" });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO songs (church_id, title, artist, key, bpm, ccli_number, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING *`,
-      [church_id, title, artist, key, bpm, ccli_number, notes]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error("POST /songs failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// UPDATE: Edit song
-app.put("/songs/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, artist, key, bpm, ccli_number, notes } = req.body;
-
-    const result = await pool.query(
-      `UPDATE songs
-       SET title = COALESCE($1, title),
-           artist = COALESCE($2, artist),
-           key = COALESCE($3, key),
-           bpm = COALESCE($4, bpm),
-           ccli_number = COALESCE($5, ccli_number),
-           notes = COALESCE($6, notes)
-       WHERE id = $7
-       RETURNING *`,
-      [title, artist, key, bpm, ccli_number, notes, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Song not found" });
-    }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error("PUT /songs/:id failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET: All songs
-app.get("/songs", async (req, res) => {
-  try {
-    const { church_id, search } = req.query;
-
-    if (!church_id) {
-      return res.status(400).json({ error: "church_id is required" });
-    }
-
-    let query = `SELECT * FROM songs WHERE church_id = $1`;
-    const params = [church_id];
-
-    if (search) {
-      query += ` AND (title ILIKE $2 OR artist ILIKE $2)`;
-      params.push(`%${search}%`);
-    }
-
-    query += ` ORDER BY title`;
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch (err) {
-    console.error("GET /songs failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// DELETE: Remove song
-app.delete("/songs/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await pool.query(
-      `DELETE FROM songs WHERE id = $1 RETURNING *`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Song not found" });
-    }
-
-    res.json({ message: "Song deleted", song: result.rows[0] });
-  } catch (err) {
-    console.error("DELETE /songs/:id failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ==========================================
-// SERVICE INSTANCE - ADD SONGS
-// ==========================================
-
-// You'll need a service_instance_songs junction table
-// CREATE TABLE service_instance_songs (
-//   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-//   service_instance_id uuid REFERENCES service_instances(id),
-//   song_id uuid REFERENCES songs(id),
-//   display_order int,
-//   key text,
-//   notes text
-// );
-
-// ADD song to service
-app.post("/service-instances/:instance_id/songs", async (req, res) => {
-  try {
-    const { instance_id } = req.params;
-    const { song_id, display_order, key, notes } = req.body;
-
-    if (!song_id) {
-      return res.status(400).json({ error: "song_id is required" });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO service_instance_songs
-        (service_instance_id, song_id, display_order, key, notes)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [instance_id, song_id, display_order, key, notes]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error("POST /service-instances/:instance_id/songs failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET songs for a service
-app.get("/service-instances/:instance_id/songs", async (req, res) => {
-  try {
-    const { instance_id } = req.params;
-
-    const result = await pool.query(
-      `SELECT
-        sis.*,
-        s.title,
-        s.artist,
-        s.key as default_key,
-        s.bpm,
-        s.ccli_number
-       FROM service_instance_songs sis
-       JOIN songs s ON s.id = sis.song_id
-       WHERE sis.service_instance_id = $1
-       ORDER BY sis.display_order`,
-      [instance_id]
-    );
-
-    res.json(result.rows);
-  } catch (err) {
-    console.error("GET /service-instances/:instance_id/songs failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// REMOVE song from service
-app.delete("/service-instance-songs/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await pool.query(
-      `DELETE FROM service_instance_songs WHERE id = $1 RETURNING *`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Song not found in service" });
-    }
-
-    res.json({ message: "Song removed from service", song: result.rows[0] });
-  } catch (err) {
-    console.error("DELETE /service-instance-songs/:id failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ==========================================
-// COPY SERVICE (Week to Week Inheritance)
-// ==========================================
-
-app.post("/service-instances/:source_id/copy", async (req, res) => {
-  try {
-    const { source_id } = req.params;
-    const { target_date, target_time } = req.body;
-
-    // This would copy assignments, songs, segments from one service to another
-    // Implementation depends on your exact needs
-
-    res.json({ message: "Service copied", source_id, target_date });
-  } catch (err) {
-    console.error("POST /service-instances/:source_id/copy failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ==========================================
-// SERVICE ROSTER ENDPOINT
-// Add this to your index.js
-// ==========================================
-
-// GET: Service roster (assignments for detail page)
-app.get("/service-instances/:instance_id/roster", async (req, res) => {
-  try {
-    const { instance_id } = req.params;
-
-    const result = await pool.query(
-      `SELECT
-        sa.id,
-        sa.role_id,
-        r.name as role_name,
-        r.ministry_area,
-        sa.person_id,
-        p.display_name as person_name,
-        sa.status,
-        sa.is_lead,
-        (srr.min_needed > 0) as is_required,
-        sa.notes
-       FROM service_instances si
-       JOIN service_groups sg ON sg.id = si.service_group_id
-       JOIN service_role_requirements srr ON srr.context_id = sg.context_id
-       JOIN roles r ON r.id = srr.role_id
-       LEFT JOIN service_assignments sa ON sa.service_instance_id = si.id AND sa.role_id = r.id
-       LEFT JOIN people p ON p.id = sa.person_id
-       WHERE si.id = $1
-       ORDER BY
-         r.ministry_area NULLS LAST,
-         srr.display_order,
-         sa.is_lead DESC NULLS LAST,
-         r.name`,
-      [instance_id]
-    );
-
-    res.json(result.rows);
-  } catch (err) {
-    console.error("GET /service-instances/:instance_id/roster failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET: Basic service instance info (for header)
-app.get("/service-instances/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await pool.query(
-      `SELECT
-        si.id,
-        si.service_time,
-        c.name as campus_name,
-        sg.group_date,
-        sg.name as service_name,
-        ctx.name as context_name
-       FROM service_instances si
-       JOIN service_groups sg ON sg.id = si.service_group_id
-       LEFT JOIN campuses c ON c.id = si.campus_id
-       LEFT JOIN contexts ctx ON ctx.id = sg.context_id
-       WHERE si.id = $1`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Service instance not found" });
-    }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error("GET /service-instances/:id failed:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // start the server
 const PORT = 3000;
