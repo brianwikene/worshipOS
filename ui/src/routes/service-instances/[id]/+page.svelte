@@ -138,6 +138,84 @@ async function removeSong(songInstanceId: string) {
   }
 }
 
+function openAddSongModal() {
+  showAddSongModal = true;
+  searchQuery = '';
+  selectedSongId = '';
+  songKey = '';
+  songNotes = '';
+}
+
+function closeAddSongModal() {
+  showAddSongModal = false;
+  searchQuery = '';
+  selectedSongId = '';
+  songKey = '';
+  songNotes = '';
+}
+
+function selectSong(song: AvailableSong) {
+  selectedSongId = song.id;
+  songKey = song.key || '';
+}
+
+// Edit song modal state
+let showEditSongModal = false;
+let editingSong: Song | null = null;
+let editSongKey = '';
+let editSongNotes = '';
+let savingEdit = false;
+
+function openEditSongModal(song: Song) {
+  editingSong = song;
+  editSongKey = song.key || '';
+  editSongNotes = song.notes || '';
+  showEditSongModal = true;
+}
+
+function closeEditSongModal() {
+  showEditSongModal = false;
+  editingSong = null;
+  editSongKey = '';
+  editSongNotes = '';
+}
+
+async function updateSongInService() {
+  if (!editingSong || !service) return;
+
+  try {
+    savingEdit = true;
+    await apiFetch(`/service-instance-songs/${editingSong.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        key: editSongKey || null,
+        notes: editSongNotes || null,
+        display_order: editingSong.display_order
+      })
+    });
+
+    closeEditSongModal();
+    await loadServiceDetail(service.id);
+  } catch (e) {
+    alert(e instanceof Error ? e.message : 'Failed to update song');
+  } finally {
+    savingEdit = false;
+  }
+}
+
+// View chart modal state
+let showChartModal = false;
+let chartSong: Song | null = null;
+
+function openChartModal(song: Song) {
+  chartSong = song;
+  showChartModal = true;
+}
+
+function closeChartModal() {
+  showChartModal = false;
+  chartSong = null;
+}
 
   function formatDate(dateStr: string): string {
     if (!dateStr) return '';
@@ -272,8 +350,8 @@ async function removeSong(songInstanceId: string) {
                   {/if}
                 </div>
                 <div class="song-actions">
-                  <button class="icon-btn" title="View chart">📄</button>
-                  <button class="icon-btn" title="Edit">✏️</button>
+                  <button class="icon-btn" on:click={() => openChartModal(song)} title="View chart">📄</button>
+                  <button class="icon-btn" on:click={() => openEditSongModal(song)} title="Edit">✏️</button>
                   <button class="icon-btn delete" on:click={() => removeSong(song.id)} title="Remove">×</button>
                 </div>
               </div>
@@ -430,6 +508,91 @@ async function removeSong(songInstanceId: string) {
         </button>
         <button class="primary-btn" on:click={addSongToService} disabled={!selectedSongId || addingSong}>
           {addingSong ? 'Adding...' : 'Add Song'}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Edit Song Modal -->
+{#if showEditSongModal && editingSong}
+<div class="modal-overlay" role="button" tabindex="0" on:click={closeEditSongModal} on:keydown={(e) => e.key === 'Escape' && closeEditSongModal()}>
+    <div class="modal edit-song-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeEditSongModal()}>
+      <div class="modal-header">
+        <h2>Edit Song</h2>
+        <button class="close-btn" on:click={closeEditSongModal}>×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="song-info-display">
+          <div class="song-title-large">{editingSong.title}</div>
+          {#if editingSong.artist}
+            <div class="song-artist-display">by {editingSong.artist}</div>
+          {/if}
+        </div>
+
+        <div class="form-group">
+          <label for="edit-key">Key</label>
+          <input id="edit-key" type="text" bind:value={editSongKey} placeholder="e.g., G, Am, Bb" />
+        </div>
+
+        <div class="form-group">
+          <label for="edit-notes">Notes</label>
+          <textarea id="edit-notes" bind:value={editSongNotes} placeholder="e.g., Skip verse 2, extended intro" rows="3"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="secondary-btn" on:click={closeEditSongModal}>
+          Cancel
+        </button>
+        <button class="primary-btn" on:click={updateSongInService} disabled={savingEdit}>
+          {savingEdit ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- View Chart Modal -->
+{#if showChartModal && chartSong}
+<div class="modal-overlay" role="button" tabindex="0" on:click={closeChartModal} on:keydown={(e) => e.key === 'Escape' && closeChartModal()}>
+    <div class="modal chart-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeChartModal()}>
+      <div class="modal-header">
+        <h2>📄 {chartSong.title}</h2>
+        <button class="close-btn" on:click={closeChartModal}>×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="chart-info">
+          {#if chartSong.artist}
+            <p class="chart-artist">by {chartSong.artist}</p>
+          {/if}
+          <div class="chart-meta">
+            {#if chartSong.key}
+              <span class="chart-detail"><strong>Key:</strong> {chartSong.key}</span>
+            {/if}
+            {#if chartSong.bpm}
+              <span class="chart-detail"><strong>BPM:</strong> {chartSong.bpm}</span>
+            {/if}
+          </div>
+          {#if chartSong.notes}
+            <div class="chart-notes">
+              <strong>Notes:</strong> {chartSong.notes}
+            </div>
+          {/if}
+        </div>
+
+        <div class="chart-placeholder">
+          <div class="placeholder-icon">🎼</div>
+          <p>Chart/lyrics viewer coming soon</p>
+          <p class="placeholder-hint">Song charts will be displayed here</p>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="secondary-btn" on:click={closeChartModal}>
+          Close
         </button>
       </div>
     </div>
@@ -1053,6 +1216,88 @@ async function removeSong(songInstanceId: string) {
     gap: 0.75rem;
     padding: 1.5rem;
     border-top: 1px solid #e0e0e0;
+  }
+
+  /* Edit Song Modal */
+  .edit-song-modal {
+    max-width: 500px;
+  }
+
+  .song-info-display {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .song-title-large {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 0.25rem;
+  }
+
+  .song-artist-display {
+    font-size: 0.9375rem;
+    color: #666;
+  }
+
+  /* Chart Modal */
+  .chart-modal {
+    max-width: 600px;
+  }
+
+  .chart-info {
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-artist {
+    font-size: 1rem;
+    color: #666;
+    margin: 0 0 1rem 0;
+  }
+
+  .chart-meta {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .chart-detail {
+    font-size: 0.9375rem;
+    color: #1a1a1a;
+  }
+
+  .chart-notes {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    color: #666;
+  }
+
+  .chart-placeholder {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 2px dashed #e0e0e0;
+  }
+
+  .placeholder-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .chart-placeholder p {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+  }
+
+  .placeholder-hint {
+    margin-top: 0.5rem !important;
+    font-size: 0.875rem !important;
+    color: #999 !important;
   }
 
   @media (max-width: 1024px) {
