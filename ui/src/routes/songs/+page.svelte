@@ -227,12 +227,16 @@
 </div>
 
 <!-- Modal -->
+<svelte:window on:keydown={(e) => {
+  if (e.key === 'Escape' && showModal) closeModal();
+}} />
+
 {#if showModal}
-  <div class="modal-overlay" on:keydown={(e) => e.key === 'Escape' && closeAddSongModal()}>
+  <div class="modal-overlay" on:click={closeModal}>
     <div class="modal" on:click|stopPropagation>
       <div class="modal-header">
         <h2>{editingSong ? 'Edit Song' : 'Add New Song'}</h2>
-        <button class="close-btn" on:keydown={(e) => e.key === 'Escape' && closeAddSongModal()}>×</button>
+        <button class="close-btn" on:click={closeModal}>×</button>
       </div>
 
       <form on:submit|preventDefault={saveSong}>
