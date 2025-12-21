@@ -108,30 +108,36 @@ app.get("/services", async (req, res) => {
     const result = await pool.query(
   `
   SELECT
-    sg.id as group_id,
-    TO_CHAR(sg.group_date, 'YYYY-MM-DD') as group_date,
-    sg.name as group_name,
-    c.name as context_name,
-    si.id as instance_id,
-    si.service_time,
-    si.campus_id,
-    camp.name as campus_name,
-    json_build_object(
-      'total_positions', 0,
-      'filled_positions', 0,
-      'confirmed', 0,
-      'pending', 0,
-      'unfilled', 0,
-      'by_ministry', '[]'::json
-    ) as assignments
+  sg.id as group_id,
+  TO_CHAR(sg.group_date, 'YYYY-MM-DD') as group_date,
+  sg.name as group_name,
+  c.name as context_name,
+  si.id as instance_id,
+  si.service_time,
+  si.campus_id,
+  camp.name as campus_name,
+  json_build_object(
+    'total_positions', 0,
+    'filled_positions', 0,
+    'confirmed', 0,
+    'pending', 0,
+    'unfilled', 0,
+    'by_ministry', '[]'::json
+  ) as assignments
   FROM service_groups sg
-  LEFT JOIN contexts c ON sg.context_id = c.id
-  JOIN service_instances si ON si.service_group_id = sg.id
-  LEFT JOIN campuses camp ON si.campus_id = camp.id
+  LEFT JOIN contexts c
+    ON c.id = sg.context_id
+   AND c.church_id = sg.church_id
+  JOIN service_instances si
+    ON si.service_group_id = sg.id
+   AND si.church_id = sg.church_id
+  LEFT JOIN campuses camp
+    ON camp.id = si.campus_id
+   AND camp.church_id = sg.church_id
   WHERE sg.church_id = $1
     AND ($2::date IS NULL OR sg.group_date >= $2::date)
     AND ($3::date IS NULL OR sg.group_date <= $3::date)
-  ORDER BY sg.group_date ASC, si.service_time ASC
+  ORDER BY sg.group_date ASC, si.service_time ASC;  
   `,
   [churchId, start_date || null, end_date || null]
 );
@@ -202,9 +208,17 @@ app.get("/service-instances/:id", async (req, res) => {
       `
       SELECT si.*
       FROM service_instances si
-      JOIN service_groups sg ON sg.id = si.service_group_id
+      JOIN service_groups sg
+        ON sg.id = si.service_group_id
+       AND sg.church_id = si.church_id
+      LEFT JOIN contexts c
+        ON c.id = sg.context_id
+       AND c.church_id = sg.church_id
+      LEFT JOIN campuses camp
+        ON camp.id = si.campus_id
+       AND camp.church_id = sg.church_id
       WHERE si.id = $1
-        AND sg.church_id = $2
+        AND sg.church_id = $2;
       `,
       [id, churchId]
     );

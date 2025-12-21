@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { apiJson, apiFetch } from '$lib/api';
+  import { getActiveChurchId } from '$lib/tenant';
 
   interface Song {
     id: string;
@@ -26,9 +28,6 @@
   let formCcli = '';
   let formNotes = '';
 
-  const CHURCH_ID = 'a8c2c7ab-836a-4ef1-a373-562e20babb76';
-  const API_BASE = 'http://localhost:3000';
-
   onMount(() => {
     loadSongs();
   });
@@ -37,12 +36,10 @@
     try {
       loading = true;
       const url = searchQuery
-        ? `${API_BASE}/songs&search=${encodeURIComponent(searchQuery)}`
-        : `${API_BASE}/songs`;
+        ? `/songs?search=${encodeURIComponent(searchQuery)}`
+        : '/songs';
 
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText}`);
-      songs = await res.json();
+      songs = await apiJson<Song[]>(url);
       error = '';
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load songs';
@@ -85,8 +82,9 @@
         return;
       }
 
+      const churchId = getActiveChurchId();
       const songData = {
-        church_id: CHURCH_ID,
+        church_id: churchId,
         title: formTitle,
         artist: formArtist || null,
         key: formKey || null,
@@ -96,18 +94,15 @@
       };
 
       const url = editingSong
-        ? `${API_BASE}/songs/${editingSong.id}`
-        : `${API_BASE}/songs`;
+        ? `/songs/${editingSong.id}`
+        : '/songs';
 
       const method = editingSong ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      await apiFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(songData)
       });
-
-      if (!res.ok) throw new Error(`Failed to save: ${res.statusText}`);
 
       closeModal();
       await loadSongs();
@@ -122,11 +117,9 @@
     }
 
     try {
-      const res = await fetch(`${API_BASE}/songs/${song.id}`, {
+      await apiFetch(`/songs/${song.id}`, {
         method: 'DELETE'
       });
-
-      if (!res.ok) throw new Error(`Failed to delete: ${res.statusText}`);
 
       await loadSongs();
     } catch (e) {
@@ -235,11 +228,11 @@
 
 <!-- Modal -->
 {#if showModal}
-  <div class="modal-overlay" on:click={closeModal}>
+  <div class="modal-overlay" on:keydown={(e) => e.key === 'Escape' && closeAddSongModal()}>
     <div class="modal" on:click|stopPropagation>
       <div class="modal-header">
         <h2>{editingSong ? 'Edit Song' : 'Add New Song'}</h2>
-        <button class="close-btn" on:click={closeModal}>×</button>
+        <button class="close-btn" on:keydown={(e) => e.key === 'Escape' && closeAddSongModal()}>×</button>
       </div>
 
       <form on:submit|preventDefault={saveSong}>
