@@ -36,8 +36,8 @@
     try {
       loading = true;
       const url = searchQuery
-        ? `/songs?search=${encodeURIComponent(searchQuery)}`
-        : '/songs';
+        ? `/api/songs?search=${encodeURIComponent(searchQuery)}`
+        : '/api/songs';
 
       songs = await apiJson<Song[]>(url);
       error = '';
@@ -84,7 +84,6 @@
 
       const churchId = getActiveChurchId();
       const songData = {
-        church_id: churchId,
         title: formTitle,
         artist: formArtist || null,
         key: formKey || null,
@@ -94,8 +93,8 @@
       };
 
       const url = editingSong
-        ? `/songs/${editingSong.id}`
-        : '/songs';
+        ? `/api/songs/${editingSong.id}`
+        : '/api/songs';
 
       const method = editingSong ? 'PUT' : 'POST';
 
@@ -117,7 +116,7 @@
     }
 
     try {
-      await apiFetch(`/songs/${song.id}`, {
+      await apiFetch(`/api/songs/${song.id}`, {
         method: 'DELETE'
       });
 
