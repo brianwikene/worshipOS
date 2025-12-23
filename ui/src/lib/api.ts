@@ -1,17 +1,11 @@
 // ui/src/lib/api.ts
-
 import { getActiveChurchId } from '$lib/tenant';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
-export async function apiFetch(
-  path: string,
-  init: RequestInit = {}
-): Promise<Response> {
+export async function apiFetch( path: string, init: RequestInit = {}): Promise<Response> {
   const churchId = getActiveChurchId();
-  if (!churchId) {
-    throw new Error('No active church selected (X-Church-Id missing).');
-  }
+  if (!churchId) { throw new Error('No active church selected (X-Church-Id missing).'); }
 
   const headers = new Headers(init.headers ?? {});
   headers.set('X-Church-Id', churchId);
@@ -47,11 +41,3 @@ export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<
 
   return res.json() as Promise<T>;
 }
-
-//export async function apiJson<T>(
-//  path: string,
-//  init: RequestInit = {}
-//): Promise<T> {
-//  const res = await apiFetch(path, init);
-//  return res.json() as Promise<T>;
-//}

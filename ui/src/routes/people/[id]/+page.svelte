@@ -1,7 +1,9 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import { apiJson } from '$lib/api';
+  import { apiJson, apiFetch } from '$lib/api';
+  import PersonModal from '$lib/components/PersonModal.svelte';
 
   interface ContactMethod {
     type: string;
@@ -20,7 +22,11 @@
 
   interface Person {
     id: string;
+    first_name: string | null;
+    last_name: string | null;
+    goes_by: string | null;
     display_name: string;
+    is_active: boolean;
     contact_methods: ContactMethod[];
     addresses: Address[];
   }
@@ -29,17 +35,70 @@
   let loading = true;
   let error = '';
 
-  onMount(async () => {
+  // Modal state
+  let modalOpen = false;
+  let modalComponent: PersonModal;
+
+  onMount(() => {
+    loadPerson();
+  });
+
+  async function loadPerson() {
     const personId = $page.params.id;
+    loading = true;
+    error = '';
 
     try {
-      person = await apiJson<Person>(`/people/${personId}`);
+      person = await apiJson<Person>(`/api/people/${personId}`);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load person details';
     } finally {
       loading = false;
     }
-  });
+  }
+
+  function openEditModal() {
+    modalOpen = true;
+  }
+
+  function closeModal() {
+    modalOpen = false;
+  }
+
+  async function handleSave(e: CustomEvent<{ first_name: string; last_name: string; goes_by: string }>) {
+    if (!person) return;
+    
+    const { first_name, last_name, goes_by } = e.detail;
+    
+    try {
+      modalComponent.setSaving(true);
+      
+      await apiFetch(`/api/people/${person.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ first_name, last_name, goes_by })
+      });
+      
+      closeModal();
+      await loadPerson(); // Reload to show updated data
+    } catch (err) {
+      modalComponent.setError(err instanceof Error ? err.message : 'Failed to save');
+    }
+  }
+
+  async function handleArchive() {
+    if (!person) return;
+    
+    if (!confirm(`Archive "${person.display_name}"? They can be restored later.`)) {
+      return;
+    }
+
+    try {
+      await apiFetch(`/api/people/${person.id}`, { method: 'DELETE' });
+      goto('/people');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to archive person');
+    }
+  }
 
   function formatType(type: string) {
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -70,7 +129,7 @@
   {:else if error}
     <div class="error">
       <p>Error: {error}</p>
-      <button on:click={() => window.location.reload()}>Retry</button>
+      <button on:click={loadPerson}>Retry</button>
     </div>
   {:else if person}
     <div class="profile-card">
@@ -79,9 +138,37 @@
           {person.display_name.charAt(0).toUpperCase()}
         </div>
         <h1>{person.display_name}</h1>
+        {#if person.goes_by && person.first_name && person.goes_by !== person.first_name}
+          <p class="legal-name">Legal name: {person.first_name} {person.last_name}</p>
+        {/if}
+        
+        <div class="header-actions">
+          <button class="btn-edit" on:click={openEditModal}>
+            ✏️ Edit
+          </button>
+          <button class="btn-archive" on:click={handleArchive}>
+            🗑️ Archive
+          </button>
+        </div>
       </div>
 
       <div class="info-section">
+        <h2>Name Details</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">First Name</span>
+            <span class="value">{person.first_name || '—'}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Last Name</span>
+            <span class="value">{person.last_name || '—'}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Goes By</span>
+            <span class="value">{person.goes_by || '—'}</span>
+          </div>
+        </div>
+
         <h2>Contact Information</h2>
 
         {#if person.contact_methods.length === 0}
@@ -127,6 +214,14 @@
     </div>
   {/if}
 </div>
+
+<PersonModal
+  bind:this={modalComponent}
+  bind:open={modalOpen}
+  person={person}
+  on:close={closeModal}
+  on:save={handleSave}
+/>
 
 <style>
   .container {
@@ -222,6 +317,52 @@
     color: #1a1a1a;
   }
 
+  .legal-name {
+    margin: 8px 0 0 0;
+    font-size: 14px;
+    color: #666;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+  }
+
+  .btn-edit, .btn-archive {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-edit {
+    background: #0066cc;
+    color: white;
+    border: 1px solid #0066cc;
+  }
+
+  .btn-edit:hover {
+    background: #0055aa;
+  }
+
+  .btn-archive {
+    background: white;
+    color: #666;
+    border: 1px solid #ddd;
+  }
+
+  .btn-archive:hover {
+    background: #fee;
+    border-color: #fcc;
+    color: #c00;
+  }
+
   .info-section {
     padding: 32px;
   }
@@ -237,6 +378,19 @@
 
   h2:first-child {
     margin-top: 0;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    padding: 12px 0;
+  }
+
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .info-row {
@@ -320,6 +474,20 @@
       width: 64px;
       height: 64px;
       font-size: 28px;
+    }
+
+    .info-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .header-actions {
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .btn-edit, .btn-archive {
+      width: 100%;
+      justify-content: center;
     }
   }
 </style>
