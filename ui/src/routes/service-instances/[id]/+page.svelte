@@ -75,9 +75,9 @@ async function loadServiceDetail(serviceId: string) {
   try {
     loading = true;
 
-    service = await apiJson<ServiceDetail>(`/service-instances/${serviceId}`);
-    assignments = await apiJson<Assignment[]>(`/service-instances/${serviceId}/roster`);
-    songs = await apiJson<Song[]>(`/service-instances/${serviceId}/songs`);
+    service = await apiJson<ServiceDetail>(`/api/service-instances/${serviceId}`);
+    assignments = await apiJson<Assignment[]>(`/api/service-instances/${serviceId}/roster`);
+    songs = await apiJson<Song[]>(`/api/service-instances/${serviceId}/songs`);
 
     error = '';
   } catch (e) {
@@ -89,7 +89,7 @@ async function loadServiceDetail(serviceId: string) {
 
 async function loadAvailableSongs() {
   try {
-    availableSongs = await apiJson<AvailableSong[]>('/songs');
+    availableSongs = await apiJson<AvailableSong[]>('/api/songs');
   } catch (e) {
     console.error('Failed to load available songs:', e);
   }
@@ -107,7 +107,7 @@ async function addSongToService() {
     const nextOrder =
       songs.length > 0 ? Math.max(...songs.map((s) => s.display_order)) + 1 : 1;
 
-    await apiFetch(`/service-instances/${service.id}/songs`, {
+    await apiFetch(`/api/service-instances/${service.id}/songs`, {
       method: 'POST',
       body: JSON.stringify({
         song_id: selectedSongId,
@@ -130,7 +130,7 @@ async function removeSong(songInstanceId: string) {
   if (!confirm('Remove this song from the service?')) return;
 
   try {
-    await apiFetch(`/service-instance-songs/${songInstanceId}`, { method: 'DELETE' });
+    await apiFetch(`/api/service-instance-songs/${songInstanceId}`, { method: 'DELETE' });
 
     if (service) await loadServiceDetail(service.id);
   } catch (e) {
@@ -185,7 +185,7 @@ async function updateSongInService() {
 
   try {
     savingEdit = true;
-    await apiFetch(`/service-instance-songs/${editingSong.id}`, {
+    await apiFetch(`/api/service-instance-songs/${editingSong.id}`, {
       method: 'PUT',
       body: JSON.stringify({
         key: editSongKey || null,

@@ -123,9 +123,9 @@ async function loadServices() {
 
   try {
     // If your backend supports view filtering:
-    // services = await apiJson<ServiceGroup[]>(`/services?view=${view}`);
+    // services = await apiJson<ServiceGroup[]>(`/api/services?view=${view}`);
     // Otherwise keep it simple:
-    services = await apiJson<ServiceGroup[]>('/services');
+    services = await apiJson<ServiceGroup[]>('/api/services');
   } catch (e: any) {
     error = e?.message ?? 'Failed to load services';
     services = [];

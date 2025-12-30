@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm:*)"
+    ],
+    "allowedTools": [
+      "Read",
+      "Write",
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(python *)",
+      "Bash(node *)"
+    ]
+  }
+}
