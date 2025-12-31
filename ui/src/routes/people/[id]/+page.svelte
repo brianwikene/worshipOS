@@ -22,6 +22,9 @@
     postal_code: string | null;
     country: string | null;
     label: string | null;
+    is_family_address: boolean;
+    family_id?: string;
+    family_name?: string;
   }
 
   interface Person {
@@ -33,6 +36,7 @@
     is_active: boolean;
     contact_methods: ContactMethod[];
     addresses: Address[];
+    family_addresses: Address[];
   }
 
   interface RoleCapability {
@@ -423,20 +427,41 @@
 
         <div class="section-header-row">
           <h2>Addresses</h2>
-          <button class="btn-add-role" on:click={openAddAddressModal}>
-            + Add Address
+          <button class="btn-add-role" on:click={openAddAddressModal} title="Add a personal address (e.g., college, work)">
+            + Add Personal Address
           </button>
         </div>
-        {#if person.addresses.length === 0}
+
+        {#if person.family_addresses.length === 0 && person.addresses.length === 0}
           <div class="empty-row">
             No addresses available.
-            <button class="btn-link" on:click={openAddAddressModal}>Add one now</button>
+            <button class="btn-link" on:click={openAddAddressModal}>Add a personal address</button>
           </div>
         {:else}
-          {#each person.addresses as addr}
-            <div class="info-row address-row">
+          <!-- Family Addresses (inherited) -->
+          {#each person.family_addresses as addr}
+            <div class="info-row address-row family-address">
               <div class="label-group">
-                <span class="label">{addr.label || 'Address'}</span>
+                <span class="label">
+                  {addr.label || 'Home'}
+                  <span class="family-badge">via {addr.family_name}</span>
+                </span>
+                <span class="value">{formatAddress(addr)}</span>
+              </div>
+              <div class="row-actions">
+                <a href="/families/{addr.family_id}" class="btn-icon" title="Edit on family page">↗️</a>
+              </div>
+            </div>
+          {/each}
+
+          <!-- Personal Addresses -->
+          {#each person.addresses as addr}
+            <div class="info-row address-row personal-address">
+              <div class="label-group">
+                <span class="label">
+                  {addr.label || 'Address'}
+                  <span class="personal-badge">Personal</span>
+                </span>
                 <span class="value">{formatAddress(addr)}</span>
               </div>
               <div class="row-actions">
@@ -1366,6 +1391,40 @@
   .btn-icon.delete:hover {
     background: #fef2f2;
     border-color: #fecaca;
+  }
+
+  .family-address {
+    background: #f0fdf4;
+    border-left: 3px solid #22c55e;
+    padding-left: 0.75rem;
+    margin-left: -0.75rem;
+  }
+
+  .family-badge {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    padding: 0.125rem 0.375rem;
+    background: #dcfce7;
+    color: #15803d;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+  }
+
+  .personal-badge {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    padding: 0.125rem 0.375rem;
+    background: #e0e7ff;
+    color: #4338ca;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+  }
+
+  a.btn-icon {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .btn-link {

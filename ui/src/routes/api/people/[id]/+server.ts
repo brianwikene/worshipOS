@@ -31,11 +31,43 @@ export const GET: RequestHandler = async ({ locals, params }) => {
           '[]'
         ) as contact_methods,
         COALESCE(
-          (SELECT json_agg(a ORDER BY a.created_at DESC)
+          (SELECT json_agg(json_build_object(
+             'id', a.id,
+             'line1', a.line1,
+             'line2', a.line2,
+             'street', a.street,
+             'city', a.city,
+             'state', a.state,
+             'postal_code', a.postal_code,
+             'country', a.country,
+             'label', a.label,
+             'is_family_address', false
+           ) ORDER BY a.created_at DESC)
            FROM addresses a
            WHERE a.person_id = p.id),
           '[]'
-        ) as addresses
+        ) as addresses,
+        COALESCE(
+          (SELECT json_agg(json_build_object(
+             'id', a.id,
+             'line1', a.line1,
+             'line2', a.line2,
+             'street', a.street,
+             'city', a.city,
+             'state', a.state,
+             'postal_code', a.postal_code,
+             'country', a.country,
+             'label', COALESCE(a.label, f.name || ' Family'),
+             'family_id', f.id,
+             'family_name', f.name,
+             'is_family_address', true
+           ))
+           FROM family_members fm
+           JOIN families f ON f.id = fm.family_id AND f.is_active = true
+           JOIN addresses a ON a.id = f.primary_address_id
+           WHERE fm.person_id = p.id AND fm.is_active = true),
+          '[]'
+        ) as family_addresses
       FROM people p
       WHERE p.id = $1
         AND p.church_id = $2
