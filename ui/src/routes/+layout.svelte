@@ -42,6 +42,9 @@
         <a href="/songs" class:active={$page.url.pathname.startsWith('/songs')}>
           Songs
         </a>
+        <a href="/admin" class:active={$page.url.pathname.startsWith('/admin')}>
+          Admin
+        </a>
       </div>
       
       <div class="tenant-switcher">

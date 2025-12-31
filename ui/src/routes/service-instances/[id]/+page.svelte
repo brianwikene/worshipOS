@@ -45,6 +45,14 @@
     bpm: number | null;
   }
 
+  interface Person {
+    id: string;
+    first_name: string;
+    last_name: string;
+    proficiency?: number;
+    is_primary?: boolean;
+  }
+
   let service: ServiceDetail | null = null;
   let assignments: Assignment[] = [];
   let songs: Song[] = [];
@@ -66,6 +74,7 @@
 onMount(async () => {
     const { params } = get(page);
     const serviceId = params.id;
+    if (!serviceId) return;
 
     await loadServiceDetail(serviceId);
     await loadAvailableSongs();
@@ -216,6 +225,105 @@ function closeChartModal() {
   showChartModal = false;
   chartSong = null;
 }
+
+// Assign person modal state
+let showAssignModal = false;
+let assigningToAssignment: Assignment | null = null;
+let availablePeople: Person[] = [];
+let capablePeople: Person[] = [];
+let selectedPersonId = '';
+let assigningPerson = false;
+let peopleSearchQuery = '';
+
+async function openAssignModal(assignment: Assignment) {
+  assigningToAssignment = assignment;
+  selectedPersonId = '';
+  peopleSearchQuery = '';
+  showAssignModal = true;
+
+  // Load people who have this role as a capability
+  try {
+    const [capable, all] = await Promise.all([
+      apiJson<Person[]>(`/api/roles/${assignment.role_id}/capable-people`),
+      apiJson<Person[]>('/api/people')
+    ]);
+    capablePeople = capable;
+    availablePeople = all;
+  } catch (e) {
+    console.error('Failed to load people:', e);
+    // Fall back to just loading all people
+    try {
+      availablePeople = await apiJson<Person[]>('/api/people');
+      capablePeople = [];
+    } catch (e2) {
+      console.error('Failed to load people:', e2);
+    }
+  }
+}
+
+function closeAssignModal() {
+  showAssignModal = false;
+  assigningToAssignment = null;
+  selectedPersonId = '';
+  peopleSearchQuery = '';
+  capablePeople = [];
+  availablePeople = [];
+}
+
+async function assignPerson() {
+  if (!selectedPersonId || !assigningToAssignment || !service) return;
+
+  try {
+    assigningPerson = true;
+    await apiFetch(`/api/service-instances/${service.id}/assignments/${assigningToAssignment.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        person_id: selectedPersonId,
+        status: 'pending'
+      })
+    });
+
+    closeAssignModal();
+    await loadServiceDetail(service.id);
+  } catch (e: any) {
+    alert(e?.message ?? 'Failed to assign person');
+  } finally {
+    assigningPerson = false;
+  }
+}
+
+async function removeAssignment(assignment: Assignment) {
+  if (!confirm(`Remove ${assignment.person_name} from ${assignment.role_name}?`)) return;
+  if (!service) return;
+
+  try {
+    await apiFetch(`/api/service-instances/${service.id}/assignments/${assignment.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        person_id: null,
+        status: 'unfilled'
+      })
+    });
+
+    await loadServiceDetail(service.id);
+  } catch (e: any) {
+    alert(e?.message ?? 'Failed to remove assignment');
+  }
+}
+
+$: filteredCapablePeople = capablePeople.filter(p => {
+  if (!peopleSearchQuery) return true;
+  const query = peopleSearchQuery.toLowerCase();
+  return `${p.first_name} ${p.last_name}`.toLowerCase().includes(query);
+});
+
+$: filteredOtherPeople = availablePeople.filter(p => {
+  // Exclude people already in capable list
+  if (capablePeople.some(cp => cp.id === p.id)) return false;
+  if (!peopleSearchQuery) return true;
+  const query = peopleSearchQuery.toLowerCase();
+  return `${p.first_name} ${p.last_name}`.toLowerCase().includes(query);
+});
 
   function formatDate(dateStr: string): string {
     if (!dateStr) return '';
@@ -420,10 +528,10 @@ function closeChartModal() {
 
                       <div class="assignment-actions">
                         {#if assignment.person_id}
-                          <button class="icon-btn" title="Change person">↻</button>
-                          <button class="icon-btn delete" title="Remove">×</button>
+                          <button class="icon-btn" title="Change person" on:click={() => openAssignModal(assignment)}>↻</button>
+                          <button class="icon-btn delete" title="Remove" on:click={() => removeAssignment(assignment)}>×</button>
                         {:else}
-                          <button class="icon-btn primary" title="Assign person">+</button>
+                          <button class="icon-btn primary" title="Assign person" on:click={() => openAssignModal(assignment)}>+</button>
                         {/if}
                       </div>
                     </div>
@@ -593,6 +701,99 @@ function closeChartModal() {
       <div class="modal-actions">
         <button class="secondary-btn" on:click={closeChartModal}>
           Close
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Assign Person Modal -->
+{#if showAssignModal && assigningToAssignment}
+<div class="modal-overlay" role="button" tabindex="0" on:click={closeAssignModal} on:keydown={(e) => e.key === 'Escape' && closeAssignModal()}>
+    <div class="modal assign-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAssignModal()}>
+      <div class="modal-header">
+        <h2>Assign {assigningToAssignment.role_name}</h2>
+        <button class="close-btn" on:click={closeAssignModal}>×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="search-box">
+          <input type="text" placeholder="Search people..." bind:value={peopleSearchQuery} />
+        </div>
+
+        <div class="people-list">
+          {#if filteredCapablePeople.length > 0}
+            <div class="people-section">
+              <h3 class="people-section-title">Qualified for this role</h3>
+              {#each filteredCapablePeople as person}
+                <div
+                  class="person-select-item"
+                  class:selected={selectedPersonId === person.id}
+                  on:click={() => selectedPersonId = person.id}
+                  role="button"
+                  tabindex="0"
+                  on:keydown={(e) => e.key === 'Enter' && (selectedPersonId = person.id)}
+                >
+                  <div class="person-select-info">
+                    <div class="person-select-name">{person.first_name} {person.last_name}</div>
+                    <div class="person-select-meta">
+                      {#if person.proficiency}
+                        <span class="proficiency-badge">
+                          {'★'.repeat(person.proficiency)}{'☆'.repeat(5 - person.proficiency)}
+                        </span>
+                      {/if}
+                      {#if person.is_primary}
+                        <span class="primary-role-badge">Primary</span>
+                      {/if}
+                    </div>
+                  </div>
+                  {#if selectedPersonId === person.id}
+                    <span class="checkmark">✓</span>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          {/if}
+
+          {#if filteredOtherPeople.length > 0}
+            <div class="people-section">
+              <h3 class="people-section-title">
+                {filteredCapablePeople.length > 0 ? 'Other people' : 'All people'}
+              </h3>
+              {#each filteredOtherPeople as person}
+                <div
+                  class="person-select-item"
+                  class:selected={selectedPersonId === person.id}
+                  on:click={() => selectedPersonId = person.id}
+                  role="button"
+                  tabindex="0"
+                  on:keydown={(e) => e.key === 'Enter' && (selectedPersonId = person.id)}
+                >
+                  <div class="person-select-info">
+                    <div class="person-select-name">{person.first_name} {person.last_name}</div>
+                  </div>
+                  {#if selectedPersonId === person.id}
+                    <span class="checkmark">✓</span>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          {/if}
+
+          {#if filteredCapablePeople.length === 0 && filteredOtherPeople.length === 0}
+            <div class="empty-message">
+              {peopleSearchQuery ? 'No people found' : 'No people available'}
+            </div>
+          {/if}
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="secondary-btn" on:click={closeAssignModal}>
+          Cancel
+        </button>
+        <button class="primary-btn" on:click={assignPerson} disabled={!selectedPersonId || assigningPerson}>
+          {assigningPerson ? 'Assigning...' : 'Assign'}
         </button>
       </div>
     </div>
@@ -1298,6 +1499,84 @@ function closeChartModal() {
     margin-top: 0.5rem !important;
     font-size: 0.875rem !important;
     color: #999 !important;
+  }
+
+  /* Assign Person Modal */
+  .assign-modal {
+    max-width: 500px;
+  }
+
+  .people-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+  }
+
+  .people-section {
+    padding: 0.5rem 0;
+  }
+
+  .people-section:not(:last-child) {
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .people-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #666;
+    padding: 0.5rem 1rem;
+    margin: 0;
+    background: #f8f9fa;
+  }
+
+  .person-select-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .person-select-item:hover {
+    background: #f8f9fa;
+  }
+
+  .person-select-item.selected {
+    background: #e3f2fd;
+  }
+
+  .person-select-info {
+    flex: 1;
+  }
+
+  .person-select-name {
+    font-weight: 500;
+    color: #1a1a1a;
+  }
+
+  .person-select-meta {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .proficiency-badge {
+    font-size: 0.75rem;
+    color: #f59e0b;
+  }
+
+  .primary-role-badge {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0.125rem 0.375rem;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 4px;
   }
 
   @media (max-width: 1024px) {

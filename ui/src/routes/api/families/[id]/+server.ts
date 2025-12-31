@@ -21,12 +21,17 @@ export const GET: RequestHandler = async ({ locals, params }) => {
         f.name,
         f.notes,
         f.is_active,
+        f.primary_address_id as address_id,
         f.created_at,
         f.updated_at,
+        a.line1 as address_line1,
+        a.line2 as address_line2,
         a.street,
         a.city,
         a.state,
-        a.postal_code
+        a.postal_code,
+        a.country,
+        a.label as address_label
       FROM families f
       LEFT JOIN addresses a ON a.id = f.primary_address_id
       WHERE f.id = $1

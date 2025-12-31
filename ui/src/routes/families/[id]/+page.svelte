@@ -26,10 +26,15 @@
     name: string;
     notes: string | null;
     is_active: boolean;
+    address_id: string | null;
+    address_line1: string | null;
+    address_line2: string | null;
     street: string | null;
     city: string | null;
     state: string | null;
     postal_code: string | null;
+    country: string | null;
+    address_label: string | null;
     members: FamilyMember[];
   }
 
@@ -54,6 +59,16 @@
   let isPrimaryContact = false;
   let isTemporary = false;
   let addingMember = false;
+
+  // Address modal state
+  let showAddressModal = false;
+  let savingAddress = false;
+  let addressLine1 = '';
+  let addressLine2 = '';
+  let addressCity = '';
+  let addressState = '';
+  let addressPostalCode = '';
+  let addressLabel = '';
 
   const relationshipOptions = [
     { value: 'parent', label: 'Parent' },
@@ -210,13 +225,69 @@
   }
 
   function formatAddress(family: Family): string | null {
+    const streetLine = family.address_line1 || family.street;
     const parts = [
-      family.street,
+      streetLine,
+      family.address_line2,
       family.city ? `${family.city},` : null,
       family.state,
       family.postal_code
     ].filter(Boolean);
     return parts.length > 0 ? parts.join(' ') : null;
+  }
+
+  function openAddressModal() {
+    if (family) {
+      addressLine1 = family.address_line1 || family.street || '';
+      addressLine2 = family.address_line2 || '';
+      addressCity = family.city || '';
+      addressState = family.state || '';
+      addressPostalCode = family.postal_code || '';
+      addressLabel = family.address_label || '';
+    }
+    showAddressModal = true;
+  }
+
+  function closeAddressModal() {
+    showAddressModal = false;
+  }
+
+  async function saveAddress() {
+    if (!family) return;
+    savingAddress = true;
+
+    try {
+      await apiFetch(`/api/families/${family.id}/address`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          line1: addressLine1 || null,
+          line2: addressLine2 || null,
+          city: addressCity || null,
+          state: addressState || null,
+          postal_code: addressPostalCode || null,
+          label: addressLabel || null
+        })
+      });
+
+      closeAddressModal();
+      await loadFamily();
+    } catch (e: any) {
+      alert(e?.message ?? 'Failed to save address');
+    } finally {
+      savingAddress = false;
+    }
+  }
+
+  async function deleteAddress() {
+    if (!family || !family.address_id) return;
+    if (!confirm('Delete this address?')) return;
+
+    try {
+      await apiFetch(`/api/families/${family.id}/address`, { method: 'DELETE' });
+      await loadFamily();
+    } catch (e: any) {
+      alert(e?.message ?? 'Failed to delete address');
+    }
   }
 
   // Filter out people already in the family
@@ -245,9 +316,19 @@
         {#if family.notes}
           <p class="notes">{family.notes}</p>
         {/if}
-        {#if formatAddress(family)}
-          <p class="address">📍 {formatAddress(family)}</p>
-        {/if}
+        <div class="address-section">
+          {#if formatAddress(family)}
+            <p class="address">
+              📍 {formatAddress(family)}
+              <button class="btn-address-action" on:click={openAddressModal} title="Edit address">✏️</button>
+              <button class="btn-address-action delete" on:click={deleteAddress} title="Delete address">🗑️</button>
+            </p>
+          {:else}
+            <button class="btn-add-address" on:click={openAddressModal}>
+              + Add Address
+            </button>
+          {/if}
+        </div>
       </div>
       <div class="header-actions">
         <button class="btn-edit" on:click={openEditModal}>
@@ -387,6 +468,94 @@
   on:close={closeEditModal}
   on:save={handleEditSave}
 />
+
+<!-- Address Modal -->
+{#if showAddressModal}
+<div class="modal-overlay" on:click={closeAddressModal} on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+  <div class="modal address-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+    <div class="modal-header">
+      <h2>{family?.address_id ? 'Edit Address' : 'Add Address'}</h2>
+      <button class="close-btn" on:click={closeAddressModal}>×</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="address-label">Label (optional)</label>
+        <input
+          id="address-label"
+          type="text"
+          bind:value={addressLabel}
+          placeholder="e.g., Home, Mailing"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="address-line1">Street Address</label>
+        <input
+          id="address-line1"
+          type="text"
+          bind:value={addressLine1}
+          placeholder="123 Main St"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="address-line2">Apt/Suite/Unit (optional)</label>
+        <input
+          id="address-line2"
+          type="text"
+          bind:value={addressLine2}
+          placeholder="Apt 4B"
+        />
+      </div>
+
+      <div class="form-row-modal">
+        <div class="form-group flex-2">
+          <label for="address-city">City</label>
+          <input
+            id="address-city"
+            type="text"
+            bind:value={addressCity}
+            placeholder="City"
+          />
+        </div>
+
+        <div class="form-group flex-1">
+          <label for="address-state">State</label>
+          <input
+            id="address-state"
+            type="text"
+            bind:value={addressState}
+            placeholder="TX"
+            maxlength="2"
+          />
+        </div>
+
+        <div class="form-group flex-1">
+          <label for="address-zip">ZIP</label>
+          <input
+            id="address-zip"
+            type="text"
+            bind:value={addressPostalCode}
+            placeholder="12345"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" on:click={closeAddressModal}>Cancel</button>
+      <button
+        class="btn-save"
+        on:click={saveAddress}
+        disabled={savingAddress}
+      >
+        {savingAddress ? 'Saving...' : 'Save Address'}
+      </button>
+    </div>
+  </div>
+</div>
+{/if}
 
 <style>
   .container {
@@ -760,5 +929,198 @@
       gap: 0.75rem;
       align-items: stretch;
     }
+
+    .form-row-modal {
+      flex-direction: column;
+    }
+  }
+
+  /* Address Section */
+  .address-section {
+    margin-top: 0.5rem;
+  }
+
+  .address {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #888;
+    font-size: 0.9rem;
+    margin: 0;
+    flex-wrap: wrap;
+  }
+
+  .btn-address-action {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+
+  .btn-address-action:hover {
+    opacity: 1;
+  }
+
+  .btn-address-action.delete:hover {
+    color: #c00;
+  }
+
+  .btn-add-address {
+    padding: 0.375rem 0.75rem;
+    background: #f0f0f0;
+    border: 1px dashed #ccc;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-add-address:hover {
+    background: #e3f2fd;
+    border-color: #0066cc;
+    color: #0066cc;
+  }
+
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+
+  .modal {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .address-modal {
+    max-width: 480px;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  .modal-header h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .close-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: white;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+  }
+
+  .close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+
+  .form-row-modal {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .flex-1 {
+    flex: 1;
+  }
+
+  .flex-2 {
+    flex: 2;
+  }
+
+  .form-group input {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    box-sizing: border-box;
+  }
+
+  .form-group input:focus {
+    outline: none;
+    border-color: #0066cc;
+  }
+
+  .btn-cancel {
+    padding: 0.625rem 1.25rem;
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel:hover {
+    background: #f3f4f6;
+  }
+
+  .btn-save {
+    padding: 0.625rem 1.25rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-save:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  .btn-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>
