@@ -21,19 +21,27 @@ export const GET: RequestHandler = async ({ locals, params }) => {
         f.name,
         f.notes,
         f.is_active,
-        f.primary_address_id as address_id,
+        f.primary_address_id,
         f.created_at,
         f.updated_at,
-        a.line1 as address_line1,
-        a.line2 as address_line2,
-        a.street,
-        a.city,
-        a.state,
-        a.postal_code,
-        a.country,
-        a.label as address_label
+        COALESCE(
+          (SELECT json_agg(json_build_object(
+             'id', a.id,
+             'line1', a.line1,
+             'line2', a.line2,
+             'street', a.street,
+             'city', a.city,
+             'state', a.state,
+             'postal_code', a.postal_code,
+             'country', a.country,
+             'label', a.label,
+             'is_primary', a.id = f.primary_address_id
+           ) ORDER BY (a.id = f.primary_address_id) DESC, a.label NULLS LAST, a.created_at)
+           FROM addresses a
+           WHERE a.family_id = f.id),
+          '[]'
+        ) as addresses
       FROM families f
-      LEFT JOIN addresses a ON a.id = f.primary_address_id
       WHERE f.id = $1
         AND f.church_id = $2
       `,

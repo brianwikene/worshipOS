@@ -60,11 +60,12 @@ export const GET: RequestHandler = async ({ locals, params }) => {
              'label', COALESCE(a.label, f.name || ' Family'),
              'family_id', f.id,
              'family_name', f.name,
-             'is_family_address', true
-           ))
+             'is_family_address', true,
+             'is_primary', a.id = f.primary_address_id
+           ) ORDER BY f.name, (a.id = f.primary_address_id) DESC, a.label NULLS LAST)
            FROM family_members fm
            JOIN families f ON f.id = fm.family_id AND f.is_active = true
-           JOIN addresses a ON a.id = f.primary_address_id
+           JOIN addresses a ON a.family_id = f.id
            WHERE fm.person_id = p.id AND fm.is_active = true),
           '[]'
         ) as family_addresses

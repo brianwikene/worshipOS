@@ -23,6 +23,7 @@
     country: string | null;
     label: string | null;
     is_family_address: boolean;
+    is_primary?: boolean;
     family_id?: string;
     family_name?: string;
   }
@@ -445,6 +446,9 @@
                 <span class="label">
                   {addr.label || 'Home'}
                   <span class="family-badge">via {addr.family_name}</span>
+                  {#if addr.is_primary}
+                    <span class="primary-badge">Primary</span>
+                  {/if}
                 </span>
                 <span class="value">{formatAddress(addr)}</span>
               </div>
@@ -1416,6 +1420,16 @@
     padding: 0.125rem 0.375rem;
     background: #e0e7ff;
     color: #4338ca;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+  }
+
+  .primary-badge {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    padding: 0.125rem 0.375rem;
+    background: #dbeafe;
+    color: #1d4ed8;
     border-radius: 4px;
     margin-left: 0.5rem;
   }

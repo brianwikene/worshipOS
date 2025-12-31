@@ -13,13 +13,13 @@ export const GET: RequestHandler = async (event) => {
   const result = await pool.query(
     `SELECT
       sa.id,
-      sa.role_id,
+      r.id as role_id,
       r.name as role_name,
       r.ministry_area,
       sa.person_id,
       p.display_name as person_name,
-      sa.status,
-      sa.is_lead,
+      COALESCE(sa.status, 'unfilled') as status,
+      COALESCE(sa.is_lead, false) as is_lead,
       (srr.min_needed > 0) as is_required,
       sa.notes
      FROM service_instances si

@@ -5,7 +5,7 @@
   import { apiJson, apiFetch } from '$lib/api';
 
   interface Assignment {
-    id: string;
+    id: string | null;  // null when no assignment record exists yet
     role_id: string;
     role_name: string;
     ministry_area: string;
@@ -275,13 +275,27 @@ async function assignPerson() {
 
   try {
     assigningPerson = true;
-    await apiFetch(`/api/service-instances/${service.id}/assignments/${assigningToAssignment.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        person_id: selectedPersonId,
-        status: 'pending'
-      })
-    });
+
+    if (assigningToAssignment.id) {
+      // Update existing assignment
+      await apiFetch(`/api/service-instances/${service.id}/assignments/${assigningToAssignment.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          person_id: selectedPersonId,
+          status: 'pending'
+        })
+      });
+    } else {
+      // Create new assignment (no existing assignment record)
+      await apiFetch(`/api/service-instances/${service.id}/assignments`, {
+        method: 'POST',
+        body: JSON.stringify({
+          role_id: assigningToAssignment.role_id,
+          person_id: selectedPersonId,
+          status: 'pending'
+        })
+      });
+    }
 
     closeAssignModal();
     await loadServiceDetail(service.id);
@@ -293,6 +307,7 @@ async function assignPerson() {
 }
 
 async function removeAssignment(assignment: Assignment) {
+  if (!assignment.id || !assignment.person_id) return;  // No assignment to remove
   if (!confirm(`Remove ${assignment.person_name} from ${assignment.role_name}?`)) return;
   if (!service) return;
 

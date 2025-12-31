@@ -21,20 +21,26 @@
     notes: string | null;
   }
 
-  interface Family {
+  interface Address {
     id: string;
-    name: string;
-    notes: string | null;
-    is_active: boolean;
-    address_id: string | null;
-    address_line1: string | null;
-    address_line2: string | null;
+    line1: string | null;
+    line2: string | null;
     street: string | null;
     city: string | null;
     state: string | null;
     postal_code: string | null;
     country: string | null;
-    address_label: string | null;
+    label: string | null;
+    is_primary: boolean;
+  }
+
+  interface Family {
+    id: string;
+    name: string;
+    notes: string | null;
+    is_active: boolean;
+    primary_address_id: string | null;
+    addresses: Address[];
     members: FamilyMember[];
   }
 
@@ -63,12 +69,14 @@
   // Address modal state
   let showAddressModal = false;
   let savingAddress = false;
+  let editingAddress: Address | null = null;  // null means adding new
   let addressLine1 = '';
   let addressLine2 = '';
   let addressCity = '';
   let addressState = '';
   let addressPostalCode = '';
   let addressLabel = '';
+  let addressIsPrimary = false;
 
   const relationshipOptions = [
     { value: 'parent', label: 'Parent' },
@@ -224,32 +232,44 @@
     return rel.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
 
-  function formatAddress(family: Family): string | null {
-    const streetLine = family.address_line1 || family.street;
+  function formatAddressLine(addr: Address): string {
+    const streetLine = addr.line1 || addr.street;
     const parts = [
       streetLine,
-      family.address_line2,
-      family.city ? `${family.city},` : null,
-      family.state,
-      family.postal_code
+      addr.line2,
+      addr.city ? `${addr.city},` : null,
+      addr.state,
+      addr.postal_code
     ].filter(Boolean);
-    return parts.length > 0 ? parts.join(' ') : null;
+    return parts.length > 0 ? parts.join(' ') : 'No address details';
   }
 
-  function openAddressModal() {
-    if (family) {
-      addressLine1 = family.address_line1 || family.street || '';
-      addressLine2 = family.address_line2 || '';
-      addressCity = family.city || '';
-      addressState = family.state || '';
-      addressPostalCode = family.postal_code || '';
-      addressLabel = family.address_label || '';
+  function openAddressModal(address: Address | null = null) {
+    editingAddress = address;
+    if (address) {
+      addressLine1 = address.line1 || address.street || '';
+      addressLine2 = address.line2 || '';
+      addressCity = address.city || '';
+      addressState = address.state || '';
+      addressPostalCode = address.postal_code || '';
+      addressLabel = address.label || '';
+      addressIsPrimary = address.is_primary;
+    } else {
+      // New address
+      addressLine1 = '';
+      addressLine2 = '';
+      addressCity = '';
+      addressState = '';
+      addressPostalCode = '';
+      addressLabel = '';
+      addressIsPrimary = (family?.addresses?.length ?? 0) === 0; // First address is primary
     }
     showAddressModal = true;
   }
 
   function closeAddressModal() {
     showAddressModal = false;
+    editingAddress = null;
   }
 
   async function saveAddress() {
@@ -257,17 +277,36 @@
     savingAddress = true;
 
     try {
-      await apiFetch(`/api/families/${family.id}/address`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          line1: addressLine1 || null,
-          line2: addressLine2 || null,
-          city: addressCity || null,
-          state: addressState || null,
-          postal_code: addressPostalCode || null,
-          label: addressLabel || null
-        })
-      });
+      if (editingAddress) {
+        // Update existing address
+        await apiFetch(`/api/families/${family.id}/address`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            address_id: editingAddress.id,
+            line1: addressLine1 || null,
+            line2: addressLine2 || null,
+            city: addressCity || null,
+            state: addressState || null,
+            postal_code: addressPostalCode || null,
+            label: addressLabel || null,
+            is_primary: addressIsPrimary
+          })
+        });
+      } else {
+        // Create new address
+        await apiFetch(`/api/families/${family.id}/address`, {
+          method: 'POST',
+          body: JSON.stringify({
+            line1: addressLine1 || null,
+            line2: addressLine2 || null,
+            city: addressCity || null,
+            state: addressState || null,
+            postal_code: addressPostalCode || null,
+            label: addressLabel || null,
+            is_primary: addressIsPrimary
+          })
+        });
+      }
 
       closeAddressModal();
       await loadFamily();
@@ -278,15 +317,32 @@
     }
   }
 
-  async function deleteAddress() {
-    if (!family || !family.address_id) return;
+  async function deleteAddress(addressId: string) {
+    if (!family) return;
     if (!confirm('Delete this address?')) return;
 
     try {
-      await apiFetch(`/api/families/${family.id}/address`, { method: 'DELETE' });
+      await apiFetch(`/api/families/${family.id}/address?address_id=${addressId}`, { method: 'DELETE' });
       await loadFamily();
     } catch (e: any) {
       alert(e?.message ?? 'Failed to delete address');
+    }
+  }
+
+  async function setPrimaryAddress(addressId: string) {
+    if (!family) return;
+
+    try {
+      await apiFetch(`/api/families/${family.id}/address`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          address_id: addressId,
+          is_primary: true
+        })
+      });
+      await loadFamily();
+    } catch (e: any) {
+      alert(e?.message ?? 'Failed to set primary address');
     }
   }
 
@@ -316,18 +372,34 @@
         {#if family.notes}
           <p class="notes">{family.notes}</p>
         {/if}
-        <div class="address-section">
-          {#if formatAddress(family)}
-            <p class="address">
-              📍 {formatAddress(family)}
-              <button class="btn-address-action" on:click={openAddressModal} title="Edit address">✏️</button>
-              <button class="btn-address-action delete" on:click={deleteAddress} title="Delete address">🗑️</button>
-            </p>
-          {:else}
-            <button class="btn-add-address" on:click={openAddressModal}>
-              + Add Address
-            </button>
+        <div class="addresses-section">
+          {#if family.addresses && family.addresses.length > 0}
+            <div class="addresses-list">
+              {#each family.addresses as address}
+                <div class="address-item" class:primary={address.is_primary}>
+                  <div class="address-content">
+                    {#if address.is_primary}
+                      <span class="badge primary-badge">Primary</span>
+                    {/if}
+                    {#if address.label}
+                      <span class="address-label">{address.label}</span>
+                    {/if}
+                    <span class="address-text">📍 {formatAddressLine(address)}</span>
+                  </div>
+                  <div class="address-actions">
+                    {#if !address.is_primary}
+                      <button class="btn-address-action" on:click={() => setPrimaryAddress(address.id)} title="Set as primary">⭐</button>
+                    {/if}
+                    <button class="btn-address-action" on:click={() => openAddressModal(address)} title="Edit address">✏️</button>
+                    <button class="btn-address-action delete" on:click={() => deleteAddress(address.id)} title="Delete address">🗑️</button>
+                  </div>
+                </div>
+              {/each}
+            </div>
           {/if}
+          <button class="btn-add-address" on:click={() => openAddressModal(null)}>
+            + Add Address
+          </button>
         </div>
       </div>
       <div class="header-actions">
@@ -474,18 +546,18 @@
 <div class="modal-overlay" on:click={closeAddressModal} on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
   <div class="modal address-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
     <div class="modal-header">
-      <h2>{family?.address_id ? 'Edit Address' : 'Add Address'}</h2>
+      <h2>{editingAddress ? 'Edit Address' : 'Add Address'}</h2>
       <button class="close-btn" on:click={closeAddressModal}>×</button>
     </div>
 
     <div class="modal-body">
       <div class="form-group">
-        <label for="address-label">Label (optional)</label>
+        <label for="address-label">Label</label>
         <input
           id="address-label"
           type="text"
           bind:value={addressLabel}
-          placeholder="e.g., Home, Mailing"
+          placeholder="e.g., Home, Mailing, Summer Home"
         />
       </div>
 
@@ -540,6 +612,13 @@
             placeholder="12345"
           />
         </div>
+      </div>
+
+      <div class="form-group checkbox-group">
+        <label class="checkbox-label">
+          <input type="checkbox" bind:checked={addressIsPrimary} />
+          Set as primary address
+        </label>
       </div>
     </div>
 
@@ -936,18 +1015,66 @@
   }
 
   /* Address Section */
-  .address-section {
-    margin-top: 0.5rem;
+  .addresses-section {
+    margin-top: 0.75rem;
   }
 
-  .address {
+  .addresses-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .address-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: #f9fafb;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+  }
+
+  .address-item.primary {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+  }
+
+  .address-content {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #888;
-    font-size: 0.9rem;
-    margin: 0;
     flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .address-label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.85rem;
+  }
+
+  .address-text {
+    color: #6b7280;
+    font-size: 0.85rem;
+  }
+
+  .primary-badge {
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.7rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .address-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
   }
 
   .btn-address-action {
@@ -983,6 +1110,10 @@
     background: #e3f2fd;
     border-color: #0066cc;
     color: #0066cc;
+  }
+
+  .checkbox-group {
+    margin-top: 0.5rem;
   }
 
   /* Modal Styles */
