@@ -1,0 +1,115 @@
+src/routes
+├── +layout.svelte
+├── +page.svelte
+├── +page.ts
+├── admin
+│   ├── +page.svelte
+│   ├── duplicates
+│   │   └── +page.svelte
+│   ├── merges
+│   │   └── +page.svelte
+│   ├── roles
+│   │   └── +page.svelte
+│   ├── service-types
+│   │   └── +page.svelte
+│   └── teams
+│       └── +page.svelte
+├── api
+│   ├── addresses
+│   │   ├── [id]
+│   │   │   └── +server.ts
+│   │   └── +server.ts
+│   ├── admin
+│   │   ├── duplicates
+│   │   │   ├── [id]
+│   │   │   │   ├── +server.ts
+│   │   │   │   └── merge
+│   │   │   │       └── +server.ts
+│   │   │   ├── +server.ts
+│   │   │   └── scan
+│   │   │       └── +server.ts
+│   │   └── merges
+│   │       ├── [id]
+│   │       │   └── undo
+│   │       │       └── +server.ts
+│   │       └── +server.ts
+│   ├── assignments
+│   │   └── [id]
+│   │       └── +server.ts
+│   ├── campuses
+│   │   └── +server.ts
+│   ├── contexts
+│   │   ├── [id]
+│   │   │   └── +server.ts
+│   │   └── +server.ts
+│   ├── families
+│   │   ├── [id]
+│   │   │   ├── +server.ts
+│   │   │   ├── address
+│   │   │   │   └── +server.ts
+│   │   │   └── members
+│   │   │       ├── [memberId]
+│   │   │       │   └── +server.ts
+│   │   │       └── +server.ts
+│   │   └── +server.ts
+│   ├── people
+│   │   ├── [id]
+│   │   │   ├── +server.ts
+│   │   │   └── capabilities
+│   │   │       ├── [roleId]
+│   │   │       │   └── +server.ts
+│   │   │       └── +server.ts
+│   │   └── +server.ts
+│   ├── roles
+│   │   ├── [id]
+│   │   │   ├── +server.ts
+│   │   │   └── capable-people
+│   │   │       └── +server.ts
+│   │   └── +server.ts
+│   ├── service-instance-songs
+│   │   └── [id]
+│   │       └── +server.ts
+│   ├── service-instances
+│   │   └── [id]
+│   │       ├── +server.ts
+│   │       ├── assignments
+│   │       │   ├── [assignmentId]
+│   │       │   │   └── +server.ts
+│   │       │   ├── +server.ts
+│   │       │   └── check-conflicts
+│   │       │       └── +server.ts
+│   │       ├── copy
+│   │       │   └── +server.ts
+│   │       ├── roster
+│   │       │   └── +server.ts
+│   │       └── songs
+│   │           └── +server.ts
+│   ├── services
+│   │   └── +server.ts
+│   ├── songs
+│   │   └── +server.ts
+│   └── teams
+│       ├── [id]
+│       │   └── +server.ts
+│       └── +server.ts
+├── families
+│   ├── [id]
+│   │   └── +page.svelte
+│   └── +page.svelte
+├── people
+│   ├── [id]
+│   │   └── +page.svelte
+│   └── +page.svelte
+├── service-instances
+│   └── [id]
+│       ├── +page.svelte
+│       └── +page.tsx
+├── services
+│   ├── [service_instance_id]
+│   │   └── +page.ts
+│   ├── +page.svelte
+│   └── +page.ts
+└── songs
+    └── +page.svelte
+
+58 directories, 55 files

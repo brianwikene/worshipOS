@@ -19,7 +19,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
   try {
     let undoneFilter = '';
     if (!includeUndone) {
-      undoneFilter = 'AND me.undone_at IS NULL';
+      undoneFilter = 'AND undone_at IS NULL';
     }
 
     const result = await pool.query(

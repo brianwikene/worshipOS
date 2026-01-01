@@ -4,6 +4,10 @@
   import { getActiveChurchId, setActiveChurchId, listTenants } from '$lib/tenant';
   import favicon from '$lib/assets/favicon.svg';
   
+  import '../app.css';
+
+
+
   let { children } = $props();
   
   const tenants = listTenants();
@@ -31,7 +35,7 @@
       
       <div class="nav-links">
         <a href="/services" class:active={$page.url.pathname.startsWith('/services')}>
-          Services
+          Gatherings
         </a>
         <a href="/people" class:active={$page.url.pathname.startsWith('/people')}>
           People

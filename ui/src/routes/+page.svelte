@@ -37,8 +37,7 @@
     error = null;
 
     try {
-      // Update this path to match your API route
-      services = await apiJson<Service[]>('/services');
+      services = await apiJson<Service[]>('/api/services');
     } catch (e: any) {
       error = e?.message ?? 'Failed to load services';
       services = [];

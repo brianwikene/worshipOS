@@ -105,38 +105,30 @@
   }
 </script>
 
-<div class="container">
-  <header>
-    <div class="header-top">
-      <div>
-        <h1>People</h1>
-        <p>Team members and volunteers</p>
-      </div>
-      <button class="btn-add" on:click={openAddModal}>
+<div class="sys-page">
+  <header class="sys-page-header people">
+  <div class="sys-page-header-main">
+    <h1 class="sys-title">People</h1>
+    <p class="sys-subtitle">Team members and volunteers</p>
+  </div>
+
+      <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
         <span class="plus">+</span> Add Person
       </button>
-    </div>
-
-    <div class="search-bar">
-      <input
-        type="text"
-        placeholder="Search people..."
-        bind:value={searchQuery}
-        on:keydown={(e) => e.key === 'Enter' && handleSearch()}
-      />
-      <button class="btn-search" on:click={handleSearch}>Search</button>
-    </div>
+      <section class="sys-toolbar">
+  <input class="sys-input" placeholder="Search people..." bind:value={searchQuery} on:keydown={(e) => e.key === 'Enter' && handleSearch()} />
+    <div class="sys-search"><button class="btn-search" on:click={handleSearch}>Search</button></div>
   </header>
 
   {#if loading}
-    <div class="loading">Loading people...</div>
+    <div class="sys-state">Loading people...</div>
   {:else if error}
-    <div class="error">
+    <div class="sys-state sys-state--error">
       <p>Error: {error}</p>
       <button on:click={loadPeople}>Retry</button>
     </div>
   {:else if people.length === 0}
-    <div class="empty">
+    <div class="sys-state sys-state--empty">
       {#if searchQuery}
         <p>No people found matching "{searchQuery}"</p>
         <button on:click={() => { searchQuery = ''; loadPeople(); }}>Clear search</button>
@@ -172,7 +164,7 @@
             <button class="btn-icon" on:click={() => openEditModal(person)} title="Edit">
               ✏️
             </button>
-            <button class="btn-icon btn-danger" on:click={() => handleDelete(person)} title="Archive">
+            <button class="sys-icon-btn sys-icon-btn--danger" on:click={() => handleDelete(person)} title="Archive">
               🗑️
             </button>
           </div>

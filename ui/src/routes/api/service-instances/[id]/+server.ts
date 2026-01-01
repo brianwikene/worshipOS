@@ -12,7 +12,14 @@ export const GET: RequestHandler = async (event) => {
 
   const result = await pool.query(
     `
-    SELECT si.*
+    SELECT
+      si.id,
+      si.service_time,
+      si.campus_id,
+      sg.name AS service_name,
+      TO_CHAR(sg.group_date, 'YYYY-MM-DD') AS group_date,
+      c.name AS context_name,
+      camp.name AS campus_name
     FROM service_instances si
     JOIN service_groups sg
       ON sg.id = si.service_group_id

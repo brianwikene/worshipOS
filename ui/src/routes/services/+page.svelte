@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { apiJson } from '$lib/api';
+  import { apiJson, apiFetch } from '$lib/api';
   import { page } from '$app/stores';
   import { getActiveChurchId } from '$lib/tenant';
 
@@ -11,6 +11,26 @@
   let services: any[] = [];
   let error: string | null = null;
   let loading = true;
+
+  // Add Service modal state
+  let showAddModal = false;
+  let addingService = false;
+  let contexts: Array<{ id: string; name: string }> = [];
+  let roles: Array<{ id: string; name: string; ministry_area: string | null }> = [];
+  let campuses: Array<{ id: string; name: string }> = [];
+
+  // Form state
+  let newServiceName = '';
+  let newServiceContextId = '';
+  let newServiceDate = '';
+  let serviceInstances: Array<{ time: string; campus_id: string }> = [{ time: '09:00', campus_id: '' }];
+  let selectedPositions: Array<{ role_id: string; quantity: number }> = [];
+
+  // Get minimum date (today)
+  function getMinDate(): string {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  }
 
 $: {
   const v = $page.url.searchParams.get('view');
@@ -137,7 +157,124 @@ async function loadServices() {
 onMount(async () => {
   activeChurchId = getActiveChurchId();
   await loadServices();
+  await loadFormData();
 });
+
+async function loadFormData() {
+  try {
+    const [ctxData, roleData, campusData] = await Promise.all([
+      apiJson<typeof contexts>('/api/contexts'),
+      apiJson<typeof roles>('/api/roles'),
+      apiJson<typeof campuses>('/api/campuses')
+    ]);
+    contexts = ctxData;
+    roles = roleData;
+    campuses = campusData;
+  } catch (e) {
+    console.error('Failed to load form data:', e);
+  }
+}
+
+function openAddModal() {
+  // Reset form
+  newServiceName = contexts.length > 0 ? contexts[0].name : '';
+  newServiceContextId = contexts.length > 0 ? contexts[0].id : '';
+  newServiceDate = getMinDate();
+  serviceInstances = [{ time: '09:00', campus_id: campuses.length > 0 ? campuses[0].id : '' }];
+  selectedPositions = [];
+  showAddModal = true;
+}
+
+function closeAddModal() {
+  showAddModal = false;
+}
+
+function addServiceInstance() {
+  serviceInstances = [...serviceInstances, { time: '10:30', campus_id: campuses.length > 0 ? campuses[0].id : '' }];
+}
+
+function removeServiceInstance(index: number) {
+  if (serviceInstances.length > 1) {
+    serviceInstances = serviceInstances.filter((_, i) => i !== index);
+  }
+}
+
+function addPosition(roleId: string) {
+  const existing = selectedPositions.find(p => p.role_id === roleId);
+  if (existing) {
+    existing.quantity += 1;
+    selectedPositions = [...selectedPositions];
+  } else {
+    selectedPositions = [...selectedPositions, { role_id: roleId, quantity: 1 }];
+  }
+}
+
+function removePosition(roleId: string) {
+  const existing = selectedPositions.find(p => p.role_id === roleId);
+  if (existing && existing.quantity > 1) {
+    existing.quantity -= 1;
+    selectedPositions = [...selectedPositions];
+  } else {
+    selectedPositions = selectedPositions.filter(p => p.role_id !== roleId);
+  }
+}
+
+function getPositionQuantity(roleId: string): number {
+  return selectedPositions.find(p => p.role_id === roleId)?.quantity ?? 0;
+}
+
+// Group roles by ministry area for display
+$: rolesByMinistry = roles.reduce((acc, role) => {
+  const area = role.ministry_area || 'Other';
+  if (!acc[area]) acc[area] = [];
+  acc[area].push(role);
+  return acc;
+}, {} as Record<string, typeof roles>);
+
+async function createService() {
+  if (!newServiceName || !newServiceDate || serviceInstances.length === 0) {
+    alert('Please fill in all required fields');
+    return;
+  }
+
+  // Validate date is not in past
+  const selectedDate = new Date(newServiceDate + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Allow 2 hours of grace period
+  const graceDate = new Date(today.getTime() - (2 * 60 * 60 * 1000));
+  graceDate.setHours(0, 0, 0, 0);
+
+  if (selectedDate < graceDate) {
+    alert('Service date must be today or in the future');
+    return;
+  }
+
+  addingService = true;
+  try {
+    await apiFetch('/api/services', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: newServiceName,
+        context_id: newServiceContextId || null,
+        group_date: newServiceDate,
+        instances: serviceInstances.map(i => ({
+          service_time: i.time + ':00',
+          campus_id: i.campus_id || null
+        })),
+        positions: selectedPositions
+      })
+    });
+
+    closeAddModal();
+    await loadServices();
+  } catch (e: any) {
+    alert(e?.message ?? 'Failed to create service');
+  } finally {
+    addingService = false;
+  }
+}
 
 let visibleServices: ServiceGroup[] = [];
 
@@ -175,7 +312,7 @@ $: visibleServices = services
   }
 </script>
 
-<div class="container">
+<div class="sys-page">
   <header>
     <div class="header-content">
       <div class="title-section">
@@ -187,33 +324,51 @@ $: visibleServices = services
   <a class:selected={view === 'upcoming'} href="/services?view=upcoming">Upcoming</a>
   <a class:selected={view === 'past'} href="/services?view=past">Past</a>
 </nav>
-      <button class="refresh-btn" on:click={() => window.location.reload()}>
-        Refresh
-      </button>
+      <div class="header-actions">
+        <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
+          + Add Service
+        </button>
+        <button class="sys-btn sys-btn--secondary" on:click={() => window.location.reload()}>
+          Refresh
+        </button>
+      </div>
     </div>
   </header>
 
   {#if loading}
-    <div class="loading">Loading services...</div>
+    <div class="sys-state">Loading services...</div>
   {:else if error}
-    <div class="error">
+    <div class="sys-state sys-state--error">
       <p>Error: {error}</p>
       <button on:click={() => window.location.reload()}>Retry</button>
     </div>
   {:else if visibleServices.length === 0}
-    <div class="empty">
-     <p>{view === 'past' ? 'No past services found.' : 'No upcoming services scheduled.'}</p>
+    <div class="empty-state-card">
+      {#if view === 'past'}
+        <div class="empty-icon">📋</div>
+        <h3>No Past Services</h3>
+        <p>There are no past services to display.</p>
+      {:else}
+        <div class="empty-icon">📅</div>
+        <h3>No Upcoming Services</h3>
+        <p>You don't have any services scheduled yet. Would you like to create one?</p>
+        <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
+          + Schedule a Service
+        </button>
+      {/if}
     </div>
   {:else}
     <div class="services-list">
       {#each visibleServices as service}
         <div class="service-block">
-          <div class="service-header-group">
-            <div class="service-title-row">
-                <h2>{service.name}</h2>
-                <span class="context-badge">{service.context_name}</span>
+          <div class="service-header-bar">
+            <div class="header-top">
+              <h2>{service.name}</h2>
+              <span class="context-badge">{service.context_name}</span>
             </div>
-            <div class="service-date">{formatDate(service.group_date)}</div>
+            <div class="header-meta">
+              <span class="meta-item">{formatDate(service.group_date)}</span>
+            </div>
           </div>
 
           <div class="instances-grid">
@@ -312,14 +467,138 @@ $: visibleServices = services
   {/if}
 </div>
 
-<style>
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-  }
+<!-- Add Service Modal -->
+{#if showAddModal}
+<div class="modal-overlay" on:click={closeAddModal} on:keydown={(e) => e.key === 'Escape' && closeAddModal()}>
+  <div class="modal add-service-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddModal()}>
+    <div class="modal-header">
+      <h2>Schedule New Service</h2>
+      <button class="close-btn" on:click={closeAddModal}>×</button>
+    </div>
 
+    <div class="modal-body">
+      <!-- Service Type & Name -->
+      <div class="form-section">
+        <h3>Service Details</h3>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="service-type">Service Type</label>
+            <select id="service-type" bind:value={newServiceContextId} on:change={(e) => {
+              const ctx = contexts.find(c => c.id === e.currentTarget.value);
+              if (ctx) newServiceName = ctx.name;
+            }}>
+              <option value="">— Select Type —</option>
+              {#each contexts as ctx}
+                <option value={ctx.id}>{ctx.name}</option>
+              {/each}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="service-name">Service Name</label>
+            <input id="service-name" type="text" bind:value={newServiceName} placeholder="e.g., Sunday AM" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="service-date">Date</label>
+          <input id="service-date" type="date" bind:value={newServiceDate} min={getMinDate()} />
+          <small class="help-text">Services can only be scheduled for today or future dates.</small>
+        </div>
+      </div>
+
+      <!-- Service Times/Instances -->
+      <div class="form-section">
+        <div class="section-header-row">
+          <h3>Service Times</h3>
+          <button type="button" class="add-instance-btn" on:click={addServiceInstance}>+ Add Time</button>
+        </div>
+
+        {#each serviceInstances as instance, idx}
+          <div class="instance-row">
+            <div class="form-group">
+              <label>Time</label>
+              <input type="time" bind:value={instance.time} />
+            </div>
+            <div class="form-group flex-grow">
+              <label>Campus</label>
+              <select bind:value={instance.campus_id}>
+                <option value="">— No Campus —</option>
+                {#each campuses as campus}
+                  <option value={campus.id}>{campus.name}</option>
+                {/each}
+              </select>
+            </div>
+            {#if serviceInstances.length > 1}
+              <button type="button" class="remove-btn" on:click={() => removeServiceInstance(idx)}>×</button>
+            {/if}
+          </div>
+        {/each}
+      </div>
+
+      <!-- Positions/Roles -->
+      {#if roles.length > 0}
+        <div class="form-section">
+          <h3>Team Positions</h3>
+          <p class="section-description">Select the positions you'll need to fill for this service. You can add multiples of the same role.</p>
+
+          {#each Object.entries(rolesByMinistry) as [ministry, ministryRoles]}
+            <div class="ministry-group">
+              <h4 class="ministry-title">{ministry}</h4>
+              <div class="roles-grid">
+                {#each ministryRoles as role}
+                  <div class="role-item" class:selected={getPositionQuantity(role.id) > 0}>
+                    <div class="role-info">
+                      <span class="role-name">{role.name}</span>
+                    </div>
+                    <div class="quantity-controls">
+                      <button type="button" class="qty-btn" on:click={() => removePosition(role.id)} disabled={getPositionQuantity(role.id) === 0}>−</button>
+                      <span class="qty-value">{getPositionQuantity(role.id)}</span>
+                      <button type="button" class="qty-btn" on:click={() => addPosition(role.id)}>+</button>
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/each}
+        </div>
+      {:else}
+        <div class="form-section">
+          <h3>Team Positions</h3>
+          <div class="no-roles-notice">
+            <p>No roles have been defined yet. You can add roles later or create this service without predefined positions.</p>
+          </div>
+        </div>
+      {/if}
+
+      <!-- Summary -->
+      {#if selectedPositions.length > 0}
+        <div class="summary-section">
+          <h4>Position Summary</h4>
+          <div class="summary-list">
+            {#each selectedPositions as pos}
+              {@const role = roles.find(r => r.id === pos.role_id)}
+              {#if role}
+                <span class="summary-tag">{pos.quantity}× {role.name}</span>
+              {/if}
+            {/each}
+          </div>
+        </div>
+      {/if}
+    </div>
+
+    <div class="modal-actions">
+      <button class="secondary-btn" on:click={closeAddModal}>Cancel</button>
+      <button class="sys-btn sys-btn--primary" on:click={createService} disabled={addingService || !newServiceName || !newServiceDate}>
+        {addingService ? 'Creating...' : 'Create Service'}
+      </button>
+    </div>
+  </div>
+</div>
+{/if}
+
+<style>
   /* HEADER STYLES */
   header { margin-bottom: 2rem; }
   .header-content { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; }
@@ -370,30 +649,54 @@ $: visibleServices = services
 }
 
   /* LOADING & ERROR STATES */
-  .loading, .error, .empty { text-align: center; padding: 3rem; background: #f9fafb; border-radius: 8px; margin-top: 2rem; color: #6b7280; }
-  .error { background: #fef2f2; color: #b91c1c; }
-  .error button { margin-top: 1rem; padding: 0.5rem 1rem; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
 
   /* SERVICE LIST LAYOUT */
   .services-list { display: flex; flex-direction: column; gap: 2rem; }
   .service-block { border-bottom: 1px solid #e5e7eb; padding-bottom: 2rem; }
   .service-block:last-child { border-bottom: none; }
 
-  .service-header-group { margin-bottom: 1.5rem; }
-  .service-title-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.25rem; }
-  .service-block h2 { font-size: 1.5rem; font-weight: 600; color: #111827; margin: 0; }
+  /* Purple gradient header bar */
+  .service-header-bar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.25rem 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+  }
 
-  .context-badge {
-    background: #eff6ff;
-    color: #2563eb;
-    padding: 0.125rem 0.625rem;
+  .header-top {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .service-header-bar h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+  }
+
+  .service-header-bar .context-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.25rem 0.75rem;
     border-radius: 999px;
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
   }
 
-  .service-date { color: #6b7280; font-size: 0.95rem; }
+  .header-meta {
+    opacity: 0.95;
+  }
+
+  .meta-item {
+    font-size: 0.9375rem;
+  }
 
   /* INSTANCE GRID */
   .instances-grid {
@@ -537,4 +840,357 @@ $: visibleServices = services
 
   /* Fix border radius if full or empty */
   .ministry-fill.green:last-child { border-radius: 999px; }
+
+  /* Header actions */
+  .header-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .add-btn {
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .add-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  /* Empty state card */
+  .empty-state-card {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border: 2px dashed #e5e7eb;
+    border-radius: 12px;
+    margin-top: 2rem;
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state-card h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .empty-state-card p {
+    color: #6b7280;
+    margin: 0 0 1.5rem 0;
+  }
+
+  
+  /* Modal styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+
+  .modal {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .add-service-modal {
+    max-width: 700px;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  .modal-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .close-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: white;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+  }
+  .close-btn:hover { background: rgba(255, 255, 255, 0.3); }
+
+  .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+
+  /* Form styles */
+  .form-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .form-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+  .form-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 1rem 0;
+  }
+
+  .section-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  .section-header-row h3 { margin: 0; }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+  }
+  .form-group:last-child { margin-bottom: 0; }
+
+  .form-group label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
+  }
+
+  .form-group input,
+  .form-group select {
+    padding: 0.625rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.9375rem;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+
+  .help-text {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.375rem;
+  }
+
+  .section-description {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0 0 1rem 0;
+  }
+
+  /* Service instances */
+  .add-instance-btn {
+    padding: 0.375rem 0.75rem;
+    background: white;
+    border: 1px solid #667eea;
+    border-radius: 6px;
+    color: #667eea;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .add-instance-btn:hover { background: #f0f1ff; }
+
+  .instance-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 8px;
+  }
+  .instance-row .form-group { margin-bottom: 0; flex: 1; }
+  .instance-row .flex-grow { flex: 2; }
+
+  .remove-btn {
+    padding: 0.5rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    color: #ef4444;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+    margin-bottom: 0.125rem;
+  }
+  .remove-btn:hover { background: #fef2f2; border-color: #ef4444; }
+
+  /* Role selection */
+  .ministry-group {
+    margin-bottom: 1rem;
+  }
+
+  .ministry-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    margin: 0 0 0.5rem 0;
+    padding-bottom: 0.375rem;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .role-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: white;
+    transition: all 0.2s;
+  }
+  .role-item.selected {
+    border-color: #667eea;
+    background: #f0f1ff;
+  }
+
+  .role-info { flex: 1; }
+  .role-name { font-size: 0.875rem; color: #1a1a1a; }
+
+  .quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .qty-btn {
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .qty-btn:hover:not(:disabled) { background: #f3f4f6; border-color: #667eea; }
+  .qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .qty-value {
+    min-width: 1.5rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #1a1a1a;
+  }
+
+  .no-roles-notice {
+    padding: 1rem;
+    background: #fef3c7;
+    border-radius: 8px;
+    border: 1px solid #fcd34d;
+  }
+  .no-roles-notice p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #92400e;
+  }
+
+  /* Summary */
+  .summary-section {
+    background: #f0f1ff;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+  .summary-section h4 {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #667eea;
+    margin: 0 0 0.5rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .summary-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .summary-tag {
+    padding: 0.25rem 0.625rem;
+    background: white;
+    border: 1px solid #667eea;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    color: #667eea;
+    font-weight: 500;
+  }
+
+  @media (max-width: 640px) {
+    .form-row { grid-template-columns: 1fr; }
+    .instance-row { flex-wrap: wrap; }
+    .roles-grid { grid-template-columns: 1fr; }
+  }
 </style>

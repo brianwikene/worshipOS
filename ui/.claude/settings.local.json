@@ -1,15 +1,26 @@
 {
   "permissions": {
     "allow": [
-      "Bash(rm:*)"
-    ],
-    "allowedTools": [
-      "Read",
-      "Write",
-      "Bash(git *)",
-      "Bash(npm *)",
-      "Bash(python *)",
-      "Bash(node *)"
+      "Read(//**/worshipOS/**)",
+      "Read(//**/worshipos/**)",
+      "Edit(//**/worshipOS/**)",
+      "Edit(//**/worshipos/**)",
+      "Write(//**/worshipOS/**)",
+      "Write(//**/worshipos/**)",
+      "Bash(rm:*)",
+      "Bash(cat:*)",
+      "Bash(PGPASSWORD=worship psql:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git push:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm:*)",
+      "Bash(node:*)",
+      "Bash(pwd:*)"
     ]
   }
 }

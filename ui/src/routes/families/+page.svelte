@@ -123,20 +123,20 @@
   }
 </script>
 
-<div class="container">
+<div class="sys-page">
   <header>
     <div class="header-top">
       <div>
         <h1>Families</h1>
         <p>Household groups and family units</p>
       </div>
-      <button class="btn-add" on:click={openAddModal}>
+      <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
         <span class="plus">+</span> Add Family
       </button>
     </div>
 
-    <div class="search-bar">
-      <input
+    <div class="sys-search">
+      <input class="sys-input"
         type="text"
         placeholder="Search families..."
         bind:value={searchQuery}
@@ -147,14 +147,14 @@
   </header>
 
   {#if loading}
-    <div class="loading">Loading families...</div>
+    <div class="sys-state">Loading families...</div>
   {:else if error}
-    <div class="error">
+    <div class="sys-state sys-state--error">
       <p>Error: {error}</p>
       <button on:click={loadFamilies}>Retry</button>
     </div>
   {:else if families.length === 0}
-    <div class="empty">
+    <div class="sys-state sys-state--empty">
       {#if searchQuery}
         <p>No families found matching "{searchQuery}"</p>
         <button on:click={() => { searchQuery = ''; loadFamilies(); }}>Clear search</button>
@@ -187,7 +187,7 @@
             <button class="btn-icon" on:click={() => openEditModal(family)} title="Edit">
               ✏️
             </button>
-            <button class="btn-icon btn-danger" on:click={() => handleArchive(family)} title="Archive">
+            <button class="sys-icon-btn sys-icon-btn--danger" on:click={() => handleArchive(family)} title="Archive">
               🗑️
             </button>
           </div>

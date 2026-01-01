@@ -89,3 +89,92 @@ export const GET: RequestHandler = async (event) => {
     headers: { 'x-served-by': 'sveltekit' }
   });
 };
+
+// POST - Create a new service
+export const POST: RequestHandler = async (event) => {
+  const churchId = event.locals.churchId;
+  if (!churchId) throw error(400, 'X-Church-Id is required');
+
+  const body = await event.request.json();
+  const {
+    name,           // Service name (e.g., "Sunday AM")
+    context_id,     // Service type ID
+    group_date,     // Date in YYYY-MM-DD format
+    instances,      // Array of { service_time, campus_id }
+    positions       // Array of { role_id, quantity }
+  } = body;
+
+  // Validate required fields
+  if (!name || !group_date || !instances || instances.length === 0) {
+    throw error(400, 'name, group_date, and at least one instance are required');
+  }
+
+  // Validate date - allow today or future (with 2-hour grace period for timezone flexibility)
+  const serviceDate = new Date(group_date + 'T00:00:00');
+  const now = new Date();
+  const gracePeriod = new Date(now.getTime() - (2 * 60 * 60 * 1000)); // 2 hours ago
+  gracePeriod.setHours(0, 0, 0, 0);
+
+  if (serviceDate < gracePeriod) {
+    throw error(400, 'Service date must be today or in the future');
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Create the service group
+    const groupResult = await client.query(
+      `INSERT INTO service_groups (church_id, group_date, name, context_id)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [churchId, group_date, name, context_id || null]
+    );
+    const groupId = groupResult.rows[0].id;
+
+    // 2. Create service instances
+    const instanceIds: string[] = [];
+    for (const inst of instances) {
+      const instResult = await client.query(
+        `INSERT INTO service_instances (church_id, service_group_id, service_date, service_time, campus_id)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id`,
+        [churchId, groupId, group_date, inst.service_time, inst.campus_id || null]
+      );
+      instanceIds.push(instResult.rows[0].id);
+    }
+
+    // 3. Create position assignments for each instance if positions provided
+    if (positions && positions.length > 0) {
+      for (const instanceId of instanceIds) {
+        for (const pos of positions) {
+          // Create multiple assignments for the same role based on quantity
+          for (let i = 0; i < (pos.quantity || 1); i++) {
+            await client.query(
+              `INSERT INTO service_assignments (church_id, service_instance_id, role_id, status)
+               VALUES ($1, $2, $3, 'pending')`,
+              [churchId, instanceId, pos.role_id]
+            );
+          }
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+
+    return json({
+      success: true,
+      group_id: groupId,
+      instance_ids: instanceIds,
+      message: `Created service "${name}" with ${instanceIds.length} instance(s)`
+    }, { status: 201 });
+
+  } catch (e: any) {
+    await client.query('ROLLBACK');
+    console.error('Error creating service:', e);
+    throw error(500, e.message || 'Failed to create service');
+  } finally {
+    client.release();
+  }
+};
