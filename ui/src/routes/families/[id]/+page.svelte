@@ -355,15 +355,15 @@
   $: inactiveMembers = family?.members.filter(m => !m.is_active) ?? [];
 </script>
 
-<div class="container">
-  <a href="/families" class="back-link">← Back to Families</a>
+<div class="sys-page sys-page--narrow">
+  <a href="/families" class="sys-back-link">← Back to Families</a>
 
   {#if loading}
-    <div class="loading">Loading family details...</div>
+    <div class="sys-state">Loading family details...</div>
   {:else if error}
-    <div class="error">
+    <div class="sys-state sys-state--error">
       <p>Error: {error}</p>
-      <button on:click={loadFamily}>Retry</button>
+      <button class="sys-btn sys-btn--danger" on:click={loadFamily}>Retry</button>
     </div>
   {:else if family}
     <div class="family-header">
@@ -403,10 +403,10 @@
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn-edit" on:click={openEditModal}>
+        <button class="sys-btn sys-btn--primary" on:click={openEditModal}>
           ✏️ Edit
         </button>
-        <button class="btn-archive" on:click={handleArchive}>
+        <button class="sys-btn sys-btn--secondary btn-archive" on:click={handleArchive}>
           🗑️ Archive
         </button>
       </div>
@@ -543,59 +543,64 @@
 
 <!-- Address Modal -->
 {#if showAddressModal}
-<div class="modal-overlay" on:click={closeAddressModal} on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
-  <div class="modal address-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
-    <div class="modal-header">
+<div class="sys-modal-overlay" on:click={closeAddressModal} on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+    <div class="sys-modal-header">
       <h2>{editingAddress ? 'Edit Address' : 'Add Address'}</h2>
-      <button class="close-btn" on:click={closeAddressModal}>×</button>
+      <button class="sys-modal-close" on:click={closeAddressModal}>×</button>
     </div>
 
-    <div class="modal-body">
-      <div class="form-group">
+    <div class="sys-modal-body">
+      <div class="sys-form-group">
         <label for="address-label">Label</label>
         <input
           id="address-label"
+          class="sys-input"
           type="text"
           bind:value={addressLabel}
           placeholder="e.g., Home, Mailing, Summer Home"
         />
       </div>
 
-      <div class="form-group">
+      <div class="sys-form-group">
         <label for="address-line1">Street Address</label>
         <input
           id="address-line1"
+          class="sys-input"
           type="text"
           bind:value={addressLine1}
           placeholder="123 Main St"
         />
       </div>
 
-      <div class="form-group">
+      <div class="sys-form-group">
         <label for="address-line2">Apt/Suite/Unit (optional)</label>
         <input
           id="address-line2"
+          class="sys-input"
           type="text"
           bind:value={addressLine2}
           placeholder="Apt 4B"
         />
       </div>
 
-      <div class="form-row-modal">
-        <div class="form-group flex-2">
+      <div class="sys-form-row">
+        <div class="sys-form-group flex-2">
           <label for="address-city">City</label>
           <input
             id="address-city"
+            class="sys-input"
             type="text"
             bind:value={addressCity}
             placeholder="City"
           />
         </div>
 
-        <div class="form-group flex-1">
+        <div class="sys-form-group flex-1">
           <label for="address-state">State</label>
           <input
             id="address-state"
+            class="sys-input"
             type="text"
             bind:value={addressState}
             placeholder="TX"
@@ -603,10 +608,11 @@
           />
         </div>
 
-        <div class="form-group flex-1">
+        <div class="sys-form-group flex-1">
           <label for="address-zip">ZIP</label>
           <input
             id="address-zip"
+            class="sys-input"
             type="text"
             bind:value={addressPostalCode}
             placeholder="12345"
@@ -614,7 +620,7 @@
         </div>
       </div>
 
-      <div class="form-group checkbox-group">
+      <div class="sys-form-group checkbox-group">
         <label class="checkbox-label">
           <input type="checkbox" bind:checked={addressIsPrimary} />
           Set as primary address
@@ -622,10 +628,10 @@
       </div>
     </div>
 
-    <div class="modal-actions">
-      <button class="btn-cancel" on:click={closeAddressModal}>Cancel</button>
+    <div class="sys-modal-actions">
+      <button class="sys-btn sys-btn--secondary" on:click={closeAddressModal}>Cancel</button>
       <button
-        class="btn-save"
+        class="sys-btn sys-btn--primary"
         on:click={saveAddress}
         disabled={savingAddress}
       >

@@ -106,43 +106,49 @@
 </script>
 
 <div class="sys-page">
-  <header class="sys-page-header people">
-  <div class="sys-page-header-main">
-    <h1 class="sys-title">People</h1>
-    <p class="sys-subtitle">Team members and volunteers</p>
+  <div class="sys-page-header">
+    <div>
+      <h1 class="sys-title">People</h1>
+      <p class="sys-subtitle">Team members and volunteers</p>
+    </div>
+    <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
+      + Add Person
+    </button>
   </div>
 
-      <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
-        <span class="plus">+</span> Add Person
-      </button>
-      <section class="sys-toolbar">
-  <input class="sys-input" placeholder="Search people..." bind:value={searchQuery} on:keydown={(e) => e.key === 'Enter' && handleSearch()} />
-    <div class="sys-search"><button class="btn-search" on:click={handleSearch}>Search</button></div>
-  </header>
+  <div class="sys-toolbar">
+    <input
+      class="sys-input"
+      placeholder="Search people..."
+      bind:value={searchQuery}
+      on:keydown={(e) => e.key === 'Enter' && handleSearch()}
+    />
+    <button class="sys-btn sys-btn--secondary" on:click={handleSearch}>Search</button>
+  </div>
 
   {#if loading}
     <div class="sys-state">Loading people...</div>
   {:else if error}
     <div class="sys-state sys-state--error">
       <p>Error: {error}</p>
-      <button on:click={loadPeople}>Retry</button>
+      <button class="sys-btn sys-btn--danger" on:click={loadPeople}>Retry</button>
     </div>
   {:else if people.length === 0}
     <div class="sys-state sys-state--empty">
       {#if searchQuery}
         <p>No people found matching "{searchQuery}"</p>
-        <button on:click={() => { searchQuery = ''; loadPeople(); }}>Clear search</button>
+        <button class="sys-btn sys-btn--secondary" on:click={() => { searchQuery = ''; loadPeople(); }}>Clear search</button>
       {:else}
         <p>No people found.</p>
-        <button on:click={openAddModal}>Add your first person</button>
+        <button class="sys-btn sys-btn--primary" on:click={openAddModal}>Add your first person</button>
       {/if}
     </div>
   {:else}
-    <div class="people-grid">
+    <div class="sys-grid sys-grid--cards">
       {#each people as person}
-        <div class="person-card">
+        <div class="sys-card person-card">
           <a href={`/people/${person.id}`} class="person-link">
-            <div class="avatar">
+            <div class="sys-avatar sys-avatar--people">
               {getInitial(person.display_name)}
             </div>
             <div class="person-info">
@@ -151,17 +157,14 @@
                 <div class="legal-name">({person.first_name})</div>
               {/if}
               {#if person.has_contact_info}
-                <div class="contact-badge">
-                  <span class="phone-icon">☎</span>
-                  <span>Contact Info</span>
-                </div>
+                <div class="contact-badge">☎ Contact Info</div>
               {:else}
                 <div class="no-info">No contact info</div>
               {/if}
             </div>
           </a>
           <div class="card-actions">
-            <button class="btn-icon" on:click={() => openEditModal(person)} title="Edit">
+            <button class="sys-icon-btn" on:click={() => openEditModal(person)} title="Edit">
               ✏️
             </button>
             <button class="sys-icon-btn sys-icon-btn--danger" on:click={() => handleDelete(person)} title="Archive">
@@ -183,149 +186,10 @@
 />
 
 <style>
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
-
-  header {
-    margin-bottom: 2rem;
-  }
-
-  .header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1.5rem;
-    gap: 1rem;
-  }
-
-  h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin: 0 0 0.5rem 0;
-    color: #1a1a1a;
-  }
-
-  header p {
-    color: #666;
-    font-size: 1.1rem;
-    margin: 0;
-  }
-
-  .btn-add {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
-    background: #0066cc;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-
-  .btn-add:hover {
-    background: #0055aa;
-  }
-
-  .plus {
-    font-size: 1.25rem;
-    font-weight: 300;
-  }
-
-  .search-bar {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .search-bar input {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 1rem;
-  }
-
-  .search-bar input:focus {
-    outline: none;
-    border-color: #0066cc;
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
-  }
-
-  .btn-search {
-    padding: 0.75rem 1.5rem;
-    background: #f0f0f0;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-search:hover {
-    background: #e5e5e5;
-  }
-
-  .loading, .error, .empty {
-    text-align: center;
-    padding: 3rem;
-    background: #f5f5f5;
-    border-radius: 8px;
-    margin-top: 2rem;
-  }
-
-  .error {
-    background: #fee;
-    color: #c00;
-  }
-
-  .error button, .empty button {
-    margin-top: 1rem;
-    padding: 0.5rem 1.5rem;
-    background: #0066cc;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-  }
-
-  .error button {
-    background: #c00;
-  }
-
-  .error button:hover {
-    background: #a00;
-  }
-
-  .empty button:hover {
-    background: #0055aa;
-  }
-
-  .people-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.5rem;
-  }
-
+  /* People-specific styles only - layout handled by sys-* classes */
   .person-card {
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
     display: flex;
     align-items: center;
-    transition: all 0.2s;
-  }
-
-  .person-card:hover {
-    border-color: #1976d2;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
 
   .person-link {
@@ -338,18 +202,10 @@
     color: inherit;
   }
 
-  .avatar {
+  .sys-avatar--people {
     width: 56px;
     height: 56px;
-    background: #e3f2fd;
-    color: #1976d2;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     font-size: 1.4rem;
-    font-weight: 700;
-    flex-shrink: 0;
   }
 
   .person-info {
@@ -357,11 +213,11 @@
     min-width: 0;
   }
 
-  h2 {
+  .person-info h2 {
     font-size: 1.1rem;
     font-weight: 600;
     margin: 0 0 0.25rem 0;
-    color: #1a1a1a;
+    color: var(--sys-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -369,7 +225,7 @@
 
   .legal-name {
     font-size: 0.8rem;
-    color: #888;
+    color: var(--sys-muted);
     margin-bottom: 0.25rem;
   }
 
@@ -385,13 +241,8 @@
     font-weight: 500;
   }
 
-  .phone-icon {
-    font-size: 0.9rem;
-    line-height: 1;
-  }
-
   .no-info {
-    color: #999;
+    color: var(--sys-muted);
     font-size: 0.8rem;
     font-style: italic;
   }
@@ -401,55 +252,6 @@
     flex-direction: column;
     gap: 0.25rem;
     padding: 0.5rem;
-    border-left: 1px solid #eee;
-  }
-
-  .btn-icon {
-    background: none;
-    border: none;
-    padding: 0.5rem;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: all 0.2s;
-    font-size: 1rem;
-  }
-
-  .btn-icon:hover {
-    background: #f0f0f0;
-  }
-
-  .btn-danger:hover {
-    background: #fee;
-  }
-
-  @media (max-width: 768px) {
-    .container {
-      padding: 1rem;
-    }
-
-    .header-top {
-      flex-direction: column;
-    }
-
-    .btn-add {
-      width: 100%;
-      justify-content: center;
-    }
-
-    h1 {
-      font-size: 2rem;
-    }
-
-    .people-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .search-bar {
-      flex-direction: column;
-    }
-
-    .btn-search {
-      width: 100%;
-    }
+    border-left: 1px solid var(--sys-border);
   }
 </style>

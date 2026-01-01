@@ -350,15 +350,15 @@
   }
 </script>
 
-<div class="container">
-  <a href="/people" class="back-link">← Back to People</a>
+<div class="sys-page sys-page--narrow">
+  <a href="/people" class="sys-back-link">← Back to People</a>
 
   {#if loading}
-    <div class="loading">Loading person details...</div>
+    <div class="sys-state">Loading person details...</div>
   {:else if error}
-    <div class="error">
+    <div class="sys-state sys-state--error">
       <p>Error: {error}</p>
-      <button on:click={loadPerson}>Retry</button>
+      <button class="sys-btn sys-btn--danger" on:click={loadPerson}>Retry</button>
     </div>
   {:else if person}
     <div class="profile-card">
@@ -372,10 +372,10 @@
         {/if}
         
         <div class="header-actions">
-          <button class="btn-edit" on:click={openEditModal}>
+          <button class="sys-btn sys-btn--primary" on:click={openEditModal}>
             ✏️ Edit
           </button>
-          <button class="btn-archive" on:click={handleArchive}>
+          <button class="sys-btn sys-btn--secondary btn-archive" on:click={handleArchive}>
             🗑️ Archive
           </button>
         </div>
@@ -428,7 +428,7 @@
 
         <div class="section-header-row">
           <h2>Addresses</h2>
-          <button class="btn-add-role" on:click={openAddAddressModal} title="Add a personal address (e.g., college, work)">
+          <button class="sys-btn sys-btn--primary btn-small" on:click={openAddAddressModal} title="Add a personal address (e.g., college, work)">
             + Add Personal Address
           </button>
         </div>
@@ -478,7 +478,7 @@
 
         <div class="section-header-row">
           <h2>Ministry Roles</h2>
-          <button class="btn-add-role" on:click={() => showAddRoleModal = true}>
+          <button class="sys-btn sys-btn--primary btn-small" on:click={() => showAddRoleModal = true}>
             + Add Role
           </button>
         </div>
@@ -486,7 +486,7 @@
         {#if capabilities.length === 0}
           <div class="empty-roles-card">
             <p>No ministry roles assigned yet.</p>
-            <button class="btn-add-first-role" on:click={() => showAddRoleModal = true}>
+            <button class="sys-btn sys-btn--primary" on:click={() => showAddRoleModal = true}>
               + Add Their First Role
             </button>
           </div>
@@ -545,22 +545,22 @@
 
 <!-- Add Role Modal -->
 {#if showAddRoleModal}
-<div class="modal-overlay" on:click={() => showAddRoleModal = false} on:keydown={(e) => e.key === 'Escape' && (showAddRoleModal = false)}>
-  <div class="modal add-role-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && (showAddRoleModal = false)}>
-    <div class="modal-header">
+<div class="sys-modal-overlay" on:click={() => showAddRoleModal = false} on:keydown={(e) => e.key === 'Escape' && (showAddRoleModal = false)}>
+  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && (showAddRoleModal = false)}>
+    <div class="sys-modal-header">
       <h2>Add Ministry Role</h2>
-      <button class="close-btn" on:click={() => showAddRoleModal = false}>×</button>
+      <button class="sys-modal-close" on:click={() => showAddRoleModal = false}>×</button>
     </div>
 
-    <div class="modal-body">
+    <div class="sys-modal-body">
       {#if unassignedRoles.length === 0}
         <div class="no-roles-available">
           <p>This person has been assigned all available roles, or no roles have been defined yet.</p>
         </div>
       {:else}
-        <div class="form-group">
+        <div class="sys-form-group">
           <label for="role-select">Select Role</label>
-          <select id="role-select" bind:value={selectedRoleId}>
+          <select id="role-select" class="sys-select" bind:value={selectedRoleId}>
             <option value="">— Choose a role —</option>
             {#each Object.entries(rolesByMinistry) as [ministry, roles]}
               <optgroup label={ministry}>
@@ -572,7 +572,7 @@
           </select>
         </div>
 
-        <div class="form-group">
+        <div class="sys-form-group">
           <label>Proficiency Level</label>
           <div class="proficiency-selector">
             {#each [1, 2, 3, 4, 5] as level}
@@ -591,10 +591,10 @@
       {/if}
     </div>
 
-    <div class="modal-actions">
-      <button class="btn-cancel" on:click={() => showAddRoleModal = false}>Cancel</button>
+    <div class="sys-modal-actions">
+      <button class="sys-btn sys-btn--secondary" on:click={() => showAddRoleModal = false}>Cancel</button>
       <button
-        class="btn-save"
+        class="sys-btn sys-btn--primary"
         on:click={addRoleCapability}
         disabled={!selectedRoleId || addingRole}
       >
@@ -607,59 +607,64 @@
 
 <!-- Address Modal -->
 {#if showAddressModal}
-<div class="modal-overlay" on:click={closeAddressModal} on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
-  <div class="modal address-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
-    <div class="modal-header">
+<div class="sys-modal-overlay" on:click={closeAddressModal} on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+    <div class="sys-modal-header">
       <h2>{editingAddress ? 'Edit Address' : 'Add Address'}</h2>
-      <button class="close-btn" on:click={closeAddressModal}>×</button>
+      <button class="sys-modal-close" on:click={closeAddressModal}>×</button>
     </div>
 
-    <div class="modal-body">
-      <div class="form-group">
+    <div class="sys-modal-body">
+      <div class="sys-form-group">
         <label for="address-label">Label</label>
         <input
           id="address-label"
+          class="sys-input"
           type="text"
           bind:value={addressLabel}
           placeholder="e.g., Home, Work, Mailing"
         />
       </div>
 
-      <div class="form-group">
+      <div class="sys-form-group">
         <label for="address-line1">Street Address</label>
         <input
           id="address-line1"
+          class="sys-input"
           type="text"
           bind:value={addressLine1}
           placeholder="123 Main St"
         />
       </div>
 
-      <div class="form-group">
+      <div class="sys-form-group">
         <label for="address-line2">Apt/Suite/Unit (optional)</label>
         <input
           id="address-line2"
+          class="sys-input"
           type="text"
           bind:value={addressLine2}
           placeholder="Apt 4B"
         />
       </div>
 
-      <div class="form-row">
-        <div class="form-group flex-2">
+      <div class="sys-form-row">
+        <div class="sys-form-group flex-2">
           <label for="address-city">City</label>
           <input
             id="address-city"
+            class="sys-input"
             type="text"
             bind:value={addressCity}
             placeholder="City"
           />
         </div>
 
-        <div class="form-group flex-1">
+        <div class="sys-form-group flex-1">
           <label for="address-state">State</label>
           <input
             id="address-state"
+            class="sys-input"
             type="text"
             bind:value={addressState}
             placeholder="TX"
@@ -667,10 +672,11 @@
           />
         </div>
 
-        <div class="form-group flex-1">
+        <div class="sys-form-group flex-1">
           <label for="address-zip">ZIP</label>
           <input
             id="address-zip"
+            class="sys-input"
             type="text"
             bind:value={addressPostalCode}
             placeholder="12345"
@@ -679,10 +685,10 @@
       </div>
     </div>
 
-    <div class="modal-actions">
-      <button class="btn-cancel" on:click={closeAddressModal}>Cancel</button>
+    <div class="sys-modal-actions">
+      <button class="sys-btn sys-btn--secondary" on:click={closeAddressModal}>Cancel</button>
       <button
-        class="btn-save"
+        class="sys-btn sys-btn--primary"
         on:click={saveAddress}
         disabled={savingAddress}
       >
@@ -702,103 +708,50 @@
 />
 
 <style>
-  .container {
-    max-width: 600px;
-    margin: 40px auto;
-    padding: 0 20px;
-    font-family: system-ui, sans-serif;
-  }
-
-  .back-link {
-    display: inline-block;
-    margin-bottom: 20px;
-    color: #666;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s;
-  }
-  
-  .back-link:hover {
-    color: #0066cc;
-  }
-
-  /* Loading and Error States */
-  .loading,
-  .error {
-    text-align: center;
-    padding: 3rem;
-    background: #f5f5f5;
-    border-radius: 12px;
-    margin-top: 2rem;
-  }
-
-  .error {
-    background: #fee;
-    color: #c00;
-  }
-
-  .error p {
-    margin: 0 0 1rem 0;
-  }
-
-  .error button {
-    padding: 0.5rem 1.5rem;
-    background: #c00;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 500;
-    transition: background 0.2s;
-  }
-
-  .error button:hover {
-    background: #a00;
-  }
+  /* Person detail page - specific styles only */
 
   /* Profile Card */
   .profile-card {
     background: white;
-    border: 1px solid #e3e3e3;
-    border-radius: 16px;
+    border: 1px solid var(--sys-border);
+    border-radius: var(--sys-radius-lg);
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--sys-shadow-sm);
   }
 
   .profile-header {
-    background: #f9fafb;
-    padding: 32px;
+    background: var(--sys-panel);
+    padding: 2rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--sys-border);
   }
 
   .avatar-large {
     width: 80px;
     height: 80px;
-    background: #0066cc;
+    background: linear-gradient(135deg, var(--gatherings-accent-start), var(--gatherings-accent-end));
     color: white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
+    font-size: 2rem;
     font-weight: 700;
-    margin-bottom: 16px;
+    margin-bottom: 1rem;
   }
 
-  h1 {
+  .profile-header h1 {
     margin: 0;
-    font-size: 24px;
-    color: #1a1a1a;
+    font-size: 1.5rem;
+    color: var(--sys-text);
   }
 
   .legal-name {
-    margin: 8px 0 0 0;
-    font-size: 14px;
-    color: #666;
+    margin: 0.5rem 0 0 0;
+    font-size: 0.875rem;
+    color: var(--sys-muted);
   }
 
   .header-actions {
@@ -807,54 +760,31 @@
     margin-top: 1.25rem;
   }
 
-  .btn-edit, .btn-archive {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-edit {
-    background: #0066cc;
-    color: white;
-    border: 1px solid #0066cc;
-  }
-
-  .btn-edit:hover {
-    background: #0055aa;
-  }
-
-  .btn-archive {
-    background: white;
-    color: #666;
-    border: 1px solid #ddd;
-  }
-
   .btn-archive:hover {
-    background: #fee;
-    border-color: #fcc;
-    color: #c00;
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+  }
+
+  .btn-small {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
   }
 
   .info-section {
-    padding: 32px;
+    padding: 2rem;
   }
 
-  h2 {
-    font-size: 14px;
+  .info-section h2 {
+    font-size: 0.75rem;
     text-transform: uppercase;
-    color: #888;
-    margin: 24px 0 12px 0;
+    color: var(--sys-muted);
+    margin: 1.5rem 0 0.75rem 0;
     letter-spacing: 0.05em;
     font-weight: 600;
   }
 
-  h2:first-child {
+  .info-section h2:first-child {
     margin-top: 0;
   }
 
@@ -862,18 +792,18 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
-    padding: 12px 0;
+    padding: 0.75rem 0;
   }
 
   .info-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.25rem;
   }
 
   .info-row {
-    padding: 12px 0;
-    border-bottom: 1px solid #eee;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--sys-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -886,26 +816,24 @@
   .label-group {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.25rem;
     flex: 1;
   }
 
   .label {
-    font-size: 13px;
-    color: #666;
+    font-size: 0.8125rem;
+    color: var(--sys-muted);
     font-weight: 500;
   }
 
-  .value,
-  .value-link {
-    font-size: 16px;
-    color: #1a1a1a;
+  .value, .value-link {
+    font-size: 1rem;
+    color: var(--sys-text);
   }
 
   .value-link {
-    color: #0066cc;
+    color: var(--gatherings-accent-start);
     text-decoration: none;
-    transition: text-decoration 0.2s;
   }
 
   .value-link:hover {
@@ -913,79 +841,45 @@
   }
 
   .badge {
-    background: #e3f2fd;
-    color: #0066cc;
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 12px;
+    background: #e0e7ff;
+    color: var(--gatherings-accent-start);
+    font-size: 0.6875rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
   }
 
   .empty-row {
-    color: #999;
+    color: var(--sys-muted);
     font-style: italic;
-    padding: 10px 0;
+    padding: 0.625rem 0;
   }
 
-  /* Section header with button */
   .section-header-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 24px 0 12px 0;
+    margin: 1.5rem 0 0.75rem 0;
   }
 
   .section-header-row h2 {
     margin: 0;
   }
 
-  .btn-add-role {
-    padding: 0.375rem 0.75rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-add-role:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-  }
-
   /* Empty roles state */
   .empty-roles-card {
     text-align: center;
     padding: 2rem;
-    background: #f9fafb;
-    border: 2px dashed #e5e7eb;
-    border-radius: 12px;
+    background: var(--sys-panel);
+    border: 2px dashed var(--sys-border);
+    border-radius: var(--sys-radius-md);
     margin: 0.5rem 0;
   }
 
   .empty-roles-card p {
-    color: #6b7280;
+    color: var(--sys-muted);
     margin: 0 0 1rem 0;
-  }
-
-  .btn-add-first-role {
-    padding: 0.5rem 1rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-add-first-role:hover {
-    opacity: 0.9;
   }
 
   /* Roles list */
@@ -1002,10 +896,10 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #6b7280;
+    color: var(--sys-muted);
     margin: 0 0 0.5rem 0;
     padding-bottom: 0.375rem;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--sys-border);
   }
 
   .role-card {
@@ -1014,14 +908,13 @@
     align-items: center;
     padding: 0.75rem 1rem;
     background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--sys-border);
+    border-radius: var(--sys-radius-sm);
     margin-bottom: 0.5rem;
-    transition: all 0.2s;
   }
 
   .role-card.primary {
-    border-color: #667eea;
+    border-color: var(--gatherings-accent-start);
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
   }
 
@@ -1038,31 +931,27 @@
 
   .role-name {
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--sys-text);
   }
 
   .primary-badge {
     font-size: 0.625rem;
     font-weight: 700;
     padding: 0.125rem 0.375rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--gatherings-accent-start), var(--gatherings-accent-end));
     color: white;
     border-radius: 999px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
   }
 
   .role-details {
     display: flex;
     gap: 1rem;
     font-size: 0.8125rem;
-    color: #6b7280;
+    color: var(--sys-muted);
   }
 
-  .proficiency {
-    font-weight: 500;
-  }
-
+  .proficiency { font-weight: 500; }
   .proficiency-1 { color: #ef4444; }
   .proficiency-2 { color: #f97316; }
   .proficiency-3 { color: #eab308; }
@@ -1078,149 +967,34 @@
     gap: 0.25rem;
   }
 
-  .btn-star,
-  .btn-remove {
+  .btn-star, .btn-remove {
     width: 2rem;
     height: 2rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--sys-border);
     border-radius: 6px;
     background: white;
     cursor: pointer;
     font-size: 1rem;
-    transition: all 0.2s;
   }
 
-  .btn-star {
-    color: #d1d5db;
-  }
-
-  .btn-star:hover,
-  .btn-star.active {
+  .btn-star { color: #d1d5db; }
+  .btn-star:hover, .btn-star.active {
     color: #fbbf24;
     border-color: #fbbf24;
     background: #fffbeb;
   }
 
-  .btn-remove {
-    color: #9ca3af;
-  }
-
+  .btn-remove { color: #9ca3af; }
   .btn-remove:hover {
     color: #ef4444;
     border-color: #ef4444;
     background: #fef2f2;
   }
 
-  /* Modal styles */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 1rem;
-  }
-
-  .modal {
-    background: white;
-    border-radius: 12px;
-    width: 100%;
-    max-height: 90vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .add-role-modal {
-    max-width: 480px;
-  }
-
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-  }
-
-  .modal-header h2 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .close-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    font-size: 1.25rem;
-    cursor: pointer;
-    color: white;
-    width: 1.75rem;
-    height: 1.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-  }
-
-  .close-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-  }
-
-  .modal-body {
-    padding: 1.5rem;
-    overflow-y: auto;
-  }
-
-  .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #e5e7eb;
-    background: #f9fafb;
-  }
-
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-
-  .form-group:last-child {
-    margin-bottom: 0;
-  }
-
-  .form-group label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-    margin-bottom: 0.5rem;
-  }
-
-  .form-group select {
-    width: 100%;
-    padding: 0.625rem 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.9375rem;
-    transition: border-color 0.2s;
-  }
-
-  .form-group select:focus {
-    outline: none;
-    border-color: #667eea;
-  }
-
+  /* Proficiency selector */
   .proficiency-selector {
     display: flex;
     gap: 0.5rem;
@@ -1232,31 +1006,30 @@
     flex-direction: column;
     align-items: center;
     padding: 0.75rem 0.5rem;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--sys-border);
+    border-radius: var(--sys-radius-sm);
     background: white;
     cursor: pointer;
-    transition: all 0.2s;
   }
 
   .proficiency-btn:hover {
-    border-color: #667eea;
+    border-color: var(--gatherings-accent-start);
   }
 
   .proficiency-btn.selected {
-    border-color: #667eea;
+    border-color: var(--gatherings-accent-start);
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
   }
 
   .level-number {
     font-size: 1.25rem;
     font-weight: 700;
-    color: #1a1a1a;
+    color: var(--sys-text);
   }
 
   .level-label {
     font-size: 0.625rem;
-    color: #6b7280;
+    color: var(--sys-muted);
     text-transform: uppercase;
     margin-top: 0.25rem;
   }
@@ -1265,7 +1038,7 @@
     text-align: center;
     padding: 1.5rem;
     background: #fef3c7;
-    border-radius: 8px;
+    border-radius: var(--sys-radius-sm);
   }
 
   .no-roles-available p {
@@ -1273,98 +1046,7 @@
     color: #92400e;
   }
 
-  .btn-cancel {
-    padding: 0.625rem 1.25rem;
-    background: white;
-    color: #374151;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-cancel:hover {
-    background: #f3f4f6;
-  }
-
-  .btn-save {
-    padding: 0.625rem 1.25rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-save:hover:not(:disabled) {
-    opacity: 0.9;
-  }
-
-  .btn-save:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  /* Responsive Design */
-  @media (max-width: 768px) {
-    .container {
-      padding: 0 16px;
-      margin: 20px auto;
-    }
-
-    .info-section {
-      padding: 24px;
-    }
-
-    .profile-header {
-      padding: 24px;
-    }
-
-    h1 {
-      font-size: 20px;
-    }
-
-    .avatar-large {
-      width: 64px;
-      height: 64px;
-      font-size: 28px;
-    }
-
-    .info-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .header-actions {
-      flex-direction: column;
-      width: 100%;
-    }
-
-    .btn-edit, .btn-archive {
-      width: 100%;
-      justify-content: center;
-    }
-
-    .proficiency-selector {
-      flex-wrap: wrap;
-    }
-
-    .proficiency-btn {
-      flex-basis: calc(33.333% - 0.5rem);
-    }
-
-    .form-row {
-      flex-direction: column;
-    }
-  }
-
-  /* Address Modal */
-  .address-modal {
-    max-width: 480px;
-  }
-
+  /* Address styles */
   .address-row {
     display: flex;
     justify-content: space-between;
@@ -1384,12 +1066,11 @@
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.875rem;
-    transition: all 0.2s;
   }
 
   .btn-icon:hover {
-    background: #f3f4f6;
-    border-color: #e5e7eb;
+    background: var(--sys-panel);
+    border-color: var(--sys-border);
   }
 
   .btn-icon.delete:hover {
@@ -1424,16 +1105,6 @@
     margin-left: 0.5rem;
   }
 
-  .primary-badge {
-    font-size: 0.6875rem;
-    font-weight: 500;
-    padding: 0.125rem 0.375rem;
-    background: #dbeafe;
-    color: #1d4ed8;
-    border-radius: 4px;
-    margin-left: 0.5rem;
-  }
-
   a.btn-icon {
     text-decoration: none;
     display: inline-flex;
@@ -1444,7 +1115,7 @@
   .btn-link {
     background: none;
     border: none;
-    color: #667eea;
+    color: var(--gatherings-accent-start);
     cursor: pointer;
     text-decoration: underline;
     font-size: inherit;
@@ -1453,34 +1124,28 @@
   }
 
   .btn-link:hover {
-    color: #764ba2;
+    color: var(--gatherings-accent-end);
   }
 
-  .form-row {
-    display: flex;
-    gap: 0.75rem;
-  }
+  .flex-1 { flex: 1; }
+  .flex-2 { flex: 2; }
 
-  .flex-1 {
-    flex: 1;
-  }
+  @media (max-width: 640px) {
+    .info-grid {
+      grid-template-columns: 1fr;
+    }
 
-  .flex-2 {
-    flex: 2;
-  }
+    .header-actions {
+      flex-direction: column;
+      width: 100%;
+    }
 
-  .form-group input {
-    width: 100%;
-    padding: 0.625rem 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.9375rem;
-    transition: border-color 0.2s;
-    box-sizing: border-box;
-  }
+    .proficiency-selector {
+      flex-wrap: wrap;
+    }
 
-  .form-group input:focus {
-    outline: none;
-    border-color: #667eea;
+    .proficiency-btn {
+      flex-basis: calc(33.333% - 0.5rem);
+    }
   }
 </style>
