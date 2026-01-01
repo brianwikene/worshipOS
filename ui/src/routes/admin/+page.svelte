@@ -20,6 +20,13 @@
       href: '/admin/service-types',
       icon: '📋',
       color: '#3b82f6'
+    },
+    {
+      title: 'Duplicate Detection',
+      description: 'Find and merge duplicate person records. Review suggested matches and maintain data integrity.',
+      href: '/admin/duplicates',
+      icon: '🔍',
+      color: '#059669'
     }
   ];
 </script>
