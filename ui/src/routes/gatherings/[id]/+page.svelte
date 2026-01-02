@@ -405,7 +405,7 @@ $: filteredOtherPeople = availablePeople.filter(p => {
 </script>
 
 <div class="container">
-  <a href="/services" class="back-link">← Back to Services</a>
+  <a href="/gatherings" class="back-link">← Back to Gatherings</a>
 
   {#if loading}
     <div class="loading">Loading service details...</div>

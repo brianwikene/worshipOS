@@ -213,6 +213,7 @@
 
   .family-link {
     flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -222,6 +223,7 @@
   }
 
   .family-avatar {
+    flex-shrink: 0;
     width: 56px;
     height: 56px;
     border-radius: 12px;
@@ -258,6 +260,7 @@
   }
 
   .card-actions {
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;

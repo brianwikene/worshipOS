@@ -24,7 +24,7 @@
     </p>
   </a>
 
-  <a href="/services" class="sys-card gatherings sys-card-link">
+  <a href="/gatherings" class="sys-card gatherings sys-card-link">
     <h2 class="sys-card-title">Gatherings</h2>
     <p class="sys-card-body">
       Plan and manage services, events, and weekly rhythms.

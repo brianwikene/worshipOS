@@ -321,8 +321,8 @@ $: visibleServices = services
         <p>church_id: {activeChurchId}</p>
       </div>
       <nav class="view-toggle">
-  <a class:selected={view === 'upcoming'} href="/services?view=upcoming">Upcoming</a>
-  <a class:selected={view === 'past'} href="/services?view=past">Past</a>
+  <a class:selected={view === 'upcoming'} href="/gatherings?view=upcoming">Upcoming</a>
+  <a class:selected={view === 'past'} href="/gatherings?view=past">Past</a>
 </nav>
       <div class="header-actions">
         <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
@@ -373,7 +373,7 @@ $: visibleServices = services
 
           <div class="instances-grid">
             {#each service.instances as instance}
-              <a href={`/service-instances/${instance.id}`} class="instance-link">
+              <a href={`/gatherings/${instance.id}`} class="instance-link">
                 <div class="instance-card">
 
                   <div class="instance-header">

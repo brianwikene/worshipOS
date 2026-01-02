@@ -194,6 +194,7 @@
 
   .person-link {
     flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -203,6 +204,7 @@
   }
 
   .sys-avatar--people {
+    flex-shrink: 0;
     width: 56px;
     height: 56px;
     font-size: 1.4rem;
@@ -248,6 +250,7 @@
   }
 
   .card-actions {
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
