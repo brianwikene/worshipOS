@@ -185,32 +185,30 @@
   }
 </script>
 
-<div class="container">
-  <header>
-    <div class="header-content">
-      <div class="title-section">
-        <h1>Service Types</h1>
-        <p>Define types of services and their required team positions</p>
-      </div>
-      <button class="btn-add" on:click={openAddModal}>
-        + Add Service Type
-      </button>
+<div class="sys-page">
+  <div class="sys-page-header">
+    <div>
+      <h1 class="sys-title">Service Types</h1>
+      <p class="sys-subtitle">Define types of services and their required team positions</p>
     </div>
-  </header>
+    <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
+      + Add Service Type
+    </button>
+  </div>
 
   {#if loading}
-    <div class="loading">Loading service types...</div>
+    <div class="sys-state">Loading service types...</div>
   {:else if error}
-    <div class="error">
+    <div class="sys-state sys-state--error">
       <p>{error}</p>
-      <button on:click={loadServiceTypes}>Retry</button>
+      <button class="sys-btn sys-btn--danger" on:click={loadServiceTypes}>Retry</button>
     </div>
   {:else if serviceTypes.length === 0}
-    <div class="empty-state">
+    <div class="sys-state sys-state--empty">
       <div class="empty-icon">📋</div>
       <h3>No Service Types Defined</h3>
       <p>Create service types like "Sunday AM", "Youth", or "Midweek" to start scheduling.</p>
-      <button class="btn-primary" on:click={openAddModal}>
+      <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
         + Create Your First Service Type
       </button>
     </div>
@@ -268,28 +266,30 @@
 
 <!-- Add/Edit Service Type Modal -->
 {#if showModal}
-<div class="modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-  <div class="modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-    <div class="modal-header">
+<div class="sys-modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
+  <div class="sys-modal sys-modal--wide" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
+    <div class="sys-modal-header">
       <h2>{editingType ? 'Edit Service Type' : 'Add Service Type'}</h2>
-      <button class="close-btn" on:click={closeModal}>×</button>
+      <button class="sys-modal-close" on:click={closeModal}>×</button>
     </div>
 
-    <div class="modal-body">
-      <div class="form-group">
+    <div class="sys-modal-body">
+      <div class="sys-form-group">
         <label for="type-name">Name *</label>
         <input
           id="type-name"
+          class="sys-input"
           type="text"
           bind:value={formName}
           placeholder="e.g., Sunday AM, Youth, Midweek"
         />
       </div>
 
-      <div class="form-group">
+      <div class="sys-form-group">
         <label for="type-desc">Description</label>
         <textarea
           id="type-desc"
+          class="sys-input"
           bind:value={formDescription}
           placeholder="Brief description of this service type"
           rows="2"
@@ -301,7 +301,7 @@
           <h3>Required Positions</h3>
           <span class="position-count">{formRequirements.reduce((s, r) => s + r.min_needed, 0)} total</span>
         </div>
-        <p class="help-text">Define which roles are needed for this type of service and how many of each.</p>
+        <p class="sys-help-text">Define which roles are needed for this type of service and how many of each.</p>
 
         {#if formRequirements.length > 0}
           <div class="requirements-editor">
@@ -343,7 +343,7 @@
         {#if availableRoles.length > 0}
           <div class="add-role-section">
             <label>Add Position</label>
-            <select on:change={(e) => { addRoleRequirement(e.currentTarget.value); e.currentTarget.value = ''; }}>
+            <select class="sys-select" on:change={(e) => { addRoleRequirement(e.currentTarget.value); e.currentTarget.value = ''; }}>
               <option value="">— Select a role to add —</option>
               {#each Object.entries(rolesByMinistry) as [ministry, ministryRoles]}
                 <optgroup label={ministry}>
@@ -364,10 +364,10 @@
       </div>
     </div>
 
-    <div class="modal-actions">
-      <button class="btn-cancel" on:click={closeModal}>Cancel</button>
+    <div class="sys-modal-actions">
+      <button class="sys-btn sys-btn--secondary" on:click={closeModal}>Cancel</button>
       <button
-        class="btn-save"
+        class="sys-btn sys-btn--primary"
         on:click={saveServiceType}
         disabled={saving || !formName.trim()}
       >
@@ -379,88 +379,10 @@
 {/if}
 
 <style>
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  }
-
-  header {
-    margin-bottom: 2rem;
-  }
-
-  .header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-  }
-
-  .title-section h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .title-section p {
-    color: #6b7280;
-    margin: 0;
-  }
-
-  .btn-add {
-    padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .btn-add:hover {
-    opacity: 0.9;
-  }
-
-  /* Loading & Error */
-  .loading, .error, .empty-state {
-    text-align: center;
-    padding: 3rem;
-    background: #f9fafb;
-    border-radius: 12px;
-  }
-
-  .error {
-    background: #fef2f2;
-    color: #b91c1c;
-  }
-
-  .empty-state {
-    background: white;
-    border: 2px dashed #e5e7eb;
-  }
-
+  /* Service types page specific styles */
   .empty-icon {
     font-size: 3rem;
     margin-bottom: 1rem;
-  }
-
-  .empty-state h3 {
-    margin: 0 0 0.5rem 0;
-  }
-
-  .empty-state p {
-    color: #6b7280;
-    margin: 0 0 1.5rem 0;
-  }
-
-  .btn-primary {
-    padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
   }
 
   /* Types grid */
@@ -599,103 +521,7 @@
     color: #ef4444;
   }
 
-  /* Modal */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 1rem;
-  }
-
-  .modal {
-    background: white;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 600px;
-    max-height: 90vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.25rem 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-  }
-
-  .modal-header h2 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .close-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    font-size: 1.25rem;
-    cursor: pointer;
-    color: white;
-    width: 1.75rem;
-    height: 1.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-  }
-
-  .modal-body {
-    padding: 1.5rem;
-    overflow-y: auto;
-  }
-
-  .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #e5e7eb;
-    background: #f9fafb;
-  }
-
-  /* Form */
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-
-  .form-group label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-    margin-bottom: 0.5rem;
-  }
-
-  .form-group input,
-  .form-group textarea,
-  .form-group select {
-    width: 100%;
-    padding: 0.625rem 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.9375rem;
-    box-sizing: border-box;
-  }
-
-  .form-group textarea {
-    resize: vertical;
-  }
-
+  /* Form section */
   .form-section {
     margin-top: 1.5rem;
     padding-top: 1.5rem;
@@ -721,11 +547,6 @@
     font-weight: 600;
   }
 
-  .help-text {
-    font-size: 0.75rem;
-    color: #6b7280;
-    margin: 0 0 1rem 0;
-  }
 
   .requirements-editor {
     display: flex;
@@ -842,31 +663,6 @@
   .no-roles-warning a {
     color: #d97706;
     text-decoration: underline;
-  }
-
-  .btn-cancel {
-    padding: 0.625rem 1.25rem;
-    background: white;
-    color: #374151;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-weight: 500;
-    cursor: pointer;
-  }
-
-  .btn-save {
-    padding: 0.625rem 1.25rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .btn-save:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   @media (max-width: 640px) {

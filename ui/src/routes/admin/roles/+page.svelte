@@ -199,17 +199,16 @@
   }
 </script>
 
-<div class="container">
-  <header>
-    <div class="header-content">
-      <div class="title-section">
-        <h1>Manage Roles</h1>
-        <p>Define positions available for scheduling on services</p>
-      </div>
-      <button class="btn-add" on:click={openAddModal}>
-        + Add Role
-      </button>
+<div class="sys-page">
+  <div class="sys-page-header">
+    <div>
+      <h1 class="sys-title">Manage Roles</h1>
+      <p class="sys-subtitle">Define positions available for scheduling on services</p>
     </div>
+    <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
+      + Add Role
+    </button>
+  </div>
 
     <div class="stats-row">
       <div class="stat">
@@ -226,18 +225,18 @@
   </header>
 
   {#if loading}
-    <div class="loading">Loading roles...</div>
+    <div class="sys-state">Loading roles...</div>
   {:else if error}
-    <div class="error">
+    <div class="sys-state sys-state--error">
       <p>{error}</p>
-      <button on:click={loadRoles}>Retry</button>
+      <button class="sys-btn sys-btn--danger" on:click={loadRoles}>Retry</button>
     </div>
   {:else if roles.length === 0}
-    <div class="empty-state">
+    <div class="sys-state sys-state--empty">
       <div class="empty-icon">🎭</div>
       <h3>No Roles Defined</h3>
       <p>Create roles to start scheduling team members for services.</p>
-      <button class="btn-primary" on:click={openAddModal}>
+      <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
         + Create Your First Role
       </button>
     </div>
@@ -305,27 +304,28 @@
 
 <!-- Add/Edit Role Modal -->
 {#if showModal}
-<div class="modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-  <div class="modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-    <div class="modal-header">
+<div class="sys-modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
+  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
+    <div class="sys-modal-header">
       <h2>{editingRole ? 'Edit Role' : 'Add New Role'}</h2>
-      <button class="close-btn" on:click={closeModal}>×</button>
+      <button class="sys-modal-close" on:click={closeModal}>×</button>
     </div>
 
-    <div class="modal-body">
-      <div class="form-group">
+    <div class="sys-modal-body">
+      <div class="sys-form-group">
         <label for="role-name">Role Name *</label>
         <input
           id="role-name"
+          class="sys-input"
           type="text"
           bind:value={formName}
           placeholder="e.g., Electric Guitar, Worship Leader"
         />
       </div>
 
-      <div class="form-group">
+      <div class="sys-form-group">
         <label for="team">Team</label>
-        <select id="team" bind:value={formTeamId}>
+        <select id="team" class="sys-select" bind:value={formTeamId}>
           <option value="">No team assigned</option>
           {#each teams as team}
             <option value={team.id}>
@@ -333,22 +333,23 @@
             </option>
           {/each}
         </select>
-        <small class="help-text">Assign this role to a ministry team</small>
+        <small class="sys-help-text">Assign this role to a ministry team</small>
       </div>
 
-      <div class="form-group">
+      <div class="sys-form-group">
         <label for="description">Description</label>
         <textarea
           id="description"
+          class="sys-input"
           bind:value={formDescription}
           placeholder="Brief description of this role's responsibilities"
           rows="2"
         ></textarea>
       </div>
 
-      <div class="form-group">
+      <div class="sys-form-group">
         <label>Body Parts Required</label>
-        <p class="help-text">Select which body parts this role uses. This helps prevent scheduling conflicts (e.g., can't play drums and guitar at the same time).</p>
+        <p class="sys-help-text">Select which body parts this role uses. This helps prevent scheduling conflicts (e.g., can't play drums and guitar at the same time).</p>
         <div class="body-parts-grid">
           {#each availableBodyParts as bp}
             <button
@@ -364,7 +365,7 @@
         </div>
       </div>
 
-      <div class="form-group">
+      <div class="sys-form-group">
         <label for="load-weight">Load Weight</label>
         <div class="load-weight-input">
           <input
@@ -376,14 +377,14 @@
           />
           <span class="load-value">{formLoadWeight}</span>
         </div>
-        <small class="help-text">Higher weight = more demanding role. Used for balancing schedules.</small>
+        <small class="sys-help-text">Higher weight = more demanding role. Used for balancing schedules.</small>
       </div>
     </div>
 
-    <div class="modal-actions">
-      <button class="btn-cancel" on:click={closeModal}>Cancel</button>
+    <div class="sys-modal-actions">
+      <button class="sys-btn sys-btn--secondary" on:click={closeModal}>Cancel</button>
       <button
-        class="btn-save"
+        class="sys-btn sys-btn--primary"
         on:click={saveRole}
         disabled={saving || !formName.trim()}
       >
@@ -395,56 +396,15 @@
 {/if}
 
 <style>
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  }
-
-  /* Header */
+  /* Roles page specific styles */
   header {
     margin-bottom: 2rem;
-  }
-
-  .header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1.5rem;
-  }
-
-  .title-section h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0 0 0.5rem 0;
-    color: #1a1a1a;
-  }
-
-  .title-section p {
-    color: #6b7280;
-    margin: 0;
-  }
-
-  .btn-add {
-    padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-add:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
   }
 
   .stats-row {
     display: flex;
     gap: 1.5rem;
+    margin-top: 1rem;
   }
 
   .stat {
@@ -456,73 +416,21 @@
   .stat-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #1a1a1a;
+    color: var(--sys-text);
   }
 
   .stat-label {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--sys-muted);
   }
 
   .stat.inactive .stat-value {
     color: #9ca3af;
   }
 
-  /* Loading & Error */
-  .loading, .error {
-    text-align: center;
-    padding: 3rem;
-    background: #f9fafb;
-    border-radius: 12px;
-  }
-
-  .error {
-    background: #fef2f2;
-    color: #b91c1c;
-  }
-
-  .error button {
-    margin-top: 1rem;
-    padding: 0.5rem 1rem;
-    background: #dc2626;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-
-  /* Empty state */
-  .empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    background: white;
-    border: 2px dashed #e5e7eb;
-    border-radius: 12px;
-  }
-
   .empty-icon {
     font-size: 3rem;
     margin-bottom: 1rem;
-  }
-
-  .empty-state h3 {
-    font-size: 1.25rem;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .empty-state p {
-    color: #6b7280;
-    margin: 0 0 1.5rem 0;
-  }
-
-  .btn-primary {
-    padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
   }
 
   /* Filter indicator */
@@ -724,125 +632,6 @@
     color: #10b981;
   }
 
-  /* Modal */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 1rem;
-  }
-
-  .modal {
-    background: white;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 500px;
-    max-height: 90vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.25rem 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-  }
-
-  .modal-header h2 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .close-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    font-size: 1.25rem;
-    cursor: pointer;
-    color: white;
-    width: 1.75rem;
-    height: 1.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-  }
-
-  .close-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-  }
-
-  .modal-body {
-    padding: 1.5rem;
-    overflow-y: auto;
-  }
-
-  .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #e5e7eb;
-    background: #f9fafb;
-  }
-
-  /* Form */
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-
-  .form-group:last-child {
-    margin-bottom: 0;
-  }
-
-  .form-group label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-    margin-bottom: 0.5rem;
-  }
-
-  .form-group input[type="text"],
-  .form-group textarea,
-  .form-group select {
-    width: 100%;
-    padding: 0.625rem 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.9375rem;
-    transition: border-color 0.2s;
-    box-sizing: border-box;
-  }
-
-  .form-group input:focus,
-  .form-group textarea:focus {
-    outline: none;
-    border-color: #667eea;
-  }
-
-  .form-group textarea {
-    resize: vertical;
-  }
-
-  .help-text {
-    display: block;
-    font-size: 0.75rem;
-    color: #6b7280;
-    margin-top: 0.375rem;
-  }
-
   /* Body parts selector */
   .body-parts-grid {
     display: flex;
@@ -915,53 +704,7 @@
     text-align: center;
   }
 
-  .btn-cancel {
-    padding: 0.625rem 1.25rem;
-    background: white;
-    color: #374151;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-weight: 500;
-    cursor: pointer;
-  }
-
-  .btn-cancel:hover {
-    background: #f3f4f6;
-  }
-
-  .btn-save {
-    padding: 0.625rem 1.25rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .btn-save:hover:not(:disabled) {
-    opacity: 0.9;
-  }
-
-  .btn-save:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
   @media (max-width: 640px) {
-    .container {
-      padding: 1rem;
-    }
-
-    .header-content {
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .btn-add {
-      width: 100%;
-    }
-
     .roles-grid {
       grid-template-columns: 1fr;
     }

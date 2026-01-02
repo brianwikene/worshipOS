@@ -147,32 +147,30 @@
   $: unassignedTeam = teams.find(t => t.id === null);
 </script>
 
-<div class="container">
-  <header>
-    <div class="header-content">
-      <div class="title-section">
-        <h1>Ministry Teams</h1>
-        <p>Organize roles into teams like Worship, Hospitality, Kids, Tech, etc.</p>
-      </div>
-      <button class="btn-add" on:click={openAddModal}>
-        + Add Team
-      </button>
+<div class="sys-page">
+  <div class="sys-page-header">
+    <div>
+      <h1 class="sys-title">Ministry Teams</h1>
+      <p class="sys-subtitle">Organize roles into teams like Worship, Hospitality, Kids, Tech, etc.</p>
     </div>
-  </header>
+    <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
+      + Add Team
+    </button>
+  </div>
 
   {#if loading}
-    <div class="loading">Loading teams...</div>
+    <div class="sys-state">Loading teams...</div>
   {:else if error}
-    <div class="error">
+    <div class="sys-state sys-state--error">
       <p>{error}</p>
-      <button on:click={loadTeams}>Retry</button>
+      <button class="sys-btn sys-btn--danger" on:click={loadTeams}>Retry</button>
     </div>
   {:else if teams.length === 0 || (teams.length === 1 && teams[0].id === null)}
-    <div class="empty-state">
+    <div class="sys-state sys-state--empty">
       <div class="empty-icon">👥</div>
       <h3>No Teams Created</h3>
       <p>Create teams to organize your ministry roles. Each team can have multiple positions.</p>
-      <button class="btn-primary" on:click={openAddModal}>
+      <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
         + Create Your First Team
       </button>
     </div>
@@ -253,31 +251,33 @@
 
 <!-- Add/Edit Team Modal -->
 {#if showModal}
-<div class="modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-  <div class="modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-    <div class="modal-header" style="background: {formColor}">
+<div class="sys-modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
+  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
+    <div class="sys-modal-header" style="background: {formColor}">
       <div class="modal-title">
         <span class="preview-icon">{formIcon}</span>
         <h2>{editingTeam ? 'Edit Team' : 'Add New Team'}</h2>
       </div>
-      <button class="close-btn" on:click={closeModal}>×</button>
+      <button class="sys-modal-close" on:click={closeModal}>×</button>
     </div>
 
-    <div class="modal-body">
-      <div class="form-group">
+    <div class="sys-modal-body">
+      <div class="sys-form-group">
         <label for="team-name">Team Name *</label>
         <input
           id="team-name"
+          class="sys-input"
           type="text"
           bind:value={formName}
           placeholder="e.g., Worship, Hospitality, Kids"
         />
       </div>
 
-      <div class="form-group">
+      <div class="sys-form-group">
         <label for="team-desc">Description</label>
         <textarea
           id="team-desc"
+          class="sys-input"
           bind:value={formDescription}
           placeholder="What does this team do?"
           rows="2"
@@ -285,7 +285,7 @@
       </div>
 
       <div class="form-row">
-        <div class="form-group">
+        <div class="sys-form-group">
           <label>Icon</label>
           <div class="icon-grid">
             {#each availableIcons as icon}
@@ -301,7 +301,7 @@
           </div>
         </div>
 
-        <div class="form-group">
+        <div class="sys-form-group">
           <label>Color</label>
           <div class="color-grid">
             {#each availableColors as color}
@@ -320,10 +320,10 @@
       </div>
     </div>
 
-    <div class="modal-actions">
-      <button class="btn-cancel" on:click={closeModal}>Cancel</button>
+    <div class="sys-modal-actions">
+      <button class="sys-btn sys-btn--secondary" on:click={closeModal}>Cancel</button>
       <button
-        class="btn-save"
+        class="sys-btn sys-btn--primary"
         style="background: {formColor}"
         on:click={saveTeam}
         disabled={saving || !formName.trim()}
@@ -336,72 +336,8 @@
 {/if}
 
 <style>
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  }
-
-  header { margin-bottom: 2rem; }
-
-  .header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-  }
-
-  .title-section h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .title-section p {
-    color: #6b7280;
-    margin: 0;
-  }
-
-  .btn-add {
-    padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  /* Loading/Error/Empty */
-  .loading, .error, .empty-state {
-    text-align: center;
-    padding: 3rem;
-    background: #f9fafb;
-    border-radius: 12px;
-  }
-
-  .error { background: #fef2f2; color: #b91c1c; }
-
-  .empty-state {
-    background: white;
-    border: 2px dashed #e5e7eb;
-  }
-
+  /* Teams page specific styles */
   .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
-
-  .empty-state h3 { margin: 0 0 0.5rem 0; }
-
-  .empty-state p { color: #6b7280; margin: 0 0 1.5rem 0; }
-
-  .btn-primary {
-    padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-  }
 
   /* Teams grid */
   .teams-grid {
@@ -616,37 +552,7 @@
     background: #ecfdf5;
   }
 
-  /* Modal */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 1rem;
-  }
-
-  .modal {
-    background: white;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 480px;
-    overflow: hidden;
-  }
-
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.25rem 1.5rem;
-    color: white;
-  }
-
+  /* Modal specific styles */
   .modal-title {
     display: flex;
     align-items: center;
@@ -655,61 +561,6 @@
 
   .preview-icon {
     font-size: 1.5rem;
-  }
-
-  .modal-header h2 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .close-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    font-size: 1.25rem;
-    cursor: pointer;
-    color: white;
-    width: 1.75rem;
-    height: 1.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-  }
-
-  .modal-body {
-    padding: 1.5rem;
-  }
-
-  .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #e5e7eb;
-    background: #f9fafb;
-  }
-
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-
-  .form-group label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-    margin-bottom: 0.5rem;
-  }
-
-  .form-group input,
-  .form-group textarea {
-    width: 100%;
-    padding: 0.625rem 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.9375rem;
-    box-sizing: border-box;
   }
 
   .form-row {
@@ -768,30 +619,6 @@
   .color-btn.selected {
     border-color: white;
     box-shadow: 0 0 0 2px #1a1a1a;
-  }
-
-  .btn-cancel {
-    padding: 0.625rem 1.25rem;
-    background: white;
-    color: #374151;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-weight: 500;
-    cursor: pointer;
-  }
-
-  .btn-save {
-    padding: 0.625rem 1.25rem;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .btn-save:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   @media (max-width: 640px) {
