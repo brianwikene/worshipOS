@@ -7,11 +7,25 @@ import { pool } from '$lib/server/db';
  * List people for the active church with optional search
  * Includes has_contact_info flag for UI display
  **************************************************************/
+
 export const GET: RequestHandler = async ({ locals, url }) => {
   const churchId = locals.churchId;
   if (!churchId) throw error(400, 'church_id is required');
 
   const search = url.searchParams.get('search');
+  const sort = url.searchParams.get('sort') ?? 'display_name';
+  const dirRaw = (url.searchParams.get('dir') ?? 'asc').toLowerCase();
+  const dir = dirRaw === 'desc' ? 'DESC' : 'ASC';
+
+  const sortMap: Record<string, string> = {
+    display_name: 'p.display_name',
+    first_name: 'p.first_name',
+    last_name: 'p.last_name',
+    created_at: 'p.created_at'
+    // later: updated_at if you add it to schema
+  };
+
+  const sortCol = sortMap[sort] ?? sortMap.display_name;
 
   try {
     const result = await pool.query(
@@ -37,7 +51,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
           OR p.first_name ILIKE '%' || $2 || '%'
           OR p.last_name ILIKE '%' || $2 || '%'
         )
-      ORDER BY p.display_name ASC
+      ORDER BY ${sortCol} ${dir} NULLS LAST, p.display_name ASC
       `,
       [churchId, search]
     );

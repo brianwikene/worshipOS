@@ -23,13 +23,21 @@ function resolveArgs(
 }
 
 export async function apiFetch(a: string, init?: RequestInit): Promise<Response>;
-export async function apiFetch(fetchFn: FetchLike, path: string, init?: RequestInit): Promise<Response>;
+export async function apiFetch(
+  fetchFn: FetchLike,
+  path: string,
+  init?: RequestInit
+): Promise<Response>;
 export async function apiFetch(
   a: string | FetchLike,
   b?: string | RequestInit,
   c: RequestInit = {}
 ): Promise<Response> {
-  const { fetchFn, path, init } = resolveArgs(a, typeof b === 'string' ? b : undefined, typeof b === 'object' ? b : c);
+  const { fetchFn, path, init } = resolveArgs(
+    a,
+    typeof b === 'string' ? b : undefined,
+    typeof b === 'object' ? b : c
+  );
 
   if (typeof path !== 'string' || path.length === 0) {
     throw new TypeError(`apiFetch expected a path string but got: ${String(path)}`);
@@ -71,11 +79,21 @@ export async function apiJson<T>(
       ? await apiFetch(a, b as string, c)
       : await apiFetch(a, b as RequestInit);
 
-  const contentType = res.headers.get('content-type') ?? '';
-  if (!contentType.includes('application/json')) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Expected JSON but got "${contentType}". Body starts: ${text.slice(0, 200)}`);
-  }
+  // const contentType = res.headers.get('content-type') ?? '';
+  // if (!contentType.includes('application/json')) {
+  //   const text = await res.text().catch(() => '');
+  //   throw new Error(`Expected JSON but got "${contentType}". Body starts: ${text.slice(0, 200)}`);
+  // }
 
-  return res.json() as Promise<T>;
+  // return res.json() as Promise<T>;
+  // NOTE: Don't read res.headers.get('content-type') here.
+  // During SvelteKit hydration replay, headers are restricted unless whitelisted,
+  // which causes hard-refresh 500s on routes like /gatherings.
+  try {
+    return (await res.json()) as T;
+  } catch {
+    // If the backend returned HTML/text, surface a useful error
+    const text = await res.text().catch(() => '');
+    throw new Error(`Expected JSON but response was not JSON. Body starts: ${text.slice(0, 200)}`);
+  }
 }

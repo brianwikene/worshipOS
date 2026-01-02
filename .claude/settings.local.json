@@ -22,7 +22,8 @@
       "Bash(node:*)",
       "Bash(pwd:*)",
       "Bash(tree:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(mv:*)"
     ]
   }
 }

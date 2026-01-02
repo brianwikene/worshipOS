@@ -316,8 +316,8 @@ $: visibleServices = services
   <header>
     <div class="header-content">
       <div class="title-section">
-        <h1>Services</h1>
-        <p>Upcoming worship services</p>
+        <h1>Gatherings</h1>
+        <p>Scheduled Gatherings</p>
         <p>church_id: {activeChurchId}</p>
       </div>
       <nav class="view-toggle">
@@ -326,7 +326,7 @@ $: visibleServices = services
 </nav>
       <div class="header-actions">
         <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
-          + Add Service
+          + Add Gathering
         </button>
         <button class="sys-btn sys-btn--secondary" on:click={() => window.location.reload()}>
           Refresh
@@ -336,7 +336,7 @@ $: visibleServices = services
   </header>
 
   {#if loading}
-    <div class="sys-state">Loading services...</div>
+    <div class="sys-state">Loading gatherings...</div>
   {:else if error}
     <div class="sys-state sys-state--error">
       <p>Error: {error}</p>
@@ -347,13 +347,13 @@ $: visibleServices = services
       {#if view === 'past'}
         <div class="empty-icon">📋</div>
         <h3>No Past Services</h3>
-        <p>There are no past services to display.</p>
+        <p>There are no past gatherings to display.</p>
       {:else}
         <div class="empty-icon">📅</div>
-        <h3>No Upcoming Services</h3>
-        <p>You don't have any services scheduled yet. Would you like to create one?</p>
+        <h3>No Upcoming Gatherings</h3>
+        <p>You don't have any gatherings scheduled yet. Would you like to create one?</p>
         <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
-          + Schedule a Service
+          + Schedule a Gathering
         </button>
       {/if}
     </div>

@@ -222,7 +222,6 @@
         </div>
       {/if}
     </div>
-  </header>
 
   {#if loading}
     <div class="sys-state">Loading roles...</div>
