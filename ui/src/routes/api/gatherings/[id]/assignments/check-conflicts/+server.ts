@@ -1,4 +1,4 @@
-// src/routes/api/service-instances/[id]/assignments/check-conflicts/+server.ts
+// src/routes/api/gatherings/[id]/assignments/check-conflicts/+server.ts
 
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';

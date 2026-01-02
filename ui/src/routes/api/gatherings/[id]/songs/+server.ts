@@ -1,4 +1,4 @@
-// src/routes/api/service-instances/[id]/songs/+server.ts
+// src/routes/api/gatherings/[id]/songs/+server.ts
 
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';

@@ -84,9 +84,9 @@ async function loadServiceDetail(serviceId: string) {
   try {
     loading = true;
 
-    service = await apiJson<ServiceDetail>(`/api/service-instances/${serviceId}`);
-    assignments = await apiJson<Assignment[]>(`/api/service-instances/${serviceId}/roster`);
-    songs = await apiJson<Song[]>(`/api/service-instances/${serviceId}/songs`);
+    service = await apiJson<ServiceDetail>(`/api/gatherings/${serviceId}`);
+    assignments = await apiJson<Assignment[]>(`/api/gatherings/${serviceId}/roster`);
+    songs = await apiJson<Song[]>(`/api/gatherings/${serviceId}/songs`);
 
     error = '';
   } catch (e) {
@@ -116,7 +116,7 @@ async function addSongToService() {
     const nextOrder =
       songs.length > 0 ? Math.max(...songs.map((s) => s.display_order)) + 1 : 1;
 
-    await apiFetch(`/api/service-instances/${service.id}/songs`, {
+    await apiFetch(`/api/gatherings/${service.id}/songs`, {
       method: 'POST',
       body: JSON.stringify({
         song_id: selectedSongId,
@@ -278,7 +278,7 @@ async function assignPerson() {
 
     if (assigningToAssignment.id) {
       // Update existing assignment
-      await apiFetch(`/api/service-instances/${service.id}/assignments/${assigningToAssignment.id}`, {
+      await apiFetch(`/api/gatherings/${service.id}/assignments/${assigningToAssignment.id}`, {
         method: 'PUT',
         body: JSON.stringify({
           person_id: selectedPersonId,
@@ -287,7 +287,7 @@ async function assignPerson() {
       });
     } else {
       // Create new assignment (no existing assignment record)
-      await apiFetch(`/api/service-instances/${service.id}/assignments`, {
+      await apiFetch(`/api/gatherings/${service.id}/assignments`, {
         method: 'POST',
         body: JSON.stringify({
           role_id: assigningToAssignment.role_id,
@@ -312,7 +312,7 @@ async function removeAssignment(assignment: Assignment) {
   if (!service) return;
 
   try {
-    await apiFetch(`/api/service-instances/${service.id}/assignments/${assignment.id}`, {
+    await apiFetch(`/api/gatherings/${service.id}/assignments/${assignment.id}`, {
       method: 'PUT',
       body: JSON.stringify({
         person_id: null,
