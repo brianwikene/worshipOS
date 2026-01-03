@@ -23,7 +23,8 @@
       "Bash(pwd:*)",
       "Bash(tree:*)",
       "Bash(tee:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(find:*)"
     ]
   }
 }
