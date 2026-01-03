@@ -1,41 +1,69 @@
-# Node.js and dependencies
+########################################
+# Node.js + package managers
+########################################
 node_modules/
+**/node_modules/
+
 npm-debug.log*
+yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-# Svelte/SvelteKit / Vite
+# build artifacts from native deps
+*.node
+
+########################################
+# SvelteKit / Vite / frontend builds
+########################################
 .svelte-kit/
+.vercel/
+.netlify/
+.output/
+
+dist/
+build/
+reports/
+
+# Vite cache
+node_modules/.vite/
+
+########################################
+# Environment / secrets
+########################################
 .env
 .env.*
 .env.local
 !.env.example
-/build
-/dist
-/eports
 
-# OS junk
+########################################
+# Testing / coverage
+########################################
+coverage/
+.nyc_output/
+*.lcov
+
+########################################
+# Logs
+########################################
+logs/
+*.log
+
+########################################
+# OS / editor junk
+########################################
 .DS_Store
-*.suo
-*.user
-*.class
-*.cache
-*.komodotools
-.idea/
+Thumbs.db
 
-# Docker / DB
-postgres-data/
-*.sql.bak
-*.dump
-.sqlite
-*.sqlite-journal
-/data/*.db
-
-# Editor
 .vscode/
 .idea/
+*.suo
+*.user
+*.swp
+*.swo
 
-# Archives / downloads
-*.zip
-*.tar
-*.gz
+########################################
+# Docker / DB / local data
+########################################
+postgres-data/
+data/
