@@ -1,10 +1,12 @@
 # WorshipOS
 
-WorshipOS is a multi-tenant worship planning and team coordination platform designed for churches. It focuses on clarity, sustainability, and real-world ministry workflows—not feature bloat.
+WorshipOS is a multi-tenant worship planning and team coordination platform designed for churches.
 
-The long-term vision is a system that helps churches plan services, organize people, and care for volunteers without burning out leaders or fragmenting data across tools.
+It prioritizes clarity, sustainability, and real-world ministry workflows over feature bloat.
+The long-term goal is to help churches plan gatherings, organize people, and care for volunteers
+without burning out leaders or fragmenting data across tools.
 
-Right now, WorshipOS is in **active early development** and intentionally narrow in scope.
+WorshipOS is in **active early development** and intentionally narrow in scope.
 
 ---
 
@@ -12,78 +14,99 @@ Right now, WorshipOS is in **active early development** and intentionally narrow
 
 WorshipOS is currently:
 
-- A **multi-tenant backend + UI** for worship service planning
+- A **multi-tenant SvelteKit application** (UI + API in one runtime)
 - Built around the concept of a **Church (Tenant)** as the hard isolation boundary
-- Exploring a clean separation between:
-  - **Tenancy** (church-level data isolation)
-  - **Authorization scopes** (campus, team, role)
-  - **Service instances** (specific dates/times that eventually become immutable)
+- Focused on modeling _real, concrete gatherings_ rather than abstract services
 
-The goal at this stage is not feature completeness—it is **architectural correctness**.
+At this stage, the goal is not feature completeness.
+The goal is **architectural correctness and conceptual clarity**.
 
 ---
 
-## Core Concepts (Working Model)
+## Core Concepts (Current Model)
 
-- **Church (Tenant)**  
+- **Church (Tenant)**
   The primary isolation boundary. All data belongs to exactly one church.
 
-- **Service Template**  
-  A reusable definition (e.g. “Sunday Morning Service”).
+- **Gathering**
+  A concrete, scheduled event (date + time + context).
+  This replaces earlier “service instance” terminology and is the canonical domain concept.
 
-- **Service Instance**  
-  A concrete occurrence of a service on a date/time. These will eventually become **read-only / locked** once finalized.
+- **Gathering Group**
+  A reusable grouping or pattern (e.g. “Sunday Morning”) that gatherings may be created from.
 
-- **People / Teams**  
-  Assigned to service instances for scheduling and visibility.
+- **People / Assignments**
+  People are assigned to gatherings in specific roles for visibility and care.
 
 ---
 
-## What WorshipOS Is *Not* (Yet)
+## What WorshipOS Is _Not_ (Yet)
 
 WorshipOS is intentionally **not** trying to replace everything at once.
 
 Not yet included:
+
 - Full RBAC / permissions
-- Music licensing or chord charts
 - Advanced scheduling automation
-- Mobile apps
+- Music licensing or chord chart management
+- Mobile applications
 - Production-grade authentication
+
+These are explicitly deferred in favor of correctness at the core.
 
 ---
 
-## Short-Term Development Path
+## Architecture (Source of Truth)
+
+- **Runtime API:** `ui/src/routes/api/**` (SvelteKit `+server.ts`)
+- **UI:** SvelteKit routes under `ui/src/routes/**`
+- **Database:** PostgreSQL with SQL-first access
+
+Key architecture documents:
+
+- `ARCHITECTURE.md` — system boundaries, vocabulary, and rationale
+- `TODO.md` — intentional follow-up work and deferred decisions
+- `DB_MIGRATION_PLAN.md` — future plan for aligning DB naming with domain language
+
+Legacy Express code exists only for reference under `dev/legacy/`.
+
+---
+
+## Short-Term Development Focus
 
 ### Phase 1: Foundations
 
-1. Repository hygiene and structure
-2. Canonical database schema + seed path
-3. Dev-mode tenant switching
-4. Service instance lifecycle (draft → published → locked)
+1. Repository hygiene and documentation
+2. Canonical domain language (“gatherings”)
+3. Stable API boundaries
+4. Gathering lifecycle (draft → published → locked)
 5. One complete vertical slice (end-to-end)
 
-At the end of this phase, WorshipOS should feel **boringly reliable** for one real-world workflow.
+At the end of this phase, WorshipOS should feel **boringly reliable** for one real workflow.
 
 ---
 
 ## Tech Stack
 
-- Frontend: Svelte / SvelteKit
-- Backend: Node.js
+- Framework: SvelteKit
+- Language: TypeScript
 - Database: PostgreSQL
-- Local Dev: Docker / Docker Compose
+- Data access: raw SQL (no ORM)
+- Local dev: Docker (optional)
 
 ---
 
 ## Design Philosophy
 
 - Multi-tenancy is non-negotiable
-- APIs enforce rules, not just the UI
-- Past services should not silently change
+- Boundaries matter more than naming perfection
+- Past gatherings should not silently change
 - Software should reduce anxiety, not create it
+- Deferred work should be documented, not hidden
 
 ---
 
 ## Status
 
-Early development. APIs, schemas, and UI are subject to change.
+Early development.
+APIs, schemas, and UI are subject to change as the architecture stabilizes.

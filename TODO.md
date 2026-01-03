@@ -1,15 +1,26 @@
-# TODO
+# TODO — Intentional, Tracked Work
 
-## Architecture Improvements
+This file documents **known, intentional follow-up work**.
+Items here are deferred by design, not forgotten or accidental.
 
-### Migrate from `$page` store to `data` load functions
+For architectural context and rationale, see `ARCHITECTURE.md`.
+
+---
+
+## 1. UI Data Loading Improvements
+
+### Migrate from `$page` store / `onMount` to `load()` functions
+
 **Priority:** Medium
-**Benefit:** SSR support, testability, type safety
+**Scope:** Incremental, page-by-page
+**Goal:** Better SSR, clearer data flow, stronger typing
 
-Pages that fetch API data should move fetching from `onMount` to `+page.ts` load functions.
+Pages that fetch API data should move fetching logic into SvelteKit
+`+page.ts` load functions instead of using `$page` store reads or `onMount`.
 
-**Pattern to follow:**
-```typescript
+### Target pattern
+
+```ts
 // +page.ts
 export const load = async ({ params, fetch }) => {
   const gathering = await apiJson(fetch, `/api/gatherings/${params.id}`);
@@ -18,31 +29,57 @@ export const load = async ({ params, fetch }) => {
 };
 ```
 
-**Pages to migrate:**
-- [ ] `/gatherings/[id]/+page.svelte` - fetches gathering, roster, songs
-- [ ] `/gatherings/+page.svelte` - fetches services list (partially done in +page.ts)
-- [ ] `/people/[id]/+page.svelte` - fetches person details
-- [ ] `/families/[id]/+page.svelte` - fetches family details
-- [ ] `/+page.svelte` - fetches services for homepage
+### Pages to migrate (suggested order)
 
-**Benefits:**
-- Server-side rendering (faster initial load, better SEO)
-- Auto-generated `PageData` types
-- Easier to test load functions in isolation
-- Explicit data dependencies
+- [ ] `/gatherings/[id]/+page.svelte`
+  - currently fetches: gathering, roster, songs
+- [ ] `/gatherings/+page.svelte`
+  - partially implemented in `+page.ts`
+- [ ] `/people/[id]/+page.svelte`
+- [ ] `/families/[id]/+page.svelte`
+- [ ] `/+page.svelte` (homepage)
+
+### Rules / non-goals
+
+- Do not mix `$page` store reads with `load()` results
+- Do not migrate pages that do not fetch data
+- Migrate one page at a time; avoid large refactors
 
 ---
 
-## Database Migration (Future)
+## 2. Database Terminology Migration (Deferred)
 
-### Rename `service_instances` to `gatherings`
+### Rename legacy `service_*` tables to `gathering_*`
+
 **Priority:** Low
-**Status:** API layer already uses "gatherings" naming
+**Status:** Deferred by design
+**Current state:** API + UI already use “gatherings”
 
-Tables to consider renaming:
+The database schema still uses legacy service-oriented names.
+These are treated as **internal implementation details** for now.
+
+### Future rename candidates
+
 - [ ] `service_instances` → `gatherings`
 - [ ] `service_groups` → `gathering_groups`
 - [ ] `service_instance_songs` → `gathering_songs`
 - [ ] `service_assignments` → `gathering_assignments`
 
-**Note:** This requires a database migration script and updating all SQL queries in API routes.
+### Constraints
+
+- Changes must be done via ordered Postgres migrations
+- Existing data must be preserved
+- All SQL in `ui/src/routes/api/**` must be updated together
+- API responses must not expose legacy names
+
+### Explicit non-goals
+
+- Do NOT block feature work on this rename
+- Do NOT partially rename tables or columns
+- Do NOT rename DB objects without migrations
+
+A future migration plan should be created before attempting this work.
+
+---
+
+_Last updated: 2026-01-03_
