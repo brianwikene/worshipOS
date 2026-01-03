@@ -37,7 +37,7 @@
     error = null;
 
     try {
-      services = await apiJson<Service[]>('/api/services');
+      services = await apiJson<Service[]>('/api/gatherings');
     } catch (e: any) {
       error = e?.message ?? 'Failed to load services';
       services = [];

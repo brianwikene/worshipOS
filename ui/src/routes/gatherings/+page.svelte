@@ -143,9 +143,9 @@ async function loadServices() {
 
   try {
     // If your backend supports view filtering:
-    // services = await apiJson<ServiceGroup[]>(`/api/services?view=${view}`);
+    // services = await apiJson<ServiceGroup[]>(`/api/gatherings?view=${view}`);
     // Otherwise keep it simple:
-    services = await apiJson<ServiceGroup[]>('/api/services');
+    services = await apiJson<ServiceGroup[]>('/api/gatherings');
   } catch (e: any) {
     error = e?.message ?? 'Failed to load services';
     services = [];
@@ -253,7 +253,7 @@ async function createService() {
 
   addingService = true;
   try {
-    await apiFetch('/api/services', {
+    await apiFetch('/api/gatherings', {
       method: 'POST',
       body: JSON.stringify({
         name: newServiceName,
