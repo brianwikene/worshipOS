@@ -137,11 +137,12 @@ async function addSongToService() {
 
 async function removeSong(songInstanceId: string) {
   if (!confirm('Remove this song from the service?')) return;
+  if (!service) return;
 
   try {
-    await apiFetch(`/api/service-instance-songs/${songInstanceId}`, { method: 'DELETE' });
+    await apiFetch(`/api/gatherings/${service.id}/songs/${songInstanceId}`, { method: 'DELETE' });
 
-    if (service) await loadServiceDetail(service.id);
+    await loadServiceDetail(service.id);
   } catch (e) {
     alert(e instanceof Error ? e.message : 'Failed to remove song');
   }
@@ -194,7 +195,7 @@ async function updateSongInService() {
 
   try {
     savingEdit = true;
-    await apiFetch(`/api/service-instance-songs/${editingSong.id}`, {
+    await apiFetch(`/api/gatherings/${service.id}/songs/${editingSong.id}`, {
       method: 'PUT',
       body: JSON.stringify({
         key: editSongKey || null,
