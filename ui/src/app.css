@@ -222,6 +222,40 @@ body {
 .sys-toolbar .sys-btn {
 	flex: 0 0 auto;
 }
+
+.sys-toggle {
+	display: inline-flex;
+	gap: 6px;
+	padding: 4px;
+	border: 1px solid var(--sys-border);
+	border-radius: 10px;
+	background: white;
+}
+
+.sys-toggle-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--sys-muted);
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sys-toggle-btn:hover {
+	background: rgba(0, 0, 0, 0.04);
+	color: var(--sys-text);
+}
+
+.sys-toggle-btn.active {
+	background: rgba(99, 102, 241, 0.12);
+	color: var(--sys-text);
+}
+
 .sys-input,
 .sys-select,
 .sys-textarea {
@@ -528,29 +562,6 @@ body {
 }
 .sys-list-item + .sys-list-item {
 	border-top: 1px solid var(--sys-border);
-}
-
-/* ----------- Avatar ----------- */
-.sys-avatar {
-	width: 40px;
-	height: 40px;
-	background: linear-gradient(135deg, var(--gatherings-accent-start), var(--gatherings-accent-end));
-	color: white;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-weight: 600;
-	flex-shrink: 0;
-}
-.sys-avatar--people {
-	background: var(--people-accent);
-}
-.sys-avatar--families {
-	background: var(--families-accent);
-}
-.sys-avatar--songs {
-	background: var(--songs-accent);
 }
 
 /* ----------- Responsive ----------- */

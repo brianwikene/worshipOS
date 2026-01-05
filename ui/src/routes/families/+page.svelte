@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { apiJson, apiFetch } from '$lib/api';
   import FamilyModal from '$lib/components/FamilyModal.svelte';
+  import ObjectMark from '$lib/components/identity/ObjectMark.svelte';
 
   interface PrimaryContact {
     id: string;
@@ -167,9 +168,12 @@
       {#each families as family}
         <div class="sys-card family-card">
           <a href={`/families/${family.id}`} class="family-link">
-            <div class="sys-avatar sys-avatar--families family-avatar">
-              {getInitials(family.name)}
-            </div>
+            <ObjectMark
+              variant="families"
+              size="md"
+              className="family-avatar"
+              label={getInitials(family.name)}
+            />
             <div class="family-info">
               <h2>{family.name}</h2>
               <div class="member-count">
@@ -224,10 +228,6 @@
 
   .family-avatar {
     flex-shrink: 0;
-    width: 56px;
-    height: 56px;
-    border-radius: 12px;
-    font-size: 1.2rem;
   }
 
   .family-info {

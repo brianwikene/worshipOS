@@ -398,10 +398,10 @@
           </div>
         </div>
 
-        <h2>Contact Information</h2>
+        <h2>Contact Methods</h2>
 
         {#if person.contact_methods.length === 0}
-          <div class="empty-row">No contact information available.</div>
+          <div class="empty-row">No contact methods available.</div>
         {:else}
           {#each person.contact_methods as contact}
             <div class="info-row">

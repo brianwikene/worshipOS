@@ -5,6 +5,7 @@
   import Button from '$lib/components/ui/Button.svelte';
   import Card from '$lib/components/ui/Card.svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
+  import ObjectMark from '$lib/components/identity/ObjectMark.svelte';
   import type { ParsedSong, SongSourceFormat } from '$lib/songs/types';
 
   interface Song {
@@ -248,10 +249,10 @@
   </div>
 
   <div class="songs-controls">
-    <div class="songs-view-toggle" role="group" aria-label="Songs view mode">
+    <div class="sys-toggle" role="group" aria-label="Songs view mode">
       <button
         type="button"
-        class="songs-view-btn"
+        class="sys-toggle-btn"
         class:active={viewMode === 'cards'}
         on:click={() => setViewMode('cards')}
         aria-label="Card view"
@@ -263,7 +264,7 @@
       </button>
       <button
         type="button"
-        class="songs-view-btn"
+        class="sys-toggle-btn"
         class:active={viewMode === 'table'}
         on:click={() => setViewMode('table')}
         aria-label="Table view"
@@ -441,7 +442,11 @@
               <tr>
                 <td class="col-photo">
                   <a href={`/songs/${song.id}`} class="row-link" aria-label={`Open ${song.title}`}>
-                    <div class="sys-avatar sys-avatar--songs">{getSongInitial(song.title)}</div>
+                    <ObjectMark
+                      size="sm"
+                      variant="songs"
+                      label={getSongInitial(song.title)}
+                    />
                   </a>
                 </td>
                 <td class="col-title">
@@ -524,41 +529,8 @@
     margin-bottom: 1rem;
   }
 
-  .songs-view-toggle {
-    display: inline-flex;
-    gap: 6px;
-    padding: 4px;
-    border: 1px solid var(--sys-border);
-    border-radius: 10px;
-    background: white;
-  }
-
-  .songs-view-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border: 0;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--sys-muted);
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
-  }
-
-  .songs-view-btn svg {
+  .sys-toggle-btn svg {
     pointer-events: none;
-  }
-
-  .songs-view-btn:hover {
-    background: rgba(0, 0, 0, 0.04);
-    color: var(--sys-text);
-  }
-
-  .songs-view-btn.active {
-    background: rgba(99, 102, 241, 0.12);
-    color: var(--sys-text);
   }
 
   .songs-grid {

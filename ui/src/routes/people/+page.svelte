@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { apiJson, apiFetch } from '$lib/api';
-  import { peoplePrefs } from '$lib/stores/peoplePrefs';
-  import type { PeopleViewMode, PeopleSortField, SortDir } from '$lib/stores/peoplePrefs';
+  import { apiFetch, apiJson } from '$lib/api';
   import PersonModal from '$lib/components/PersonModal.svelte';
+  import Avatar from '$lib/components/identity/Avatar.svelte';
+  import type { PeopleSortField, PeopleViewMode, SortDir } from '$lib/stores/peoplePrefs';
+  import { peoplePrefs } from '$lib/stores/peoplePrefs';
+  import { onMount } from 'svelte';
 
   interface Person {
     id: string;
@@ -101,10 +102,10 @@
 
   async function handleSave(e: CustomEvent<{ first_name: string; last_name: string; goes_by: string }>) {
     const { first_name, last_name, goes_by } = e.detail;
-    
+
     try {
       modalComponent.setSaving(true);
-      
+
       if (editingPerson?.id) {
         // Update existing
         await apiFetch(`/api/people/${editingPerson.id}`, {
@@ -118,7 +119,7 @@
           body: JSON.stringify({ first_name, last_name, goes_by })
         });
       }
-      
+
       closeModal();
       await loadPeople();
     } catch (err) {
@@ -137,10 +138,6 @@
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to archive person');
     }
-  }
-
-  function getInitial(name: string): string {
-    return name.charAt(0).toUpperCase();
   }
 
 </script>
@@ -168,10 +165,10 @@
 
 <div class="people-controls">
   <!-- view toggle -->
-  <div class="people-view-toggle" role="group" aria-label="People view">
+  <div class="sys-toggle" role="group" aria-label="People view">
     <button
       type="button"
-      class="people-view-btn"
+      class="sys-toggle-btn"
       class:active={viewMode === 'cards'}
       on:click={() => setViewMode('cards')}
       aria-label="Card view"
@@ -184,7 +181,7 @@
 
     <button
       type="button"
-      class="people-view-btn"
+      class="sys-toggle-btn"
       class:active={viewMode === 'table'}
       on:click={() => setViewMode('table')}
       aria-label="Table view"
@@ -224,13 +221,13 @@
     </button>
   </div>
 </div>
-</div>
 
 
 
 
 
- 
+
+
 
 
   {#if loading}
@@ -251,23 +248,27 @@
       {/if}
     </div>
   {:else}
-    {#if viewMode === 'cards'}  
+    {#if viewMode === 'cards'}
     <div class="sys-grid sys-grid--cards">
       {#each people as person}
         <div class="sys-card person-card">
           <a href={`/people/${person.id}`} class="person-link">
-            <div class="sys-avatar sys-avatar--people">
-              {getInitial(person.display_name)}
-            </div>
+            <Avatar
+              size="lg"
+              className="flex-shrink-0"
+              firstName={person.first_name}
+              lastName={person.last_name}
+              fallback={person.display_name}
+            />
             <div class="person-info">
               <h2>{person.display_name}</h2>
               {#if person.goes_by && person.first_name && person.goes_by !== person.first_name}
                 <div class="legal-name">({person.first_name})</div>
               {/if}
               {#if person.has_contact_info}
-                <div class="contact-badge">☎ Contact Info</div>
+                <div class="contact-badge">☎ Contact methods</div>
               {:else}
-                <div class="no-info">No contact info</div>
+                <div class="no-info">No contact methods</div>
               {/if}
             </div>
           </a>
@@ -285,6 +286,7 @@
     </div>
     {:else}
     <!-- Table view placeholder for now -->
+    <div class="sys-card people-table-card">
     <div class="sys-table-wrap">
   <table class="sys-table" aria-label="People table">
     <thead>
@@ -329,7 +331,7 @@
 
         <th scope="col" class="col-goes">Goes by</th>
 
-        <th scope="col" class="col-contact">Contact</th>
+        <th scope="col" class="col-contact">Contact methods</th>
 
         <th scope="col" class="col-actions">Actions</th>
       </tr>
@@ -340,9 +342,12 @@
         <tr>
           <td class="col-photo">
             <a href={`/people/${person.id}`} class="row-link" aria-label={`Open ${person.display_name}`}>
-              <div class="sys-avatar sys-avatar--people">
-                {getInitial(person.display_name)}
-              </div>
+              <Avatar
+                size="sm"
+                firstName={person.first_name}
+                lastName={person.last_name}
+                fallback={person.display_name}
+              />
             </a>
           </td>
 
@@ -364,9 +369,9 @@
 
           <td class="col-contact">
             {#if person.has_contact_info}
-              <span class="badge">📞 Contact info</span>
+              <span class="badge">📞 Contact methods</span>
             {:else}
-              <span class="muted">&mdash;</span>
+              <span class="muted">No contact methods</span>
             {/if}
           </td>
 
@@ -378,6 +383,7 @@
       {/each}
     </tbody>
   </table>
+</div>
 </div>
 
   {/if}
@@ -391,7 +397,7 @@
   on:close={closeModal}
   on:save={handleSave}
 />
-
+</div>
 <style>
   /* People-specific styles only - layout handled by sys-* classes */
   .person-card {
@@ -408,13 +414,6 @@
     padding: 1.25rem;
     text-decoration: none;
     color: inherit;
-  }
-
-  .sys-avatar--people {
-    flex-shrink: 0;
-    width: 56px;
-    height: 56px;
-    font-size: 1.4rem;
   }
 
   .person-info {
@@ -503,41 +502,24 @@
   width: 220px;      /* pick a size you like */
   min-width: 220px;  /* prevents flex from crushing it */
 }
-
-
-  .people-view-toggle {
-  display: inline-flex;
-  gap: 6px;
-  padding: 4px;
-  border: 1px solid var(--sys-border, #e5e7eb);
-  border-radius: 10px;
+.sys-table-wrap {
+  margin-top: 1.5rem;
+  overflow: hidden;
+  overflow-x: auto;
+  border: 1px solid var(--sys-border);
+  border-radius: var(--sys-radius-lg);
   background: white;
 }
 
-.people-view-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
+.people-table-card {
+  margin-top: 1.5rem;
+}
+
+.people-table-card .sys-table-wrap {
+  margin-top: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   background: transparent;
-  color: var(--sys-muted, #6b7280);
-  cursor: pointer;
-}
-
-.people-view-btn:hover {
-  background: rgba(0, 0, 0, 0.04);
-  color: var(--sys-text, #111827);
-}
-
-.people-view-btn.active {
-  background: rgba(99, 102, 241, 0.12); /* subtle “selected” */
-  color: var(--sys-primary, #4f46e5);
-}
-.sys-table-wrap {
-  overflow-x: auto;
 }
 
 .sys-table {
@@ -546,12 +528,20 @@
   border-spacing: 0;
 }
 
+.sys-table thead {
+  background: var(--sys-panel);
+}
+
 .sys-table th,
 .sys-table td {
   padding: 12px 14px;
   border-bottom: 1px solid rgba(0,0,0,0.06);
   vertical-align: middle;
   text-align: left;
+}
+
+.sys-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .col-photo { width: 64px; }

@@ -487,7 +487,7 @@
             <ul>
               <li>Service assignments will be transferred to survivor</li>
               <li>Role capabilities will be merged</li>
-              <li>Contact info will be combined</li>
+              <li>Contact methods will be combined</li>
               <li>This can be undone from Merge History</li>
             </ul>
           </div>
