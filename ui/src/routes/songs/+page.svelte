@@ -3,7 +3,6 @@
   import { apiJson, apiFetch } from '$lib/api';
   import SongModal from '$lib/components/SongModal.svelte';
   import Button from '$lib/components/ui/Button.svelte';
-  import Input from '$lib/components/ui/Input.svelte';
   import Card from '$lib/components/ui/Card.svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
   import type { ParsedSong, SongSourceFormat } from '$lib/songs/types';
@@ -37,11 +36,18 @@
   };
 
   const MAX_PREVIEW_LINES = 6;
+  type SongsViewMode = 'cards' | 'table';
+  type SongSortField = 'title' | 'key' | 'bpm' | 'updated';
+  type SortDir = 'asc' | 'desc';
 
   let songs: Song[] = [];
   let loading = true;
   let error = '';
   let searchQuery = '';
+  let viewMode: SongsViewMode = 'table';
+  let tableSortBy: SongSortField = 'title';
+  let tableSortDir: SortDir = 'asc';
+  let tableSongs: Song[] = [];
 
   // Modal state
   let modalOpen = false;
@@ -50,6 +56,15 @@
 
   function formatSourceFormat(format: SongSourceFormat) {
     return format === 'chordpro' ? 'ChordPro' : 'Plain text';
+  }
+
+  const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
+
+  function formatTimestamp(value?: string | null) {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return dateFormatter.format(date);
   }
 
   function buildLyricsPreview(song: Song): string | null {
@@ -158,122 +173,338 @@
     searchQuery = '';
     loadSongs();
   }
+
+  function setViewMode(mode: SongsViewMode) {
+    viewMode = mode;
+  }
+
+  function toggleSort(field: SongSortField) {
+    if (tableSortBy === field) {
+      tableSortDir = tableSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      tableSortBy = field;
+      tableSortDir = 'asc';
+    }
+  }
+
+  function getSongInitial(title?: string | null) {
+    if (!title) return '♪';
+    const trimmed = title.trim();
+    return trimmed ? trimmed[0].toUpperCase() : '♪';
+  }
+
+  function compareSongs(a: Song, b: Song, field: SongSortField) {
+    const dir = tableSortDir === 'asc' ? 1 : -1;
+    const getString = (value: string | null | undefined) => (value ?? '').toLowerCase();
+    const getNumber = (value: number | null | undefined) => (value ?? Number.NEGATIVE_INFINITY);
+    const getDate = (value: string | null | undefined) => {
+      if (!value) return 0;
+      const ts = new Date(value).getTime();
+      return Number.isNaN(ts) ? 0 : ts;
+    };
+
+    switch (field) {
+      case 'title':
+        return getString(a.title).localeCompare(getString(b.title)) * dir;
+      case 'key':
+        return getString(a.key).localeCompare(getString(b.key)) * dir;
+      case 'bpm':
+        return (getNumber(a.bpm) - getNumber(b.bpm)) * dir;
+      case 'updated':
+        return (getDate(a.updated_at ?? a.created_at) - getDate(b.updated_at ?? b.created_at)) * dir;
+      default:
+        return 0;
+    }
+  }
+
+  $: tableSongs =
+    viewMode === 'table'
+      ? songs.slice().sort((a, b) => compareSongs(a, b, tableSortBy))
+      : songs;
 </script>
 
-<div class="songs-shell">
-  <div class="songs-header">
+<div class="sys-page">
+  <div class="sys-page-header">
     <div>
-      <h1>Songs</h1>
-      <p>Keep lyrics, arrangements, and context in one calm view.</p>
+      <h1 class="sys-title">Songs</h1>
+      <p class="sys-subtitle">Keep lyrics, arrangements, and context in one calm view.</p>
     </div>
-    <Button on:click={openAddModal}>+ Add Song</Button>
+    <button class="sys-btn sys-btn--primary" type="button" on:click={openAddModal}>
+      + Add Song
+    </button>
   </div>
 
-  <div class="songs-toolbar">
-    <Input
+  <div class="sys-toolbar">
+    <input
+      class="sys-input"
       placeholder="Search songs by title or artist..."
       bind:value={searchQuery}
       on:keydown={(e) => e.key === 'Enter' && handleSearch()}
     />
-    <Button variant="secondary" on:click={handleSearch}>Search</Button>
+    <button class="sys-btn sys-btn--secondary" type="button" on:click={handleSearch}>Search</button>
     {#if searchQuery}
-      <Button variant="ghost" on:click={clearSearch}>Clear</Button>
+      <button class="sys-btn sys-btn--secondary" type="button" on:click={clearSearch}>Clear</button>
     {/if}
   </div>
 
+  <div class="songs-controls">
+    <div class="songs-view-toggle" role="group" aria-label="Songs view mode">
+      <button
+        type="button"
+        class="songs-view-btn"
+        class:active={viewMode === 'cards'}
+        on:click={() => setViewMode('cards')}
+        aria-label="Card view"
+        title="Card view"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="songs-view-btn"
+        class:active={viewMode === 'table'}
+        on:click={() => setViewMode('table')}
+        aria-label="Table view"
+        title="Table view"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
   {#if loading}
-    <div class="songs-state">Loading songs...</div>
+    <div class="sys-state">Loading songs...</div>
   {:else if error}
-    <div class="songs-state songs-state--error">
-      <p>{error}</p>
-      <Button variant="primary" on:click={loadSongs}>Retry</Button>
+    <div class="sys-state sys-state--error">
+      <p>Error: {error}</p>
+      <button class="sys-btn sys-btn--primary" type="button" on:click={loadSongs}>Retry</button>
     </div>
   {:else if songs.length === 0}
-    <div class="songs-state songs-state--empty">
+    <div class="sys-state sys-state--empty">
       {#if searchQuery}
         <p>No songs found matching “{searchQuery}”.</p>
-        <Button variant="secondary" on:click={clearSearch}>Clear search</Button>
+        <button class="sys-btn sys-btn--secondary" type="button" on:click={clearSearch}>Clear search</button>
       {:else}
         <p>No songs in your library yet.</p>
-        <Button on:click={openAddModal}>Add your first song</Button>
+        <button class="sys-btn sys-btn--primary" type="button" on:click={openAddModal}>
+          Add your first song
+        </button>
       {/if}
     </div>
   {:else}
-    <div class="songs-grid">
-      {#each songs as song}
-        {@const preview = buildLyricsPreview(song)}
-        {@const warnings = song.parser_warnings ?? []}
-        <Card elevated={false}>
-          <svelte:fragment slot="header">
-            <div class="song-card__header">
-              <div>
-                <p class="song-card__format">{formatSourceFormat(song.source_format)}</p>
-                <h3>{song.title}</h3>
-                {#if song.artist}
-                  <p class="song-card__artist">{song.artist}</p>
-                {/if}
-              </div>
-              <div class="song-card__actions">
-                {#if warnings.length}
-                  <Badge variant="warning">Warnings</Badge>
-                {/if}
-                <Badge variant="muted">
-                  {song.arrangement_count} {song.arrangement_count === 1 ? 'arrangement' : 'arrangements'}
-                </Badge>
-                <div class="song-card__action-buttons">
-                  <Button variant="ghost" size="sm" on:click={() => openEditModal(song)}>Edit</Button>
-                  <Button variant="ghost" size="sm" on:click={() => handleDelete(song)}>Delete</Button>
+    {#if viewMode === 'cards'}
+      <div class="songs-grid">
+        {#each songs as song}
+          {@const preview = buildLyricsPreview(song)}
+          {@const warnings = song.parser_warnings ?? []}
+          <Card elevated={false}>
+            <svelte:fragment slot="header">
+              <div class="song-card__header">
+                <div>
+                  <p class="song-card__format">{formatSourceFormat(song.source_format)}</p>
+                  <h3>{song.title}</h3>
+                  {#if song.artist}
+                    <p class="song-card__artist">{song.artist}</p>
+                  {/if}
+                </div>
+                <div class="song-card__actions">
+                  {#if warnings.length}
+                    <Badge variant="warning">Warnings</Badge>
+                  {/if}
+                  <Badge variant="muted">
+                    {song.arrangement_count} {song.arrangement_count === 1 ? 'arrangement' : 'arrangements'}
+                  </Badge>
+                  <div class="song-card__action-buttons">
+                    <Button variant="ghost" size="sm" on:click={() => openEditModal(song)}>Edit</Button>
+                    <Button variant="ghost" size="sm" on:click={() => handleDelete(song)}>Delete</Button>
+                  </div>
                 </div>
               </div>
+            </svelte:fragment>
+
+            <div class="song-card__meta">
+              {#if song.key}
+                <div>
+                  <span class="meta-label">Key</span>
+                  <span class="meta-value">{song.key}</span>
+                </div>
+              {/if}
+              {#if song.bpm}
+                <div>
+                  <span class="meta-label">BPM</span>
+                  <span class="meta-value">{song.bpm}</span>
+                </div>
+              {/if}
+              {#if song.ccli_number}
+                <div>
+                  <span class="meta-label">CCLI</span>
+                  <span class="meta-value">{song.ccli_number}</span>
+                </div>
+              {/if}
             </div>
-          </svelte:fragment>
 
-          <div class="song-card__meta">
-            {#if song.key}
-              <div>
-                <span class="meta-label">Key</span>
-                <span class="meta-value">{song.key}</span>
-              </div>
-            {/if}
-            {#if song.bpm}
-              <div>
-                <span class="meta-label">BPM</span>
-                <span class="meta-value">{song.bpm}</span>
-              </div>
-            {/if}
-            {#if song.ccli_number}
-              <div>
-                <span class="meta-label">CCLI</span>
-                <span class="meta-value">{song.ccli_number}</span>
-              </div>
-            {/if}
-          </div>
-
-          <div class="song-card__preview">
-            {#if preview}
-              <pre>{preview}</pre>
-            {:else}
-              <p>No lyrics stored yet.</p>
-            {/if}
-          </div>
-
-          {#if song.notes}
-            <div class="song-card__notes">{song.notes}</div>
-          {/if}
-
-          {#if warnings.length}
-            <div class="song-card__warning-panel">
-              <strong>Warnings</strong>
-              <ul>
-                {#each warnings as warning}
-                  <li>{warning}</li>
-                {/each}
-              </ul>
+            <div class="song-card__preview">
+              {#if preview}
+                <pre>{preview}</pre>
+              {:else}
+                <p>No lyrics stored yet.</p>
+              {/if}
             </div>
-          {/if}
-        </Card>
-      {/each}
-    </div>
+
+            {#if song.notes}
+              <div class="song-card__notes">{song.notes}</div>
+            {/if}
+
+            {#if warnings.length}
+              <div class="song-card__warning-panel">
+                <strong>Warnings</strong>
+                <ul>
+                  {#each warnings as warning}
+                    <li>{warning}</li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
+          </Card>
+        {/each}
+      </div>
+    {:else}
+      <div class="sys-table-wrap">
+        <table class="sys-table songs-table" aria-label="Songs table">
+          <thead>
+            <tr>
+              <th scope="col" class="col-photo">Song</th>
+              <th scope="col" class="col-title">
+                <button
+                  type="button"
+                  class="th-btn"
+                  on:click={() => toggleSort('title')}
+                  aria-label="Sort by title"
+                >
+                  Title
+                  <span class="sort-indicator">
+                    {tableSortBy === 'title' ? (tableSortDir === 'asc' ? '▲' : '▼') : ''}
+                  </span>
+                </button>
+              </th>
+              <th scope="col" class="col-key">
+                <button
+                  type="button"
+                  class="th-btn"
+                  on:click={() => toggleSort('key')}
+                  aria-label="Sort by key"
+                >
+                  Key
+                  <span class="sort-indicator">
+                    {tableSortBy === 'key' ? (tableSortDir === 'asc' ? '▲' : '▼') : ''}
+                  </span>
+                </button>
+              </th>
+              <th scope="col" class="col-bpm">
+                <button
+                  type="button"
+                  class="th-btn"
+                  on:click={() => toggleSort('bpm')}
+                  aria-label="Sort by BPM"
+                >
+                  BPM
+                  <span class="sort-indicator">
+                    {tableSortBy === 'bpm' ? (tableSortDir === 'asc' ? '▲' : '▼') : ''}
+                  </span>
+                </button>
+              </th>
+              <th scope="col" class="col-format">Format</th>
+              <th scope="col" class="col-warnings">Warnings</th>
+              <th scope="col" class="col-updated">
+                <button
+                  type="button"
+                  class="th-btn"
+                  on:click={() => toggleSort('updated')}
+                  aria-label="Sort by updated date"
+                >
+                  Updated
+                  <span class="sort-indicator">
+                    {tableSortBy === 'updated' ? (tableSortDir === 'asc' ? '▲' : '▼') : ''}
+                  </span>
+                </button>
+              </th>
+              <th scope="col" class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each tableSongs as song (song.id)}
+              {@const warnings = song.parser_warnings ?? []}
+              <tr>
+                <td class="col-photo">
+                  <a href={`/songs/${song.id}`} class="row-link" aria-label={`Open ${song.title}`}>
+                    <div class="sys-avatar sys-avatar--songs">{getSongInitial(song.title)}</div>
+                  </a>
+                </td>
+                <td class="col-title">
+                  <a href={`/songs/${song.id}`} class="row-link">
+                    <div class="primary">{song.title}</div>
+                    {#if song.artist || song.arrangement_count}
+                      <div class="muted songs-row-meta">
+                        {#if song.artist}{song.artist}{/if}
+                        {#if song.artist && song.arrangement_count}
+                          <span aria-hidden="true">&nbsp;·&nbsp;</span>
+                        {/if}
+                        {#if song.arrangement_count}
+                          {song.arrangement_count} {song.arrangement_count === 1 ? 'arrangement' : 'arrangements'}
+                        {/if}
+                      </div>
+                    {/if}
+                  </a>
+                </td>
+                <td class="col-key">{song.key ?? '—'}</td>
+                <td class="col-bpm">{song.bpm ?? '—'}</td>
+                <td class="col-format">{formatSourceFormat(song.source_format)}</td>
+                <td class="col-warnings">
+                  {#if warnings.length}
+                    <span class="badge badge-warning">Warnings</span>
+                  {:else}
+                    <span class="muted">—</span>
+                  {/if}
+                </td>
+                <td class="col-updated">{formatTimestamp(song.updated_at ?? song.created_at)}</td>
+                <td class="col-actions">
+                  <div class="songs-table-actions">
+                    <a
+                      class="sys-icon-btn"
+                      href={`/songs/${song.id}`}
+                      title="View song"
+                      aria-label={`View ${song.title}`}
+                    >
+                      👁️
+                    </a>
+                    <button
+                      class="sys-icon-btn"
+                      on:click={() => openEditModal(song)}
+                      title="Edit song"
+                      type="button"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      class="sys-icon-btn sys-icon-btn--danger"
+                      on:click={() => handleDelete(song)}
+                      title="Delete song"
+                      type="button"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -286,69 +517,189 @@
 />
 
 <style>
-  .songs-shell {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: var(--ui-space-6) var(--ui-space-4);
-  }
-
-  .songs-header {
+  .songs-controls {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: var(--ui-space-4);
-    margin-bottom: var(--ui-space-4);
-  }
-
-  .songs-header h1 {
-    margin: 0;
-    font-size: var(--ui-font-size-xl);
-    color: var(--ui-color-text);
-  }
-
-  .songs-header p {
-    margin: var(--ui-space-1) 0 0;
-    color: var(--ui-color-text-muted);
-  }
-
-  .songs-toolbar {
-    display: flex;
-    gap: var(--ui-space-3);
     align-items: center;
-    margin-bottom: var(--ui-space-5);
+    gap: 1rem;
+    margin-bottom: 1rem;
   }
 
-  .songs-toolbar :global(.ui-input) {
-    flex: 1;
+  .songs-view-toggle {
+    display: inline-flex;
+    gap: 6px;
+    padding: 4px;
+    border: 1px solid var(--sys-border);
+    border-radius: 10px;
+    background: white;
   }
 
-  .songs-state {
-    border: 1px dashed var(--ui-color-border);
-    border-radius: var(--ui-radius-lg);
-    padding: var(--ui-space-6);
-    text-align: center;
-    background: var(--ui-color-surface);
-    color: var(--ui-color-text-muted);
-    display: flex;
-    flex-direction: column;
-    gap: var(--ui-space-3);
+  .songs-view-btn {
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--sys-muted);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
   }
 
-  .songs-state--error {
-    border-color: color-mix(in srgb, var(--ui-color-danger) 40%, white);
-    color: var(--ui-color-danger);
+  .songs-view-btn svg {
+    pointer-events: none;
   }
 
-  .songs-state--empty {
-    border-style: solid;
-    border-color: var(--ui-color-border);
+  .songs-view-btn:hover {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--sys-text);
+  }
+
+  .songs-view-btn.active {
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--sys-text);
   }
 
   .songs-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: var(--ui-space-4);
+  }
+
+  .songs-view-toggle {
+    display: inline-flex;
+    gap: 0.5rem;
+    padding: 0.25rem;
+    border: 1px solid var(--sys-border);
+    border-radius: var(--sys-radius-lg);
+    background: white;
+    margin-bottom: var(--ui-space-4);
+  }
+
+  .songs-view-btn {
+    border: 0;
+    background: transparent;
+    padding: 0.35rem 0.9rem;
+    border-radius: var(--sys-radius-md);
+    cursor: pointer;
+    color: var(--sys-muted);
+    font-weight: 500;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .songs-view-btn.active {
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--sys-text);
+  }
+
+  .sys-table-wrap {
+    margin-top: var(--ui-space-4);
+    border: 1px solid var(--sys-border);
+    border-radius: var(--sys-radius-lg);
+    overflow-x: auto;
+    background: white;
+  }
+
+  .sys-table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .sys-table th,
+  .sys-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    vertical-align: middle;
+    text-align: left;
+  }
+
+  .sys-table thead {
+    background: var(--sys-panel);
+  }
+
+  .sys-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .col-photo {
+    width: 64px;
+  }
+
+  .col-actions {
+    width: 150px;
+  }
+
+  .th-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    color: inherit;
+  }
+
+  .th-btn:focus-visible {
+    outline: 2px solid var(--gatherings-accent-start);
+    outline-offset: 2px;
+  }
+
+  .sort-indicator {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  .row-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .row-link:hover .primary {
+    text-decoration: underline;
+  }
+
+  .primary {
+    font-weight: 600;
+  }
+
+  .muted {
+    color: var(--sys-muted);
+    font-size: 0.9rem;
+  }
+
+  .songs-row-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 1px solid var(--sys-border);
+    background: var(--sys-panel);
+  }
+
+  .badge-warning {
+    background: #fef3c7;
+    border-color: #fcd34d;
+    color: #92400e;
+  }
+
+  .songs-table-actions {
+    display: inline-flex;
+    gap: 0.35rem;
   }
 
   .song-card__header {
@@ -458,9 +809,9 @@
   }
 
   @media (max-width: 640px) {
-    .songs-toolbar {
+    .songs-controls {
       flex-direction: column;
-      align-items: stretch;
+      align-items: flex-start;
     }
 
     .song-card__actions {

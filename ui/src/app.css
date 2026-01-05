@@ -549,6 +549,9 @@ body {
 .sys-avatar--families {
 	background: var(--families-accent);
 }
+.sys-avatar--songs {
+	background: var(--songs-accent);
+}
 
 /* ----------- Responsive ----------- */
 @media (max-width: 640px) {
