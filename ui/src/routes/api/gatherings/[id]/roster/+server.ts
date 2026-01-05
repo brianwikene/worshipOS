@@ -1,3 +1,5 @@
+// This route uses legacy service_* database tables while the API surface and domain language use "gatherings".
+
 // src/routes/api/gatherings/[id]/roster/+server.ts
 
 import { json, error } from '@sveltejs/kit';
@@ -10,7 +12,7 @@ export const GET: RequestHandler = async (event) => {
 
   const { id: instanceId } = event.params;
 
-  const result = await pool.query(
+  const rosterResult = await pool.query(
     `SELECT
       sa.id,
       r.id as role_id,
@@ -38,7 +40,7 @@ export const GET: RequestHandler = async (event) => {
     [instanceId, churchId]
   );
 
-  return json(result.rows, {
+  return json(rosterResult.rows, {
     headers: { 'x-served-by': 'sveltekit' }
   });
 };

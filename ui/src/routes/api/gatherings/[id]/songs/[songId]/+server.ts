@@ -1,3 +1,5 @@
+// This route uses legacy service_* database tables while the API surface and domain language use "gatherings".
+
 // src/routes/api/gatherings/[id]/songs/[songId]/+server.ts
 
 import { json, error } from '@sveltejs/kit';
@@ -11,7 +13,7 @@ export const PUT: RequestHandler = async (event) => {
   const { songId } = event.params;
   const body = await event.request.json();
 
-  const result = await pool.query(
+  const songUpdateResult = await pool.query(
     `UPDATE service_instance_songs
      SET key = $1, notes = $2, display_order = $3, updated_at = NOW()
      WHERE id = $4
@@ -19,11 +21,11 @@ export const PUT: RequestHandler = async (event) => {
     [body.key, body.notes, body.display_order, songId]
   );
 
-  if (result.rows.length === 0) {
-    throw error(404, 'Song not found in service');
+  if (songUpdateResult.rows.length === 0) {
+    throw error(404, 'Song not found in gathering');
   }
 
-  return json(result.rows[0], { headers: { 'x-served-by': 'sveltekit' } });
+  return json(songUpdateResult.rows[0], { headers: { 'x-served-by': 'sveltekit' } });
 };
 
 export const DELETE: RequestHandler = async (event) => {
@@ -32,17 +34,17 @@ export const DELETE: RequestHandler = async (event) => {
 
   const { songId } = event.params;
 
-  const result = await pool.query(
+  const songDeleteResult = await pool.query(
     `DELETE FROM service_instance_songs WHERE id = $1 RETURNING *`,
     [songId]
   );
 
-  if (result.rows.length === 0) {
-    throw error(404, 'Song not found in service');
+  if (songDeleteResult.rows.length === 0) {
+    throw error(404, 'Song not found in gathering');
   }
 
   return json(
-    { message: 'Song removed from service', song: result.rows[0] },
+    { message: 'Song removed from gathering', song: songDeleteResult.rows[0] },
     { headers: { 'x-served-by': 'sveltekit' } }
   );
 };

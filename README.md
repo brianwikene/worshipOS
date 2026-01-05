@@ -96,6 +96,18 @@ At the end of this phase, WorshipOS should feel **boringly reliable** for one re
 
 ---
 
+## Local Database Migrations
+
+Ensure your personal Postgres instance stays in sync with the code by running:
+
+```bash
+npm run db:migrate
+```
+
+By default this targets `postgres://worship:worship@127.0.0.1:5432/worshipos`, but you can override the `DATABASE_URL` env var to point at a different database.
+
+---
+
 ## Design Philosophy
 
 - Multi-tenancy is non-negotiable

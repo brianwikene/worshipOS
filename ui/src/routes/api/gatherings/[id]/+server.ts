@@ -1,3 +1,5 @@
+// This route uses legacy service_* database tables while the API surface and domain language use "gatherings".
+
 // src/routes/api/gatherings/[id]/+server.ts
 
 import { json, error } from '@sveltejs/kit';
@@ -10,7 +12,7 @@ export const GET: RequestHandler = async (event) => {
 
   const { id } = event.params;
 
-  const result = await pool.query(
+  const gatheringInstanceResult = await pool.query(
     `
     SELECT
       si.id,
@@ -36,11 +38,11 @@ export const GET: RequestHandler = async (event) => {
     [id, churchId]
   );
 
-  if (result.rows.length === 0) {
-    throw error(404, 'Service instance not found');
+  if (gatheringInstanceResult.rows.length === 0) {
+    throw error(404, 'Gathering instance not found');
   }
 
-  return json(result.rows[0], {
+  return json(gatheringInstanceResult.rows[0], {
     headers: { 'x-served-by': 'sveltekit' }
   });
 };

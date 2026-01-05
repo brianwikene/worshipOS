@@ -1,3 +1,5 @@
+@import '$lib/styles/tokens.css';
+
 /* ============================
    file: app.css
    System styles (sys-*)
@@ -23,19 +25,19 @@
 	--gatherings-accent-end: #764ba2;
 
 	/* Neutrals */
-	--sys-text: #111827;
-	--sys-muted: #6b7280;
-	--sys-bg: #ffffff;
-	--sys-panel: #f9fafb;
-	--sys-border: #e5e7eb;
-	--sys-border-strong: #d1d5db;
+	--sys-text: var(--ui-color-text);
+	--sys-muted: var(--ui-color-text-muted);
+	--sys-bg: var(--ui-color-bg);
+	--sys-panel: var(--ui-color-surface-muted);
+	--sys-border: var(--ui-color-border);
+	--sys-border-strong: var(--ui-color-border-strong);
 
 	/* Radii & shadow */
-	--sys-radius-sm: 8px;
-	--sys-radius-md: 12px;
-	--sys-radius-lg: 16px;
-	--sys-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.06);
-	--sys-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+	--sys-radius-sm: var(--ui-radius-sm);
+	--sys-radius-md: var(--ui-radius-md);
+	--sys-radius-lg: var(--ui-radius-lg);
+	--sys-shadow-sm: var(--ui-shadow-sm);
+	--sys-shadow-md: var(--ui-shadow-md);
 }
 
 /* ----------- Base ----------- */

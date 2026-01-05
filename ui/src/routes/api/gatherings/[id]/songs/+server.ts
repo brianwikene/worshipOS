@@ -1,3 +1,5 @@
+// This route uses legacy service_* database tables while the API surface and domain language use "gatherings".
+
 // src/routes/api/gatherings/[id]/songs/+server.ts
 
 import { json, error } from '@sveltejs/kit';
@@ -5,7 +7,7 @@ import type { RequestHandler } from './$types';
 import { pool } from '$lib/server/db';
 
 async function assertInstanceInChurch(instanceId: string, churchId: string): Promise<boolean> {
-  const check = await pool.query(
+  const instanceLookupResult = await pool.query(
     `
     SELECT 1
     FROM service_instances si
@@ -14,7 +16,7 @@ async function assertInstanceInChurch(instanceId: string, churchId: string): Pro
     `,
     [instanceId, churchId]
   );
-  return (check.rowCount ?? 0) > 0;
+  return (instanceLookupResult.rowCount ?? 0) > 0;
 }
 
 export const GET: RequestHandler = async (event) => {
@@ -23,7 +25,7 @@ export const GET: RequestHandler = async (event) => {
 
   const { id: instanceId } = event.params;
 
-  const result = await pool.query(
+  const songsResult = await pool.query(
     `SELECT
       sis.*,
       s.title,
@@ -41,7 +43,7 @@ export const GET: RequestHandler = async (event) => {
     [instanceId, churchId]
   );
 
-  return json(result.rows, {
+  return json(songsResult.rows, {
     headers: { 'x-served-by': 'sveltekit' }
   });
 };
@@ -58,12 +60,12 @@ export const POST: RequestHandler = async (event) => {
     throw error(400, 'song_id is required');
   }
 
-  const ok = await assertInstanceInChurch(instanceId, churchId);
-  if (!ok) {
-    throw error(404, 'Service instance not found');
+  const instanceBelongsToChurch = await assertInstanceInChurch(instanceId, churchId);
+  if (!instanceBelongsToChurch) {
+    throw error(404, 'Gathering instance not found');
   }
 
-  const result = await pool.query(
+  const songInsertResult = await pool.query(
     `INSERT INTO service_instance_songs
        (service_instance_id, song_id, display_order, key, notes)
        VALUES ($1, $2, $3, $4, $5)
@@ -71,7 +73,7 @@ export const POST: RequestHandler = async (event) => {
     [instanceId, song_id, display_order, key, notes]
   );
 
-  return json(result.rows[0], {
+  return json(songInsertResult.rows[0], {
     status: 201,
     headers: { 'x-served-by': 'sveltekit' }
   });

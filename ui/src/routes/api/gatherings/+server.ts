@@ -1,5 +1,6 @@
-// src/routes/api/gatherings/+server.ts
+// This route uses legacy service_* database tables while the API surface and domain language use "gatherings".
 
+// src/routes/api/gatherings/+server.ts
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { pool } from '$lib/server/db';
@@ -12,7 +13,7 @@ export const GET: RequestHandler = async (event) => {
   const startDate = url.searchParams.get('start_date');
   const endDate = url.searchParams.get('end_date');
 
-  const result = await pool.query(
+  const gatheringInstancesResult = await pool.query(
     `
     SELECT
       sg.id as group_id,
@@ -64,24 +65,24 @@ export const GET: RequestHandler = async (event) => {
     }>;
   }>();
 
-  for (const row of result.rows) {
-    if (!groupsMap.has(row.group_id)) {
-      groupsMap.set(row.group_id, {
-        id: row.group_id,
-        group_date: row.group_date,
-        name: row.group_name,
-        context_name: row.context_name || 'Unknown',
+  for (const gatheringRow of gatheringInstancesResult.rows) {
+    if (!groupsMap.has(gatheringRow.group_id)) {
+      groupsMap.set(gatheringRow.group_id, {
+        id: gatheringRow.group_id,
+        group_date: gatheringRow.group_date,
+        name: gatheringRow.group_name,
+        context_name: gatheringRow.context_name || 'Unknown',
         instances: []
       });
     }
 
-    const group = groupsMap.get(row.group_id)!;
+    const group = groupsMap.get(gatheringRow.group_id)!;
     group.instances.push({
-      id: row.instance_id,
-      service_time: row.service_time,
-      campus_id: row.campus_id,
-      campus_name: row.campus_name,
-      assignments: row.assignments
+      id: gatheringRow.instance_id,
+      service_time: gatheringRow.service_time,
+      campus_id: gatheringRow.campus_id,
+      campus_name: gatheringRow.campus_name,
+      assignments: gatheringRow.assignments
     });
   }
 
@@ -116,7 +117,7 @@ export const POST: RequestHandler = async (event) => {
   gracePeriod.setHours(0, 0, 0, 0);
 
   if (serviceDate < gracePeriod) {
-    throw error(400, 'Service date must be today or in the future');
+    throw error(400, 'Gathering date must be today or in the future');
   }
 
   const client = await pool.connect();
@@ -125,24 +126,24 @@ export const POST: RequestHandler = async (event) => {
     await client.query('BEGIN');
 
     // 1. Create the service group
-    const groupResult = await client.query(
+    const groupInsertResult = await client.query(
       `INSERT INTO service_groups (church_id, group_date, name, context_id)
        VALUES ($1, $2, $3, $4)
        RETURNING id`,
       [churchId, group_date, name, context_id || null]
     );
-    const groupId = groupResult.rows[0].id;
+    const groupId = groupInsertResult.rows[0].id;
 
     // 2. Create service instances
     const instanceIds: string[] = [];
     for (const inst of instances) {
-      const instResult = await client.query(
+      const instanceInsertResult = await client.query(
         `INSERT INTO service_instances (church_id, service_group_id, service_date, service_time, campus_id)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id`,
         [churchId, groupId, group_date, inst.service_time, inst.campus_id || null]
       );
-      instanceIds.push(instResult.rows[0].id);
+        instanceIds.push(instanceInsertResult.rows[0].id);
     }
 
     // 3. Create position assignments for each instance if positions provided
@@ -167,13 +168,13 @@ export const POST: RequestHandler = async (event) => {
       success: true,
       group_id: groupId,
       instance_ids: instanceIds,
-      message: `Created service "${name}" with ${instanceIds.length} instance(s)`
+      message: `Created gathering "${name}" with ${instanceIds.length} instance(s)`
     }, { status: 201 });
 
   } catch (e: any) {
     await client.query('ROLLBACK');
     console.error('Error creating service:', e);
-    throw error(500, e.message || 'Failed to create service');
+    throw error(500, e.message || 'Failed to create gathering');
   } finally {
     client.release();
   }

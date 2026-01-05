@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "db:migrate": "bash scripts/db-migrate.sh"
+  },
   "dependencies": {
     "cors": "^2.8.5"
   }

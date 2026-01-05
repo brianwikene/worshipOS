@@ -1,3 +1,5 @@
+// This route uses legacy service_* database tables while the API surface and domain language use "gatherings".
+
 // src/routes/api/gatherings/[id]/copy/+server.ts
 
 import { json, error } from '@sveltejs/kit';
@@ -16,7 +18,7 @@ export const POST: RequestHandler = async (event) => {
   // Implementation depends on exact requirements
 
   return json(
-    { message: 'Service copied', source_id: sourceId, target_date },
+    { message: 'Gathering copied', source_id: sourceId, target_date },
     { headers: { 'x-served-by': 'sveltekit' } }
   );
 };

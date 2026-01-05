@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { apiJson, apiFetch } from '$lib/api';
+  import { peoplePrefs } from '$lib/stores/peoplePrefs';
+  import type { PeopleViewMode, PeopleSortField, SortDir } from '$lib/stores/peoplePrefs';
   import PersonModal from '$lib/components/PersonModal.svelte';
 
   interface Person {
@@ -16,30 +18,46 @@
   let loading = true;
   let error = '';
   let searchQuery = '';
-  let sortBy: 'last_name' | 'first_name' | 'updated_at' = 'last_name';
-  let sortDir: 'asc' | 'desc' = 'asc';
-  let viewMode: 'cards' | 'table' = 'cards';
+  let viewMode: PeopleViewMode = 'cards';
+  let sortBy: PeopleSortField = 'last_name';
+  let sortDir: SortDir = 'asc';
+
+  $: viewMode = $peoplePrefs.viewMode;
+  $: sortBy = $peoplePrefs.sortBy;
+  $: sortDir = $peoplePrefs.sortDir;
+
+  function setViewMode(mode: PeopleViewMode) {
+    peoplePrefs.update((p) => ({ ...p, viewMode: mode }));
+  }
+
+  function setSortBy(by: PeopleSortField) {
+    peoplePrefs.update((p) => ({ ...p, sortBy: by }));
+  }
+
+  function setSortDir(dir: SortDir) {
+    peoplePrefs.update((p) => ({ ...p, sortDir: dir }));
+  }
 
   // Modal state
   let modalOpen = false;
   let editingPerson: Person | null = null;
   let modalComponent: PersonModal;
 
-  onMount(() => {
-    // restore preferred view mode
-  const savedView = localStorage.getItem('people:viewMode');
-  if (savedView === 'cards' || savedView === 'table') {
-    viewMode = savedView;
-  }
+  let mounted = false;
+  let lastSortKey: string | null = null;
 
-  // initial data load
+  onMount(() => {
+    mounted = true;
+    lastSortKey = sortBy && sortDir ? `${sortBy}:${sortDir}` : null;
     loadPeople();
   });
 
-  // UI helpers
-  function setViewMode(mode: 'cards' | 'table') {
-    viewMode = mode;
-    localStorage.setItem('people:viewMode', mode);
+  $: if (mounted && sortBy && sortDir) {
+    const sortKey = `${sortBy}:${sortDir}`;
+    if (sortKey !== lastSortKey) {
+      lastSortKey = sortKey;
+      loadPeople();
+    }
   }
 
   async function loadPeople() {
@@ -180,7 +198,14 @@
 
   <!-- sort controls -->
   <div class="people-sort-group">
-    <select class="sys-select people-sort-select" bind:value={sortBy} on:change={loadPeople}>
+    <select
+      class="sys-select people-sort-select"
+      value={sortBy}
+      on:change={(event) => {
+        const selected = (event.target as HTMLSelectElement).value as PeopleSortField;
+        setSortBy(selected);
+      }}
+    >
       <option value="last_name">Last name</option>
       <option value="first_name">First name</option>
       <!-- IMPORTANT: your API whitelist doesn't include updated_at yet -->
@@ -190,7 +215,10 @@
     <button
       type="button"
       class="sys-btn sys-btn--secondary sort-dir-btn"
-      on:click={() => { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; loadPeople(); }}
+      on:click={() => {
+        const nextDir = sortDir === 'asc' ? 'desc' : 'asc';
+        setSortDir(nextDir);
+      }}
     >
       {sortDir === 'asc' ? 'A–Z' : 'Z–A'}
     </button>
@@ -261,30 +289,49 @@
   <table class="sys-table" aria-label="People table">
     <thead>
       <tr>
-        <th class="col-photo">Photo</th>
+        <th scope="col" class="col-photo">Photo</th>
 
-        <th class="col-name">
+        <th scope="col" class="col-last">
           <button
             type="button"
             class="th-btn"
             on:click={() => {
-              // sort by last_name by default when clicking "Name"
-              sortBy = 'last_name';
-              sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-              loadPeople();
+              const nextDir = sortBy === 'last_name' ? (sortDir === 'asc' ? 'desc' : 'asc') : 'asc';
+              setSortBy('last_name');
+              setSortDir(nextDir);
             }}
-            aria-label="Sort by name"
+            aria-label="Sort by last name"
           >
-            Name
-            <span class="sort-indicator">{sortBy === 'last_name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
+            Last
+            <span class="sort-indicator">
+              {sortBy === 'last_name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+            </span>
           </button>
         </th>
 
-        <th class="col-legal">Legal name</th>
+        <th scope="col" class="col-first">
+          <button
+            type="button"
+            class="th-btn"
+            on:click={() => {
+              const nextDir = sortBy === 'first_name' ? (sortDir === 'asc' ? 'desc' : 'asc') : 'asc';
+              setSortBy('first_name');
+              setSortDir(nextDir);
+            }}
+            aria-label="Sort by first name"
+          >
+            First
+            <span class="sort-indicator">
+              {sortBy === 'first_name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+            </span>
+          </button>
+        </th>
 
-        <th class="col-contact">Contact</th>
+        <th scope="col" class="col-goes">Goes by</th>
 
-        <th class="col-actions">Actions</th>
+        <th scope="col" class="col-contact">Contact</th>
+
+        <th scope="col" class="col-actions">Actions</th>
       </tr>
     </thead>
 
@@ -299,24 +346,27 @@
             </a>
           </td>
 
-          <td class="col-name">
+          <td class="col-last">
             <a href={`/people/${person.id}`} class="row-link">
-              <div class="primary">{person.display_name}</div>
-              {#if person.goes_by && person.goes_by !== person.first_name}
-                <div class="secondary">({person.goes_by})</div>
-              {/if}
+              <div class="primary">{person.last_name ?? '—'}</div>
             </a>
           </td>
 
-          <td class="col-legal">
-            <span class="muted">{person.first_name} {person.last_name}</span>
+          <td class="col-first">
+            <a href={`/people/${person.id}`} class="row-link">
+              <div class="primary">{person.first_name ?? '—'}</div>
+            </a>
+          </td>
+
+          <td class="col-goes">
+            <span class="muted">{person.goes_by ?? '—'}</span>
           </td>
 
           <td class="col-contact">
             {#if person.has_contact_info}
               <span class="badge">📞 Contact info</span>
             {:else}
-              <span class="muted">No contact info</span>
+              <span class="muted">&mdash;</span>
             {/if}
           </td>
 

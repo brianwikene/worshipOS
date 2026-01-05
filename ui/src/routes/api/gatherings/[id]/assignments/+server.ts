@@ -1,3 +1,5 @@
+// This route uses legacy service_* database tables while the API surface and domain language use "gatherings".
+
 // src/routes/api/gatherings/[id]/assignments/+server.ts
 
 import { json, error } from '@sveltejs/kit';
@@ -5,7 +7,7 @@ import type { RequestHandler } from './$types';
 import { pool } from '$lib/server/db';
 
 async function assertInstanceInChurch(instanceId: string, churchId: string): Promise<boolean> {
-  const check = await pool.query(
+  const instanceLookupResult = await pool.query(
     `
     SELECT 1
     FROM service_instances si
@@ -14,7 +16,7 @@ async function assertInstanceInChurch(instanceId: string, churchId: string): Pro
     `,
     [instanceId, churchId]
   );
-  return (check.rowCount ?? 0) > 0;
+  return (instanceLookupResult.rowCount ?? 0) > 0;
 }
 
 // Check for body part conflicts when assigning a person to a role
@@ -29,17 +31,17 @@ async function checkBodyPartConflicts(
   }
 
   // Get body parts for the new role
-  const newRoleResult = await pool.query(
+  const newRoleLookupResult = await pool.query(
     'SELECT name, body_parts FROM roles WHERE id = $1 AND church_id = $2',
     [newRoleId, churchId]
   );
 
-  if (newRoleResult.rows.length === 0) {
+  if (newRoleLookupResult.rows.length === 0) {
     return { hasConflict: false, conflicts: [] };
   }
 
-  const newRole = newRoleResult.rows[0];
-  const newBodyParts: string[] = newRole.body_parts || [];
+  const newRoleRow = newRoleLookupResult.rows[0];
+  const newBodyParts: string[] = newRoleRow.body_parts || [];
 
   // If the new role doesn't require any body parts, no conflict possible
   if (newBodyParts.length === 0) {
@@ -47,7 +49,7 @@ async function checkBodyPartConflicts(
   }
 
   // Get all existing assignments for this person in this service instance
-  const existingResult = await pool.query(
+  const existingAssignmentsResult = await pool.query(
     `SELECT r.name, r.body_parts
      FROM service_assignments sa
      JOIN roles r ON r.id = sa.role_id
@@ -59,15 +61,15 @@ async function checkBodyPartConflicts(
 
   const conflicts: string[] = [];
 
-  for (const existing of existingResult.rows) {
-    const existingBodyParts: string[] = existing.body_parts || [];
+  for (const existingAssignmentRow of existingAssignmentsResult.rows) {
+    const existingBodyParts: string[] = existingAssignmentRow.body_parts || [];
 
     // Check for overlapping body parts
     const overlap = newBodyParts.filter(bp => existingBodyParts.includes(bp));
 
     if (overlap.length > 0) {
       conflicts.push(
-        `${newRole.name} (${overlap.join(', ')}) conflicts with ${existing.name}`
+        `${newRoleRow.name} (${overlap.join(', ')}) conflicts with ${existingAssignmentRow.name}`
       );
     }
   }
@@ -90,9 +92,9 @@ export const POST: RequestHandler = async (event) => {
     throw error(400, 'role_id is required');
   }
 
-  const ok = await assertInstanceInChurch(instanceId, churchId);
-  if (!ok) {
-    throw error(404, 'Service instance not found');
+  const instanceBelongsToChurch = await assertInstanceInChurch(instanceId, churchId);
+  if (!instanceBelongsToChurch) {
+    throw error(404, 'Gathering instance not found');
   }
 
   // Check for body part conflicts (unless force=true to override)
@@ -108,7 +110,7 @@ export const POST: RequestHandler = async (event) => {
     }
   }
 
-  const result = await pool.query(
+  const assignmentInsertResult = await pool.query(
     `INSERT INTO service_assignments
       (church_id, service_instance_id, role_id, person_id, status, is_lead, notes)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -124,7 +126,7 @@ export const POST: RequestHandler = async (event) => {
     ]
   );
 
-  return json(result.rows[0], {
+  return json(assignmentInsertResult.rows[0], {
     status: 201,
     headers: { 'x-served-by': 'sveltekit' }
   });

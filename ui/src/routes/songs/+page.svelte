@@ -2,6 +2,11 @@
   import { onMount } from 'svelte';
   import { apiJson, apiFetch } from '$lib/api';
   import SongModal from '$lib/components/SongModal.svelte';
+  import Button from '$lib/components/ui/Button.svelte';
+  import Input from '$lib/components/ui/Input.svelte';
+  import Card from '$lib/components/ui/Card.svelte';
+  import Badge from '$lib/components/ui/Badge.svelte';
+  import type { ParsedSong, SongSourceFormat } from '$lib/songs/types';
 
   interface Song {
     id: string;
@@ -11,7 +16,27 @@
     bpm: number | null;
     ccli_number: string | null;
     notes: string | null;
+    source_format: SongSourceFormat;
+    raw_text: string | null;
+    parsed_json: ParsedSong | null;
+    parser_warnings: string[];
+    arrangement_count: number;
+    created_at: string;
+    updated_at: string;
   }
+
+  type SongFormPayload = {
+    title: string;
+    artist: string | null;
+    key: string | null;
+    bpm: number | null;
+    ccli_number: string | null;
+    notes: string | null;
+    source_format: SongSourceFormat;
+    raw_text: string | null;
+  };
+
+  const MAX_PREVIEW_LINES = 6;
 
   let songs: Song[] = [];
   let loading = true;
@@ -22,6 +47,39 @@
   let modalOpen = false;
   let editingSong: Song | null = null;
   let modalComponent: SongModal;
+
+  function formatSourceFormat(format: SongSourceFormat) {
+    return format === 'chordpro' ? 'ChordPro' : 'Plain text';
+  }
+
+  function buildLyricsPreview(song: Song): string | null {
+    const sections = song.parsed_json?.sections;
+    if (!sections || sections.length === 0) {
+      return null;
+    }
+
+    const lines: string[] = [];
+    for (const section of sections) {
+      lines.push(section.label.toUpperCase());
+      for (const line of section.lines) {
+        if (line.lyrics) {
+          lines.push(line.lyrics);
+        } else if (line.chords.length) {
+          lines.push(line.chords.map((chord) => chord.chord).join(' '));
+        }
+        if (lines.length >= MAX_PREVIEW_LINES) break;
+      }
+      if (lines.length >= MAX_PREVIEW_LINES) break;
+      lines.push('');
+    }
+
+    return lines.slice(0, MAX_PREVIEW_LINES).join('\n').trim() || null;
+  }
+
+  function showParserWarnings(warnings?: string[]) {
+    if (!warnings || warnings.length === 0) return;
+    alert(`Song saved with warnings:\n- ${warnings.join('\n- ')}`);
+  }
 
   onMount(() => {
     loadSongs();
@@ -58,33 +116,22 @@
     editingSong = null;
   }
 
-  async function handleSave(e: CustomEvent<{
-    title: string;
-    artist: string | null;
-    key: string | null;
-    bpm: number | null;
-    ccli_number: string | null;
-    notes: string | null;
-  }>) {
+  async function handleSave(e: CustomEvent<SongFormPayload>) {
     const songData = e.detail;
 
     try {
       modalComponent.setSaving(true);
 
-      if (editingSong?.id) {
-        await apiFetch(`/api/songs/${editingSong.id}`, {
-          method: 'PUT',
-          body: JSON.stringify(songData)
-        });
-      } else {
-        await apiFetch('/api/songs', {
-          method: 'POST',
-          body: JSON.stringify(songData)
-        });
-      }
+      const url = editingSong?.id ? `/api/songs/${editingSong.id}` : '/api/songs';
+      const method = editingSong?.id ? 'PUT' : 'POST';
+      const saved = await apiJson<Song>(url, {
+        method,
+        body: JSON.stringify(songData)
+      });
 
       closeModal();
       await loadSongs();
+      showParserWarnings(saved.parser_warnings);
     } catch (err) {
       modalComponent.setError(err instanceof Error ? err.message : 'Failed to save song');
     }
@@ -113,92 +160,118 @@
   }
 </script>
 
-<div class="sys-page">
-  <div class="sys-page-header">
+<div class="songs-shell">
+  <div class="songs-header">
     <div>
-      <h1 class="sys-title">Songs</h1>
-      <p class="sys-subtitle">Manage your worship song library</p>
+      <h1>Songs</h1>
+      <p>Keep lyrics, arrangements, and context in one calm view.</p>
     </div>
-    <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
-      + Add Song
-    </button>
+    <Button on:click={openAddModal}>+ Add Song</Button>
   </div>
 
-  <div class="sys-toolbar">
-    <div class="sys-search">
-      <input
-        class="sys-input"
-        type="text"
-        placeholder="Search songs by title or artist..."
-        bind:value={searchQuery}
-        on:keydown={(e) => e.key === 'Enter' && handleSearch()}
-      />
-    </div>
-    <button class="sys-btn sys-btn--secondary" on:click={handleSearch}>Search</button>
+  <div class="songs-toolbar">
+    <Input
+      placeholder="Search songs by title or artist..."
+      bind:value={searchQuery}
+      on:keydown={(e) => e.key === 'Enter' && handleSearch()}
+    />
+    <Button variant="secondary" on:click={handleSearch}>Search</Button>
     {#if searchQuery}
-      <button class="sys-btn sys-btn--secondary" on:click={clearSearch}>Clear</button>
+      <Button variant="ghost" on:click={clearSearch}>Clear</Button>
     {/if}
   </div>
 
   {#if loading}
-    <div class="sys-state">Loading songs...</div>
+    <div class="songs-state">Loading songs...</div>
   {:else if error}
-    <div class="sys-state sys-state--error">
-      <p>Error: {error}</p>
-      <button class="sys-btn sys-btn--danger" on:click={loadSongs}>Retry</button>
+    <div class="songs-state songs-state--error">
+      <p>{error}</p>
+      <Button variant="primary" on:click={loadSongs}>Retry</Button>
     </div>
   {:else if songs.length === 0}
-    <div class="sys-state sys-state--empty">
+    <div class="songs-state songs-state--empty">
       {#if searchQuery}
-        <p>No songs found matching "{searchQuery}"</p>
-        <button class="sys-btn sys-btn--secondary" on:click={clearSearch}>Clear search</button>
+        <p>No songs found matching “{searchQuery}”.</p>
+        <Button variant="secondary" on:click={clearSearch}>Clear search</Button>
       {:else}
         <p>No songs in your library yet.</p>
-        <button class="sys-btn sys-btn--primary" on:click={openAddModal}>Add your first song</button>
+        <Button on:click={openAddModal}>Add your first song</Button>
       {/if}
     </div>
   {:else}
-    <div class="sys-grid sys-grid--cards">
+    <div class="songs-grid">
       {#each songs as song}
-        <div class="sys-card song-card">
-          <div class="song-header">
-            <h3 class="sys-card-title">{song.title}</h3>
-            <div class="song-actions">
-              <button class="sys-icon-btn" on:click={() => openEditModal(song)} title="Edit">
-                ✏️
-              </button>
-              <button class="sys-icon-btn sys-icon-btn--danger" on:click={() => handleDelete(song)} title="Delete">
-                🗑️
-              </button>
+        {@const preview = buildLyricsPreview(song)}
+        {@const warnings = song.parser_warnings ?? []}
+        <Card elevated={false}>
+          <svelte:fragment slot="header">
+            <div class="song-card__header">
+              <div>
+                <p class="song-card__format">{formatSourceFormat(song.source_format)}</p>
+                <h3>{song.title}</h3>
+                {#if song.artist}
+                  <p class="song-card__artist">{song.artist}</p>
+                {/if}
+              </div>
+              <div class="song-card__actions">
+                {#if warnings.length}
+                  <Badge variant="warning">Warnings</Badge>
+                {/if}
+                <Badge variant="muted">
+                  {song.arrangement_count} {song.arrangement_count === 1 ? 'arrangement' : 'arrangements'}
+                </Badge>
+                <div class="song-card__action-buttons">
+                  <Button variant="ghost" size="sm" on:click={() => openEditModal(song)}>Edit</Button>
+                  <Button variant="ghost" size="sm" on:click={() => handleDelete(song)}>Delete</Button>
+                </div>
+              </div>
             </div>
-          </div>
+          </svelte:fragment>
 
-          {#if song.artist}
-            <div class="song-artist">by {song.artist}</div>
-          {/if}
-
-          <div class="song-details">
+          <div class="song-card__meta">
             {#if song.key}
-              <span class="detail-item">
-                <span class="label">Key:</span> {song.key}
-              </span>
+              <div>
+                <span class="meta-label">Key</span>
+                <span class="meta-value">{song.key}</span>
+              </div>
             {/if}
             {#if song.bpm}
-              <span class="detail-item">
-                <span class="label">BPM:</span> {song.bpm}
-              </span>
+              <div>
+                <span class="meta-label">BPM</span>
+                <span class="meta-value">{song.bpm}</span>
+              </div>
             {/if}
             {#if song.ccli_number}
-              <span class="detail-item">
-                <span class="label">CCLI:</span> {song.ccli_number}
-              </span>
+              <div>
+                <span class="meta-label">CCLI</span>
+                <span class="meta-value">{song.ccli_number}</span>
+              </div>
+            {/if}
+          </div>
+
+          <div class="song-card__preview">
+            {#if preview}
+              <pre>{preview}</pre>
+            {:else}
+              <p>No lyrics stored yet.</p>
             {/if}
           </div>
 
           {#if song.notes}
-            <div class="song-notes">{song.notes}</div>
+            <div class="song-card__notes">{song.notes}</div>
           {/if}
-        </div>
+
+          {#if warnings.length}
+            <div class="song-card__warning-panel">
+              <strong>Warnings</strong>
+              <ul>
+                {#each warnings as warning}
+                  <li>{warning}</li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
+        </Card>
       {/each}
     </div>
   {/if}
@@ -213,54 +286,190 @@
 />
 
 <style>
-  /* Song-specific styles only - layout handled by sys-* classes */
-  .song-card {
-    padding: 1.5rem;
+  .songs-shell {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--ui-space-6) var(--ui-space-4);
   }
 
-  .song-header {
+  .songs-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 0.5rem;
-    gap: 1rem;
+    gap: var(--ui-space-4);
+    margin-bottom: var(--ui-space-4);
   }
 
-  .song-actions {
+  .songs-header h1 {
+    margin: 0;
+    font-size: var(--ui-font-size-xl);
+    color: var(--ui-color-text);
+  }
+
+  .songs-header p {
+    margin: var(--ui-space-1) 0 0;
+    color: var(--ui-color-text-muted);
+  }
+
+  .songs-toolbar {
     display: flex;
-    gap: 0.25rem;
+    gap: var(--ui-space-3);
+    align-items: center;
+    margin-bottom: var(--ui-space-5);
   }
 
-  .song-artist {
-    color: var(--sys-muted);
-    font-size: 0.9375rem;
-    margin-bottom: 1rem;
+  .songs-toolbar :global(.ui-input) {
+    flex: 1;
   }
 
-  .song-details {
+  .songs-state {
+    border: 1px dashed var(--ui-color-border);
+    border-radius: var(--ui-radius-lg);
+    padding: var(--ui-space-6);
+    text-align: center;
+    background: var(--ui-color-surface);
+    color: var(--ui-color-text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-3);
+    align-items: center;
+  }
+
+  .songs-state--error {
+    border-color: color-mix(in srgb, var(--ui-color-danger) 40%, white);
+    color: var(--ui-color-danger);
+  }
+
+  .songs-state--empty {
+    border-style: solid;
+    border-color: var(--ui-color-border);
+  }
+
+  .songs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--ui-space-4);
+  }
+
+  .song-card__header {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--ui-space-3);
+    align-items: flex-start;
+  }
+
+  .song-card__format {
+    margin: 0 0 var(--ui-space-1);
+    font-size: var(--ui-font-size-sm);
+    color: var(--ui-color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .song-card__header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--ui-color-text);
+  }
+
+  .song-card__artist {
+    margin: var(--ui-space-1) 0 0;
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-font-size-sm);
+  }
+
+  .song-card__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-2);
+    align-items: flex-end;
+  }
+
+  .song-card__action-buttons {
+    display: flex;
+    gap: var(--ui-space-2);
+  }
+
+  .song-card__meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 0.75rem;
+    gap: var(--ui-space-4);
+    margin-bottom: var(--ui-space-4);
   }
 
-  .detail-item {
-    font-size: 0.875rem;
-    color: var(--sys-muted);
+  .song-card__meta .meta-label {
+    display: block;
+    font-size: var(--ui-font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ui-color-text-muted);
   }
 
-  .label {
+  .song-card__meta .meta-value {
     font-weight: 600;
-    color: var(--sys-text);
+    color: var(--ui-color-text);
   }
 
-  .song-notes {
-    margin-top: 0.75rem;
-    padding: 0.75rem;
-    background: var(--sys-panel);
-    border-radius: 6px;
-    font-size: 0.875rem;
-    color: var(--sys-muted);
-    line-height: 1.5;
+  .song-card__preview {
+    background: var(--ui-color-surface-muted);
+    border-radius: var(--ui-radius-md);
+    padding: var(--ui-space-3);
+    min-height: 4.5rem;
+    margin-bottom: var(--ui-space-3);
+  }
+
+  .song-card__preview pre {
+    margin: 0;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    font-size: var(--ui-font-size-sm);
+    white-space: pre-wrap;
+    color: var(--ui-color-text);
+  }
+
+  .song-card__preview p {
+    margin: 0;
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-font-size-sm);
+  }
+
+  .song-card__notes {
+    padding: var(--ui-space-3);
+    border-radius: var(--ui-radius-md);
+    background: var(--ui-color-surface-muted);
+    color: var(--ui-color-text-muted);
+    font-size: var(--ui-font-size-sm);
+    margin-bottom: var(--ui-space-3);
+    line-height: 1.4;
+  }
+
+  .song-card__warning-panel {
+    border-radius: var(--ui-radius-md);
+    border: 1px solid color-mix(in srgb, var(--ui-color-warning) 35%, white);
+    background: color-mix(in srgb, var(--ui-color-warning) 10%, #fffdf5);
+    color: var(--ui-color-warning);
+    font-size: var(--ui-font-size-sm);
+    padding: var(--ui-space-3);
+    line-height: 1.4;
+  }
+
+  .song-card__warning-panel ul {
+    margin: var(--ui-space-2) 0 0;
+    padding-left: var(--ui-space-4);
+  }
+
+  @media (max-width: 640px) {
+    .songs-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .song-card__actions {
+      align-items: flex-start;
+    }
+
+    .song-card__action-buttons {
+      width: 100%;
+      flex-direction: column;
+    }
   }
 </style>

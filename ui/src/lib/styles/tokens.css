@@ -1,0 +1,41 @@
+:root {
+	/* Palette */
+	--ui-color-bg: #f6f7fb;
+	--ui-color-surface: #ffffff;
+	--ui-color-surface-muted: #f9fafc;
+	--ui-color-border: #e0e6f0;
+	--ui-color-border-strong: #c8d2e3;
+	--ui-color-text: #1f2533;
+	--ui-color-text-muted: #677289;
+	--ui-color-accent: #4c6ef5;
+	--ui-color-accent-muted: #dee6ff;
+	--ui-color-danger: #dc2626;
+	--ui-color-warning: #f59e0b;
+	--ui-color-success: #0f9d58;
+
+	/* Typography */
+	--ui-font-size-xs: 0.75rem;
+	--ui-font-size-sm: 0.875rem;
+	--ui-font-size-md: 1rem;
+	--ui-font-size-lg: 1.25rem;
+	--ui-font-size-xl: 1.5rem;
+
+	/* Spacing scale */
+	--ui-space-0: 0;
+	--ui-space-1: 0.25rem;
+	--ui-space-2: 0.5rem;
+	--ui-space-3: 0.75rem;
+	--ui-space-4: 1rem;
+	--ui-space-5: 1.5rem;
+	--ui-space-6: 2rem;
+
+	/* Radii */
+	--ui-radius-sm: 6px;
+	--ui-radius-md: 10px;
+	--ui-radius-lg: 16px;
+
+	/* Shadows */
+	--ui-shadow-sm: 0 4px 10px rgba(15, 23, 42, 0.06);
+	--ui-shadow-md: 0 10px 20px rgba(15, 23, 42, 0.08);
+	--ui-shadow-lg: 0 25px 45px rgba(15, 23, 42, 0.12);
+}
