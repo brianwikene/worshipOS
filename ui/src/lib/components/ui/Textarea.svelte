@@ -11,7 +11,7 @@
 </script>
 
 <textarea
-	class="ui-textarea"
+	class="w-full min-h-[120px] resize-y rounded-card border border-ui-border bg-ui-surface px-4 py-3 text-base text-ui-text placeholder:text-ui-text-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent focus-visible:ring-offset-2 focus-visible:ring-offset-ui-surface disabled:cursor-not-allowed disabled:bg-ui-surface-muted disabled:text-ui-text-muted"
 	{name}
 	{id}
 	{rows}
@@ -20,34 +20,3 @@
 	{placeholder}
 	bind:value
 />
-
-<style>
-	.ui-textarea {
-		width: 100%;
-		padding: var(--ui-space-3) var(--ui-space-4);
-		border-radius: var(--ui-radius-md);
-		border: 1px solid var(--ui-color-border);
-		background: var(--ui-color-surface);
-		font-size: var(--ui-font-size-md);
-		color: var(--ui-color-text);
-		font-family: inherit;
-		box-sizing: border-box;
-		resize: vertical;
-		min-height: 120px;
-		transition:
-			border-color 0.2s ease,
-			box-shadow 0.2s ease;
-	}
-
-	.ui-textarea:focus {
-		outline: none;
-		border-color: color-mix(in srgb, var(--ui-color-accent) 65%, white);
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--ui-color-accent) 20%, transparent);
-	}
-
-	.ui-textarea:disabled {
-		background: var(--ui-color-surface-muted);
-		color: var(--ui-color-text-muted);
-		cursor: not-allowed;
-	}
-</style>

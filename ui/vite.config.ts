@@ -13,6 +13,11 @@ export default defineConfig({
 			$lib: pathResolve(projectDir, 'src/lib')
 		}
 	},
+	server: {
+		host: '127.0.0.1',
+		strictPort: true,
+		cors: false
+	},
 	test: {
 		environment: 'node',
 		include: ['src/**/*.{test,spec}.{js,ts}']

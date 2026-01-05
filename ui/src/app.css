@@ -1,5 +1,9 @@
 @import '$lib/styles/tokens.css';
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ============================
    file: app.css
    System styles (sys-*)
@@ -46,20 +50,24 @@ body {
 	margin: 0;
 	padding: 0;
 }
-body {
-	color: var(--sys-text);
-	background: var(--sys-bg);
-	font-family:
-		system-ui,
-		-apple-system,
-		Segoe UI,
-		Roboto,
-		Helvetica,
-		Arial,
-		sans-serif;
-}
-a {
-	color: inherit;
+
+@layer base {
+	body {
+		color: var(--sys-text);
+		background: var(--sys-bg);
+		font-family:
+			system-ui,
+			-apple-system,
+			Segoe UI,
+			Roboto,
+			Helvetica,
+			Arial,
+			sans-serif;
+	}
+
+	a {
+		color: inherit;
+	}
 }
 
 /* ----------- Layout ----------- */

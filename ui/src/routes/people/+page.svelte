@@ -586,7 +586,6 @@
   font-weight: 600;
 }
 
-.secondary,
 .muted {
   opacity: 0.7;
   font-size: 13px;

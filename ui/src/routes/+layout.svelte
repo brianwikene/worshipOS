@@ -34,6 +34,9 @@
       <div class="logo">Worship OS</div>
       
       <div class="nav-links">
+        <a href="/start" class:active={$page.url.pathname.startsWith('/start')}>
+          Start
+        </a>
         <a href="/gatherings" class:active={$page.url.pathname.startsWith('/gatherings')}>
           Gatherings
         </a>

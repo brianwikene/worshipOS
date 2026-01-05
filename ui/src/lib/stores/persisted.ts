@@ -1,11 +1,13 @@
 // src/lib/stores/persisted.ts
 export function persisted<T>(key: string, initial: T) {
 	let start = initial;
+	// NOTE: window guard required for SSR to avoid Node localStorage warnings
+	const hasLocalStorage = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 
 	// SSR-safe: only touch localStorage in the browser
-	if (typeof localStorage !== 'undefined') {
+	if (hasLocalStorage) {
 		try {
-			const raw = localStorage.getItem(key);
+			const raw = window.localStorage.getItem(key);
 			if (raw != null) start = JSON.parse(raw) as T;
 		} catch {
 			// ignore bad JSON / storage issues
@@ -21,9 +23,9 @@ export function persisted<T>(key: string, initial: T) {
 
 	function set(v: T) {
 		value = v;
-		if (typeof localStorage !== 'undefined') {
+		if (hasLocalStorage) {
 			try {
-				localStorage.setItem(key, JSON.stringify(v));
+				window.localStorage.setItem(key, JSON.stringify(v));
 			} catch {
 				// ignore quota / privacy mode errors
 			}
