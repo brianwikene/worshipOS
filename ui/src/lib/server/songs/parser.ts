@@ -16,7 +16,7 @@ interface Heading {
 	type: ParsedSectionKind;
 }
 
-const CHORD_MARKER = /\[([A-G](?:#|b)?[^\]]*)\]/g;
+const CHORD_MARKER = /\[([A-G](?:#|b)?[^\]]*)\]|\{[cC]:([^}]+)\}/g;
 
 const SECTION_PATTERNS: Array<{ type: ParsedSectionKind; match: RegExp }> = [
 	{ type: 'verse', match: /^verse\b/i },
@@ -56,7 +56,7 @@ const CHORDPRO_END_DIRECTIVES = new Set([
 ]);
 
 export function detectSourceFormat(rawText: string): SongSourceFormat {
-	return /\[[A-G](?:#|b)?[^\]]*\]/.test(rawText) ? 'chordpro' : 'plain_text';
+	return /\[[A-G](?:#|b)?[^\]]*\]/.test(rawText) || /\{[cC]:[^}]+\}/.test(rawText) ? 'chordpro' : 'plain_text';
 }
 
 export function parseSongText(
@@ -156,7 +156,7 @@ export function parseSongText(
 	}
 
 	if (format === 'chordpro' && trimmed && chordTokenCount === 0) {
-		warnings.push('ChordPro format detected but no chord markers like [C] were found.');
+		warnings.push('ChordPro format detected but no chord markers like [C] or {c:C} were found.');
 	}
 
 	return {
@@ -177,7 +177,7 @@ function parseChordProLine(line: string): ParsedLyricLine {
 		if (matchIndex > cursor) {
 			lyrics += line.slice(cursor, matchIndex);
 		}
-		const chordText = match[1].trim();
+		const chordText = (match[1] ?? match[2] ?? '').trim();
 		chords.push({ position: lyrics.length, chord: chordText });
 		cursor = matchIndex + match[0].length;
 	}

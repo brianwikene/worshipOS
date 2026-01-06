@@ -1,11 +1,11 @@
 
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-  import type { SongSourceFormat } from '$lib/songs/types';
-  import Input from '$lib/components/ui/Input.svelte';
-  import Textarea from '$lib/components/ui/Textarea.svelte';
-  import Select from '$lib/components/ui/Select.svelte';
   import Button from '$lib/components/ui/Button.svelte';
+  import Input from '$lib/components/ui/Input.svelte';
+  import Select from '$lib/components/ui/Select.svelte';
+  import Textarea from '$lib/components/ui/Textarea.svelte';
+  import type { SongSourceFormat } from '$lib/songs/types';
+  import { createEventDispatcher } from 'svelte';
 
   export let open = false;
   export let song: {
@@ -187,7 +187,7 @@
         </button>
       </header>
 
-      <form on:submit|preventDefault={handleSubmit}>
+      <form class="modal-form" on:submit|preventDefault={handleSubmit}>
         <div class="modal-body">
           {#if error}
             <div class="error-message">{error}</div>
@@ -249,11 +249,11 @@
           <div class="form-group">
             <label for="format">Lyrics Format</label>
             <Select id="format" bind:value={sourceFormat} disabled={saving}>
-              <option value="chordpro">ChordPro (use [C] style chords)</option>
+              <option value="chordpro">ChordPro (use [C] or &#123;c:C&#125; chords)</option>
               <option value="plain_text">Plain text (lyrics only)</option>
             </Select>
             <span class="hint">
-              ChordPro keeps chords inline, e.g., <code>[C]</code>You are here.
+              ChordPro keeps chords inline, e.g., <code>[C]</code>You are here or <code>&#123;c:C&#125;</code>You are here.
             </span>
           </div>
 
@@ -296,7 +296,7 @@
               disabled={saving}
             />
             <span class="hint">
-              ChordPro format supported (sections, directives, inline chords). Use blank lines between sections.
+              ChordPro format supported (sections, directives, inline chords via [C] or &#123;c:C&#125;). Use blank lines between sections.
             </span>
           </div>
 
@@ -359,9 +359,9 @@
     width: 100%;
     max-width: 560px;
     max-height: 90vh;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   .modal-header {
@@ -399,8 +399,17 @@
     cursor: not-allowed;
   }
 
+  .modal-form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
   .modal-body {
     padding: var(--ui-space-5);
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
   }
 

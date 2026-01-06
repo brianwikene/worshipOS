@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { apiJson, apiFetch } from '$lib/api';
+  import { apiFetch, apiJson } from '$lib/api';
+  import ObjectMark from '$lib/components/identity/ObjectMark.svelte';
   import SongModal from '$lib/components/SongModal.svelte';
+  import Badge from '$lib/components/ui/Badge.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Card from '$lib/components/ui/Card.svelte';
-  import Badge from '$lib/components/ui/Badge.svelte';
-  import ObjectMark from '$lib/components/identity/ObjectMark.svelte';
   import type { ParsedSong, SongSourceFormat } from '$lib/songs/types';
-  import type { TableAffordances, TableRowAction, TableSortField } from '$lib/types/table';
-  import { songsPrefs } from '$lib/stores/songsPrefs';
   import type { SongsViewMode } from '$lib/stores/songsPrefs';
+  import { songsPrefs } from '$lib/stores/songsPrefs';
+  import type { TableAffordances, TableRowAction, TableSortField } from '$lib/types/table';
+  import { onMount } from 'svelte';
 
   interface Song {
     id: string;
@@ -395,8 +395,30 @@
                     {song.arrangement_count} {song.arrangement_count === 1 ? 'arrangement' : 'arrangements'}
                   </Badge>
                   <div class="song-card__action-buttons">
-                    <Button variant="ghost" size="sm" on:click={() => openEditModal(song)}>Edit</Button>
-                    <Button variant="ghost" size="sm" on:click={() => handleDelete(song)}>Delete</Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      on:click={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openEditModal(song);
+                      }}
+                    >
+                      Edit
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      on:click={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDelete(song);
+                      }}
+                    >
+                      Delete
+                    </Button>
+
                   </div>
                 </div>
               </div>

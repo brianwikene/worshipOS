@@ -26,6 +26,7 @@
 	type={type}
 	class={`inline-flex items-center justify-center gap-2 rounded-card border font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent focus-visible:ring-offset-2 focus-visible:ring-offset-ui-surface disabled:cursor-not-allowed disabled:opacity-60 ${variantClasses[variant]} ${sizeClasses[size]} ${fullWidth ? 'w-full' : ''}`}
 	{disabled}
+	{...$$restProps}
 >
 	<slot />
 </button>
