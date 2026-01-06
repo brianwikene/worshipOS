@@ -202,6 +202,27 @@ body {
 .sys-icon-btn:hover {
 	box-shadow: var(--sys-shadow-sm);
 }
+.sys-icon-btn--ghost {
+	background: transparent;
+	border-color: transparent;
+	color: var(--sys-muted);
+}
+.sys-icon-btn--ghost:hover,
+.sys-icon-btn--ghost:focus-visible {
+	border-color: var(--sys-border);
+	background: rgba(0, 0, 0, 0.03);
+	color: var(--sys-text);
+	box-shadow: none;
+}
+.sys-icon-btn--ghost.sys-icon-btn--danger {
+	color: #b91c1c;
+}
+.sys-icon-btn--ghost.sys-icon-btn--danger:hover,
+.sys-icon-btn--ghost.sys-icon-btn--danger:focus-visible {
+	border-color: #f3b4b4;
+	background: rgba(185, 28, 28, 0.12);
+	color: #7f1d1d;
+}
 .sys-icon-btn--danger {
 	border-color: #f3b4b4;
 }

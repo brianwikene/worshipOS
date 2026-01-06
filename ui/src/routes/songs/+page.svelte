@@ -7,6 +7,7 @@
   import Badge from '$lib/components/ui/Badge.svelte';
   import ObjectMark from '$lib/components/identity/ObjectMark.svelte';
   import type { ParsedSong, SongSourceFormat } from '$lib/songs/types';
+  import type { TableAffordances, TableRowAction, TableSortField } from '$lib/types/table';
 
   interface Song {
     id: string;
@@ -222,6 +223,61 @@
     viewMode === 'table'
       ? songs.slice().sort((a, b) => compareSongs(a, b, tableSortBy))
       : songs;
+
+  type SongSortOption = TableSortField<SongSortField, { columnClass: string }>;
+  type SongRowAction = TableRowAction<Song>;
+
+  // Table affordances define how users interact with this domain.
+  // This is intentionally explicit to distinguish relational (People)
+  // from operational/catalog (Songs) behaviors.
+  const songsTableAffordances: TableAffordances<Song, SongSortOption, SongRowAction> = {
+    searchPlaceholder: 'Search songs by title or artist...',
+    rowLink: (song: Song) => ({
+      href: `/songs/${song.id}`,
+      label: `Open ${song.title}`
+    }),
+    sortFields: [
+      { field: 'title', label: 'Title', columnClass: 'col-title' },
+      { field: 'key', label: 'Key', columnClass: 'col-key' },
+      { field: 'bpm', label: 'BPM', columnClass: 'col-bpm' },
+      { field: 'updated', label: 'Updated', columnClass: 'col-updated' }
+    ],
+    rowActions: [
+      {
+        key: 'view',
+        title: 'View song',
+        icon: '👁️',
+        variant: 'sys-icon-btn--ghost',
+        type: 'link',
+        href: (song: Song) => `/songs/${song.id}`
+      },
+      {
+        key: 'edit',
+        title: 'Edit song',
+        icon: '✏️',
+        variant: 'sys-icon-btn--ghost',
+        type: 'button',
+        handler: openEditModal
+      },
+      {
+        key: 'delete',
+        title: 'Delete song',
+        icon: '🗑️',
+        variant: 'sys-icon-btn--ghost sys-icon-btn--danger',
+        type: 'button',
+        handler: handleDelete
+      }
+    ]
+  };
+
+  const songsColumnSorts = songsTableAffordances.sortFields;
+  const getSongsSortMeta = (field: SongSortField) =>
+    songsColumnSorts.find((column) => column.field === field)!;
+
+  const titleSort = getSongsSortMeta('title');
+  const keySort = getSongsSortMeta('key');
+  const bpmSort = getSongsSortMeta('bpm');
+  const updatedSort = getSongsSortMeta('updated');
 </script>
 
 <div class="sys-page">
@@ -238,7 +294,7 @@
   <div class="sys-toolbar">
     <input
       class="sys-input"
-      placeholder="Search songs by title or artist..."
+      placeholder={songsTableAffordances.searchPlaceholder}
       bind:value={searchQuery}
       on:keydown={(e) => e.key === 'Enter' && handleSearch()}
     />
@@ -377,57 +433,61 @@
       <div class="sys-table-wrap">
         <table class="sys-table songs-table" aria-label="Songs table">
           <thead>
-            <tr>
-              <th scope="col" class="col-photo">Song</th>
-              <th scope="col" class="col-title">
+              <tr>
+                <th scope="col" class="col-photo">Song</th>
+              <th scope="col" class={titleSort.columnClass}>
                 <button
                   type="button"
                   class="th-btn"
                   on:click={() => toggleSort('title')}
-                  aria-label="Sort by title"
+                  aria-label={`Sort by ${titleSort.label.toLowerCase()}`}
                 >
-                  Title
+                  {titleSort.label}
                   <span class="sort-indicator">
                     {tableSortBy === 'title' ? (tableSortDir === 'asc' ? '▲' : '▼') : ''}
                   </span>
                 </button>
               </th>
-              <th scope="col" class="col-key">
+
+              <th scope="col" class={keySort.columnClass}>
                 <button
                   type="button"
                   class="th-btn"
                   on:click={() => toggleSort('key')}
-                  aria-label="Sort by key"
+                  aria-label={`Sort by ${keySort.label.toLowerCase()}`}
                 >
-                  Key
+                  {keySort.label}
                   <span class="sort-indicator">
                     {tableSortBy === 'key' ? (tableSortDir === 'asc' ? '▲' : '▼') : ''}
                   </span>
                 </button>
               </th>
-              <th scope="col" class="col-bpm">
+
+              <th scope="col" class={bpmSort.columnClass}>
                 <button
                   type="button"
                   class="th-btn"
                   on:click={() => toggleSort('bpm')}
-                  aria-label="Sort by BPM"
+                  aria-label={`Sort by ${bpmSort.label.toLowerCase()}`}
                 >
-                  BPM
+                  {bpmSort.label}
                   <span class="sort-indicator">
                     {tableSortBy === 'bpm' ? (tableSortDir === 'asc' ? '▲' : '▼') : ''}
                   </span>
                 </button>
               </th>
+
               <th scope="col" class="col-format">Format</th>
               <th scope="col" class="col-warnings">Warnings</th>
-              <th scope="col" class="col-updated">
+
+              <th scope="col" class={updatedSort.columnClass}>
                 <button
                   type="button"
                   class="th-btn"
                   on:click={() => toggleSort('updated')}
-                  aria-label="Sort by updated date"
+                  aria-label={`Sort by ${updatedSort.label.toLowerCase()}`}
                 >
-                  Updated
+                  {updatedSort.label}
                   <span class="sort-indicator">
                     {tableSortBy === 'updated' ? (tableSortDir === 'asc' ? '▲' : '▼') : ''}
                   </span>
@@ -439,18 +499,26 @@
           <tbody>
             {#each tableSongs as song (song.id)}
               {@const warnings = song.parser_warnings ?? []}
+              {@const rowLink = songsTableAffordances.rowLink(song)}
               <tr>
                 <td class="col-photo">
-                  <a href={`/songs/${song.id}`} class="row-link" aria-label={`Open ${song.title}`}>
-                    <ObjectMark
-                      size="sm"
-                      variant="songs"
-                      label={getSongInitial(song.title)}
-                    />
+                  <a href={rowLink.href} class="row-link songs-photo-link" aria-label={rowLink.label}>
+                    <span class="songs-anchor-badge" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                        <path fill="currentColor" d="M9 5v10.17A3 3 0 1 0 11 18V9h6V5H9z" />
+                      </svg>
+                    </span>
+                    <span class="songs-row-mark">
+                      <ObjectMark
+                        size="sm"
+                        variant="songs"
+                        label={getSongInitial(song.title)}
+                      />
+                    </span>
                   </a>
                 </td>
                 <td class="col-title">
-                  <a href={`/songs/${song.id}`} class="row-link">
+                  <a href={rowLink.href} class="row-link">
                     <div class="primary">{song.title}</div>
                     {#if song.artist || song.arrangement_count}
                       <div class="muted songs-row-meta">
@@ -478,30 +546,27 @@
                 <td class="col-updated">{formatTimestamp(song.updated_at ?? song.created_at)}</td>
                 <td class="col-actions">
                   <div class="songs-table-actions">
-                    <a
-                      class="sys-icon-btn"
-                      href={`/songs/${song.id}`}
-                      title="View song"
-                      aria-label={`View ${song.title}`}
-                    >
-                      👁️
-                    </a>
-                    <button
-                      class="sys-icon-btn"
-                      on:click={() => openEditModal(song)}
-                      title="Edit song"
-                      type="button"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      class="sys-icon-btn sys-icon-btn--danger"
-                      on:click={() => handleDelete(song)}
-                      title="Delete song"
-                      type="button"
-                    >
-                      🗑️
-                    </button>
+                    {#each songsTableAffordances.rowActions as action (action.key)}
+                      {#if action.type === 'link'}
+                        <a
+                          class={`sys-icon-btn ${action.variant ?? ''}`.trim()}
+                          href={action.href(song)}
+                          title={action.title}
+                          aria-label={`${action.title} ${song.title}`}
+                        >
+                          {action.icon}
+                        </a>
+                      {:else}
+                        <button
+                          class={`sys-icon-btn ${action.variant ?? ''}`.trim()}
+                          on:click={() => action.handler(song)}
+                          title={action.title}
+                          type="button"
+                        >
+                          {action.icon}
+                        </button>
+                      {/if}
+                    {/each}
                   </div>
                 </td>
               </tr>
@@ -597,7 +662,7 @@
   }
 
   .col-photo {
-    width: 64px;
+    width: 110px;
   }
 
   .col-actions {
@@ -634,6 +699,30 @@
 
   .row-link:hover .primary {
     text-decoration: underline;
+  }
+
+  .songs-photo-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .songs-anchor-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--songs-accent) 40%, rgba(0, 0, 0, 0.08));
+    background: color-mix(in srgb, var(--songs-accent) 12%, #ffffff);
+    color: var(--songs-accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .songs-row-mark {
+    display: inline-flex;
+    flex-shrink: 0;
   }
 
   .primary {

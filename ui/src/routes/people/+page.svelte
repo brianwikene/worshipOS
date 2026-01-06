@@ -5,6 +5,7 @@
   import type { PeopleSortField, PeopleViewMode, SortDir } from '$lib/stores/peoplePrefs';
   import { peoplePrefs } from '$lib/stores/peoplePrefs';
   import { onMount } from 'svelte';
+  import type { TableAffordances, TableRowAction, TableSortField } from '$lib/types/table';
 
   interface Person {
     id: string;
@@ -140,6 +141,57 @@
     }
   }
 
+  function togglePeopleSort(field: PeopleSortField) {
+    const nextDir = sortBy === field ? (sortDir === 'asc' ? 'desc' : 'asc') : 'asc';
+    setSortBy(field);
+    setSortDir(nextDir);
+  }
+
+  type PeopleSortOption = TableSortField<
+    PeopleSortField,
+    { columnLabel: string | null; columnClass: string }
+  >;
+
+  type PeopleRowAction = TableRowAction<Person>;
+
+  // Table affordances define how users interact with this domain.
+  // This is intentionally explicit to distinguish relational (People)
+  // from operational/catalog (Songs) behaviors.
+  const peopleTableAffordances: TableAffordances<Person, PeopleSortOption, PeopleRowAction> = {
+    searchPlaceholder: 'Search people...',
+    rowLink: (person: Person) => ({
+      href: `/people/${person.id}`,
+      label: `Open ${person.display_name}`
+    }),
+    sortFields: [
+      { field: 'last_name', label: 'Last name', columnLabel: 'Last', columnClass: 'col-last' },
+      { field: 'first_name', label: 'First name', columnLabel: 'First', columnClass: 'col-first' },
+      { field: 'created_at', label: 'Recently added', columnLabel: null, columnClass: '' }
+    ],
+    rowActions: [
+      {
+        key: 'edit',
+        title: 'Edit',
+        icon: '✏️',
+        variant: '',
+        type: 'button',
+        handler: openEditModal
+      },
+      {
+        key: 'archive',
+        title: 'Archive',
+        icon: '🗑️',
+        variant: 'sys-icon-btn--danger',
+        type: 'button',
+        handler: handleDelete
+      }
+    ]
+  };
+
+  const peopleColumnSorts = peopleTableAffordances.sortFields.filter(
+    (field): field is PeopleSortOption & { columnLabel: string } => Boolean(field.columnLabel)
+  );
+
 </script>
 
 <div class="sys-page">
@@ -156,7 +208,7 @@
 <div class="sys-toolbar">
   <input
     class="sys-input"
-    placeholder="Search people..."
+    placeholder={peopleTableAffordances.searchPlaceholder}
     bind:value={searchQuery}
     on:keydown={(e) => e.key === 'Enter' && handleSearch()}
   />
@@ -203,10 +255,9 @@
         setSortBy(selected);
       }}
     >
-      <option value="last_name">Last name</option>
-      <option value="first_name">First name</option>
-      <!-- IMPORTANT: your API whitelist doesn't include updated_at yet -->
-      <option value="created_at">Recently added</option>
+      {#each peopleTableAffordances.sortFields as option (option.field)}
+        <option value={option.field}>{option.label}</option>
+      {/each}
     </select>
 
     <button
@@ -251,8 +302,9 @@
     {#if viewMode === 'cards'}
     <div class="sys-grid sys-grid--cards">
       {#each people as person}
+        {@const rowLink = peopleTableAffordances.rowLink(person)}
         <div class="sys-card person-card">
-          <a href={`/people/${person.id}`} class="person-link">
+          <a href={rowLink.href} class="person-link" aria-label={rowLink.label}>
             <Avatar
               size="lg"
               className="flex-shrink-0"
@@ -273,12 +325,27 @@
             </div>
           </a>
           <div class="card-actions">
-            <button class="sys-icon-btn" on:click={() => openEditModal(person)} title="Edit">
-              ✏️
-            </button>
-            <button class="sys-icon-btn sys-icon-btn--danger" on:click={() => handleDelete(person)} title="Archive">
-              🗑️
-            </button>
+            {#each peopleTableAffordances.rowActions as action (action.key)}
+              {#if action.type === 'link'}
+                <a
+                  class={`sys-icon-btn ${action.variant ?? ''}`.trim()}
+                  href={action.href(person)}
+                  title={action.title}
+                  aria-label={`${action.title} ${person.display_name}`}
+                >
+                  {action.icon}
+                </a>
+              {:else}
+                <button
+                  class={`sys-icon-btn ${action.variant ?? ''}`.trim()}
+                  on:click={() => action.handler(person)}
+                  title={action.title}
+                  type="button"
+                >
+                  {action.icon}
+                </button>
+              {/if}
+            {/each}
           </div>
         </div>
       {/each}
@@ -293,41 +360,21 @@
       <tr>
         <th scope="col" class="col-photo">Photo</th>
 
-        <th scope="col" class="col-last">
-          <button
-            type="button"
-            class="th-btn"
-            on:click={() => {
-              const nextDir = sortBy === 'last_name' ? (sortDir === 'asc' ? 'desc' : 'asc') : 'asc';
-              setSortBy('last_name');
-              setSortDir(nextDir);
-            }}
-            aria-label="Sort by last name"
-          >
-            Last
-            <span class="sort-indicator">
-              {sortBy === 'last_name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-            </span>
-          </button>
-        </th>
-
-        <th scope="col" class="col-first">
-          <button
-            type="button"
-            class="th-btn"
-            on:click={() => {
-              const nextDir = sortBy === 'first_name' ? (sortDir === 'asc' ? 'desc' : 'asc') : 'asc';
-              setSortBy('first_name');
-              setSortDir(nextDir);
-            }}
-            aria-label="Sort by first name"
-          >
-            First
-            <span class="sort-indicator">
-              {sortBy === 'first_name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-            </span>
-          </button>
-        </th>
+        {#each peopleColumnSorts as column (column.field)}
+          <th scope="col" class={column.columnClass}>
+            <button
+              type="button"
+              class="th-btn"
+              on:click={() => togglePeopleSort(column.field)}
+              aria-label={`Sort by ${column.label.toLowerCase()}`}
+            >
+              {column.columnLabel}
+              <span class="sort-indicator">
+                {sortBy === column.field ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+              </span>
+            </button>
+          </th>
+        {/each}
 
         <th scope="col" class="col-goes">Goes by</th>
 
@@ -339,9 +386,10 @@
 
     <tbody>
       {#each people as person (person.id)}
+        {@const rowLink = peopleTableAffordances.rowLink(person)}
         <tr>
           <td class="col-photo">
-            <a href={`/people/${person.id}`} class="row-link" aria-label={`Open ${person.display_name}`}>
+            <a href={rowLink.href} class="row-link" aria-label={rowLink.label}>
               <Avatar
                 size="sm"
                 firstName={person.first_name}
@@ -351,17 +399,21 @@
             </a>
           </td>
 
-          <td class="col-last">
-            <a href={`/people/${person.id}`} class="row-link">
-              <div class="primary">{person.last_name ?? '—'}</div>
-            </a>
-          </td>
-
-          <td class="col-first">
-            <a href={`/people/${person.id}`} class="row-link">
-              <div class="primary">{person.first_name ?? '—'}</div>
-            </a>
-          </td>
+          {#each peopleColumnSorts as column (column.field)}
+            {#if column.field === 'last_name'}
+              <td class={column.columnClass}>
+                <a href={rowLink.href} class="row-link">
+                  <div class="primary">{person.last_name ?? '—'}</div>
+                </a>
+              </td>
+            {:else if column.field === 'first_name'}
+              <td class={column.columnClass}>
+                <a href={rowLink.href} class="row-link">
+                  <div class="primary">{person.first_name ?? '—'}</div>
+                </a>
+              </td>
+            {/if}
+          {/each}
 
           <td class="col-goes">
             <span class="muted">{person.goes_by ?? '—'}</span>
@@ -376,8 +428,27 @@
           </td>
 
           <td class="col-actions">
-            <button class="sys-icon-btn" on:click={() => openEditModal(person)} title="Edit" type="button">✏️</button>
-            <button class="sys-icon-btn sys-icon-btn--danger" on:click={() => handleDelete(person)} title="Archive" type="button">🗑️</button>
+            {#each peopleTableAffordances.rowActions as action (action.key)}
+              {#if action.type === 'link'}
+                <a
+                  class={`sys-icon-btn ${action.variant ?? ''}`.trim()}
+                  href={action.href(person)}
+                  title={action.title}
+                  aria-label={`${action.title} ${person.display_name}`}
+                >
+                  {action.icon}
+                </a>
+              {:else}
+                <button
+                  class={`sys-icon-btn ${action.variant ?? ''}`.trim()}
+                  on:click={() => action.handler(person)}
+                  title={action.title}
+                  type="button"
+                >
+                  {action.icon}
+                </button>
+              {/if}
+            {/each}
           </td>
         </tr>
       {/each}

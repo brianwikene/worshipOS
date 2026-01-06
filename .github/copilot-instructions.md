@@ -34,3 +34,27 @@ Purpose: quick, actionable guidance for AI coding agents to be productive in thi
 - **Common edits agents will make:**
   - Add new endpoints to `api/index.js` following the existing style: `app.METHOD(path, async (req,res)=>{ try{ const r=await pool.query(...); res.json(r.rows) } catch(err){...} })`.
   - When changing SQL, prefer minimal diffs: keep existing aliases and named columns (e.g., `group_id`, `instance_id`, `assignments`) to avoid b
+
+# WorshipOS Copilot Instructions
+
+## UI philosophy: iconography + density
+- Tables are interaction surfaces, not just layouts.
+- People tables are relational/pastoral: identity anchors (Avatar), actions recede.
+- Songs tables are operational/catalog: strong scanability, actions recede.
+
+## Scanability rules (tables)
+- Every table row must have a leading visual anchor in the first column:
+  - People: Avatar (existing)
+  - Songs: ObjectMark (existing) or a stable-width anchor element.
+- Row actions must be visually secondary:
+  - Prefer `sys-icon-btn--ghost` for non-destructive actions.
+  - Destructive actions may also be ghosted but must retain danger emphasis on hover/focus.
+
+## Consistency rules
+- Reuse existing system classes (`sys-*`) and existing SVGs/components. Do not invent new icon systems.
+- Prefer small, reversible diffs. Avoid redesigns unless explicitly requested.
+- Preserve ARIA labels and keyboard behavior. Add `type="button"` to buttons inside rows.
+
+## When editing routes
+- Keep changes local to the target page unless a shared type/style is clearly reused across multiple pages.
+- If adding shared styles, add them to `ui/src/app.css` using existing tokens/variables.

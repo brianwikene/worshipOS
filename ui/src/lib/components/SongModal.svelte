@@ -135,6 +135,17 @@
 
   let isDragActive = false;
 
+  function openFilePicker() {
+    fileInput?.click();
+  }
+
+  function handleDropZoneKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openFilePicker();
+    }
+  }
+
   async function handleSubmit() {
     if (!canSave) return;
 
@@ -252,7 +263,11 @@
             on:dragover={onDragOver}
             on:dragleave={onDragLeave}
             on:drop={onDrop}
-            on:click={() => fileInput?.click()}
+            on:click={openFilePicker}
+            on:keydown={handleDropZoneKeydown}
+            role="button"
+            tabindex="0"
+            aria-label="Import ChordPro file"
           >
             <div>
               <strong>Drop .pro file</strong> or click to choose

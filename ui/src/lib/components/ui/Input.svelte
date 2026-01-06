@@ -9,7 +9,6 @@
 	export let id: string | undefined = undefined;
 	export let required = false;
 	export let autocomplete: string | undefined = undefined;
-	export let autofocus = false;
 	export let inputmode: HTMLInputElement['inputMode'] | undefined = undefined;
 	export let min: number | string | undefined = undefined;
 	export let max: number | string | undefined = undefined;
@@ -26,7 +25,6 @@
 	{required}
 	{placeholder}
 	{autocomplete}
-	{autofocus}
 	{inputmode}
 	{min}
 	{max}

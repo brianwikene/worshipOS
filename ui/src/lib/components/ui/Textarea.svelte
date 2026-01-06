@@ -19,4 +19,4 @@
 	{required}
 	{placeholder}
 	bind:value
-/>
+></textarea>
