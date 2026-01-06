@@ -8,6 +8,8 @@
   import ObjectMark from '$lib/components/identity/ObjectMark.svelte';
   import type { ParsedSong, SongSourceFormat } from '$lib/songs/types';
   import type { TableAffordances, TableRowAction, TableSortField } from '$lib/types/table';
+  import { songsPrefs } from '$lib/stores/songsPrefs';
+  import type { SongsViewMode } from '$lib/stores/songsPrefs';
 
   interface Song {
     id: string;
@@ -38,7 +40,6 @@
   };
 
   const MAX_PREVIEW_LINES = 6;
-  type SongsViewMode = 'cards' | 'table';
   type SongSortField = 'title' | 'key' | 'bpm' | 'updated';
   type SortDir = 'asc' | 'desc';
 
@@ -176,8 +177,10 @@
     loadSongs();
   }
 
+  $: viewMode = $songsPrefs.viewMode;
+
   function setViewMode(mode: SongsViewMode) {
-    viewMode = mode;
+    songsPrefs.update((prefs) => ({ ...prefs, viewMode: mode }));
   }
 
   function toggleSort(field: SongSortField) {
@@ -361,12 +364,28 @@
           <Card elevated={false}>
             <svelte:fragment slot="header">
               <div class="song-card__header">
-                <div>
-                  <p class="song-card__format">{formatSourceFormat(song.source_format)}</p>
-                  <h3>{song.title}</h3>
-                  {#if song.artist}
-                    <p class="song-card__artist">{song.artist}</p>
-                  {/if}
+                <div class="song-card__identity">
+                  <div class="song-card__anchor" aria-hidden="true">
+                    <span class="songs-anchor-badge" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                        <path fill="currentColor" d="M9 5v10.17A3 3 0 1 0 11 18V9h6V5H9z" />
+                      </svg>
+                    </span>
+                    <span class="songs-row-mark">
+                      <ObjectMark
+                        size="sm"
+                        variant="songs"
+                        label={getSongInitial(song.title)}
+                      />
+                    </span>
+                  </div>
+                  <div>
+                    <p class="song-card__format">{formatSourceFormat(song.source_format)}</p>
+                    <h3>{song.title}</h3>
+                    {#if song.artist}
+                      <p class="song-card__artist">{song.artist}</p>
+                    {/if}
+                  </div>
                 </div>
                 <div class="song-card__actions">
                   {#if warnings.length}
@@ -604,6 +623,20 @@
     gap: var(--ui-space-4);
   }
 
+  .songs-grid :global(.rounded-card) {
+    background: white;
+    border: 1px solid var(--sys-border);
+    box-shadow: var(--sys-shadow-sm);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .songs-grid :global(.rounded-card:hover) {
+    border-color: #cfcfcf;
+    box-shadow: var(--sys-shadow-md);
+  }
+
   .songs-view-toggle {
     display: inline-flex;
     gap: 0.5rem;
@@ -768,6 +801,19 @@
     justify-content: space-between;
     gap: var(--ui-space-3);
     align-items: flex-start;
+  }
+
+  .song-card__identity {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ui-space-3);
+  }
+
+  .song-card__anchor {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
   }
 
   .song-card__format {

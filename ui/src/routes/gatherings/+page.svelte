@@ -320,15 +320,27 @@ $: visibleServices = services
         <p>Scheduled Gatherings</p>
         <p>church_id: {activeChurchId}</p>
       </div>
-      <nav class="view-toggle">
-  <a class:selected={view === 'upcoming'} href="/gatherings?view=upcoming">Upcoming</a>
-  <a class:selected={view === 'past'} href="/gatherings?view=past">Past</a>
-</nav>
+      <nav class="view-toggle" aria-label="Filter gatherings by timeframe">
+        <a
+          class:selected={view === 'upcoming'}
+          aria-current={view === 'upcoming' ? 'page' : undefined}
+          href="/gatherings?view=upcoming"
+        >
+          Upcoming
+        </a>
+        <a
+          class:selected={view === 'past'}
+          aria-current={view === 'past' ? 'page' : undefined}
+          href="/gatherings?view=past"
+        >
+          Past
+        </a>
+      </nav>
       <div class="header-actions">
-        <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
+        <button class="sys-btn sys-btn--primary" type="button" on:click={openAddModal}>
           + Add Gathering
         </button>
-        <button class="sys-btn sys-btn--secondary" on:click={() => window.location.reload()}>
+        <button class="sys-btn sys-btn--secondary" type="button" on:click={() => window.location.reload()}>
           Refresh
         </button>
       </div>
@@ -340,7 +352,7 @@ $: visibleServices = services
   {:else if error}
     <div class="sys-state sys-state--error">
       <p>Error: {error}</p>
-      <button on:click={() => window.location.reload()}>Retry</button>
+      <button type="button" on:click={() => window.location.reload()}>Retry</button>
     </div>
   {:else if visibleServices.length === 0}
     <div class="empty-state-card">
@@ -352,7 +364,7 @@ $: visibleServices = services
         <div class="empty-icon">📅</div>
         <h3>No Upcoming Gatherings</h3>
         <p>You don't have any gatherings scheduled yet. Would you like to create one?</p>
-        <button class="sys-btn sys-btn--primary" on:click={openAddModal}>
+        <button class="sys-btn sys-btn--primary" type="button" on:click={openAddModal}>
           + Schedule a Gathering
         </button>
       {/if}
@@ -469,14 +481,30 @@ $: visibleServices = services
 
 <!-- Add Service Modal -->
 {#if showAddModal}
-<div class="modal-overlay" on:click={closeAddModal} on:keydown={(e) => e.key === 'Escape' && closeAddModal()}>
-  <div class="modal add-service-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddModal()}>
+<div
+  class="modal-overlay"
+  role="presentation"
+  aria-hidden="true"
+  tabindex="-1"
+  on:click={closeAddModal}
+  on:keydown={(e) => e.key === 'Escape' && closeAddModal()}
+>
+  <div
+    class="modal add-service-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="add-service-modal-title"
+    aria-describedby="add-service-modal-body"
+    tabindex="-1"
+    on:click|stopPropagation
+    on:keydown={(e) => e.key === 'Escape' && closeAddModal()}
+  >
     <div class="modal-header">
-      <h2>Schedule New Service</h2>
-      <button class="close-btn" on:click={closeAddModal}>×</button>
+      <h2 id="add-service-modal-title">Schedule New Service</h2>
+      <button class="close-btn" type="button" aria-label="Close modal" on:click={closeAddModal}>×</button>
     </div>
 
-    <div class="modal-body">
+    <div class="modal-body" id="add-service-modal-body">
       <!-- Service Type & Name -->
       <div class="form-section">
         <h3>Service Details</h3>
@@ -516,14 +544,16 @@ $: visibleServices = services
         </div>
 
         {#each serviceInstances as instance, idx}
+          {@const timeId = `instance-time-${idx}`}
+          {@const campusId = `instance-campus-${idx}`}
           <div class="instance-row">
             <div class="form-group">
-              <label>Time</label>
-              <input type="time" bind:value={instance.time} />
+              <label for={timeId}>Time</label>
+              <input id={timeId} type="time" bind:value={instance.time} />
             </div>
             <div class="form-group flex-grow">
-              <label>Campus</label>
-              <select bind:value={instance.campus_id}>
+              <label for={campusId}>Campus</label>
+              <select id={campusId} bind:value={instance.campus_id}>
                 <option value="">— No Campus —</option>
                 {#each campuses as campus}
                   <option value={campus.id}>{campus.name}</option>
@@ -589,8 +619,13 @@ $: visibleServices = services
     </div>
 
     <div class="modal-actions">
-      <button class="secondary-btn" on:click={closeAddModal}>Cancel</button>
-      <button class="sys-btn sys-btn--primary" on:click={createService} disabled={addingService || !newServiceName || !newServiceDate}>
+      <button class="secondary-btn" type="button" on:click={closeAddModal}>Cancel</button>
+      <button
+        class="sys-btn sys-btn--primary"
+        type="button"
+        on:click={createService}
+        disabled={addingService || !newServiceName || !newServiceDate}
+      >
         {addingService ? 'Creating...' : 'Create Service'}
       </button>
     </div>

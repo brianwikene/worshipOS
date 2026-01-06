@@ -56,28 +56,7 @@
 </section>
 
 <style>
-
-
-
-	.subtitle {
-		font-size: 1.1rem;
-		color: var(--muted, #666);
-		margin-bottom: 1rem;
-	}
-
-	.context {
-		max-width: 60ch;
-		margin-bottom: 2.5rem;
-	}
-
-
-
-	.card h2 {
-		margin-bottom: 0.25rem;
-	}
-
 	.recent {
 		margin-top: 3rem;
 	}
-
 </style>

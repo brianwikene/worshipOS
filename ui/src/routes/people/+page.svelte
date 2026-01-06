@@ -4,8 +4,8 @@
   import Avatar from '$lib/components/identity/Avatar.svelte';
   import type { PeopleSortField, PeopleViewMode, SortDir } from '$lib/stores/peoplePrefs';
   import { peoplePrefs } from '$lib/stores/peoplePrefs';
-  import { onMount } from 'svelte';
   import type { TableAffordances, TableRowAction, TableSortField } from '$lib/types/table';
+  import { onMount } from 'svelte';
 
   interface Person {
     id: string;

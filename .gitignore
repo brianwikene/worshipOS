@@ -25,6 +25,20 @@ dist/
 build/
 reports/
 
+########################################
+# Copilot / AI tooling
+########################################
+
+# NOTE:
+# .github/copilot-instructions.md is intentionally committed.
+# It defines repo-specific guidance for GitHub Copilot.
+# Do NOT add it to gitignore.
+
+# Ignore local Copilot artifacts only (if any appear in future)
+.copilot/
+copilot-cache/
+**/*.copilot.log
+
 # Vite cache
 node_modules/.vite/
 

@@ -31,4 +31,5 @@
 	{step}
 	{maxlength}
 	bind:value
+	{...$$restProps}
 />
