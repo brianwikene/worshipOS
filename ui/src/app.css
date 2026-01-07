@@ -23,6 +23,7 @@
 	--people-accent: #4a6fa5;
 	--families-accent: #4f7c67;
 	--songs-accent: #a07a3f;
+	--gatherings-accent: #764ba2;
 
 	/* Gatherings gradient (canonical) */
 	--gatherings-accent-start: #667eea;
@@ -42,6 +43,305 @@
 	--sys-radius-lg: var(--ui-radius-lg);
 	--sys-shadow-sm: var(--ui-shadow-sm);
 	--sys-shadow-md: var(--ui-shadow-md);
+
+	/* THE CONNECTIONS SPECTRUM */
+	/* A cohesive, calming slate family for People, Families, and Teams */
+	--connections-base: #475569; /* Slate-600 */
+	--connections-accent: #334155; /* Slate-700 (Active State) */
+	--connections-bg: #f1f5f9; /* Slate-100 (Subtle Backgrounds) */
+
+	:root {
+		/* --- Existing Variables (Keep these!) --- */
+		--connections-bg: #f1f5f9;
+
+		/* --- Brand Colors --- */
+		--brand-primary: #6c63ff;
+		--brand-primary-light: #eef2ff;
+
+		/* ---  Neutrals --- */
+		--bg-cool-gray: #f3f4f6;
+		--text-dark: #111827;
+		--text-muted: #9ca3af;
+		--border-light: #e5e7eb;
+
+		/* --- Status Colors --- */
+		--danger-color: #ef4444;
+		--success-color: #10b981;
+
+		--people-accent: #e5e7eb !important;
+	}
+
+	/* --- Avatar Shape & Color Enforcer --- */
+	span.inline-flex.items-center.justify-center {
+		/* Force the background to gray (overriding Tailwind bg classes) */
+		background-color: #e5e7eb !important;
+		color: #374151 !important;
+
+		/* Force Circle (Overriding rounded-[14px]) */
+		border-radius: 50% !important;
+
+		/* Optional: Remove the Tailwind 'ring' if it looks messy */
+		box-shadow: none !important;
+	}
+
+	/* --- The "Fresh & Light" Avatar (Standardized Circles) --- */
+	.avatar-circle,
+	.family-avatar,
+	.user-pic,
+	span.inline-flex.items-center.justify-center {
+		/* Dimensions: Standard 48px (Apple Contacts style) */
+		width: 48px !important;
+		height: 48px !important;
+		min-width: 48px !important; /* Prevents squishing on small screens */
+
+		/* Typography: Adjusted to fit the new size */
+		font-size: 18px !important;
+		font-weight: 600 !important;
+	}
+
+	/* Apple style: Cool gray background, dark gray text */
+	background-color: var(--bg-cool-gray) !important;
+	color: #4b5563 !important;
+	font-weight: 500;
+
+	/* Flex centering for initials */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.grid-view-item .avatar,
+.card .avatar,
+.person-card-avatar {
+	background-color: #e5e7eb !important; /* Overrides the Blue */
+	color: #374151 !important;
+	border-radius: 50% !important; /* Forces the square to be a circle */
+	width: 48px; /* Standardize size if they look inconsistent */
+	height: 48px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* --- 2. "Apple" Style Table Rows (Breathing Room) --- */
+table tr td {
+	padding-top: 16px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid var(--bg-cool-gray);
+	vertical-align: middle;
+	color: var(--text-dark);
+}
+
+table {
+	border-collapse: collapse;
+	border: none; /* Removes heavy outer borders */
+}
+
+/* --- 3. Minimalist Action Buttons (The "Ghost" Look) --- */
+/* Default state is invisible/gray */
+.action-btn-group .btn,
+button.action-btn {
+	border: 0 solid transparent !important;
+	background-color: transparent !important;
+	box-shadow: none !important;
+	opacity: 0.6; /* Slight fade to make them less distracting */
+}
+
+/* Only show full color/opacity on hover */
+.action-btn-group .btn:hover,
+button.action-btn:hover {
+	opacity: 1;
+	background-color: #f3f4f6 !important;
+	transform: scale(1.1);
+}
+
+/* Hover State: Color appears on interaction */
+.action-btn-group .btn-edit:hover {
+	background-color: var(--brand-primary-light) !important;
+	color: var(--brand-primary) !important;
+	transform: scale(1.1);
+}
+
+.action-btn-group .btn-delete:hover {
+	background-color: #fef2f2 !important;
+	color: #ef4444 !important;
+	transform: scale(1.1);
+}
+
+/* --- 4. Families Card Refinement --- */
+.family-card {
+	background: white;
+	border: 1px solid var(--border-light);
+	border-radius: 12px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+	transition:
+		transform 0.15s ease,
+		box-shadow 0.15s ease;
+}
+
+.family-card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+/* --- 5. Teams Placeholder (Empty State) --- */
+/* --- 1. THE "CALM" TEAM CARD --- */
+/* Removes the heavy color blocks */
+.team-card,
+.card {
+	background: white !important;
+	border: 1px solid var(--border-light) !important;
+	border-radius: 12px !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important; /* Super subtle shadow */
+	overflow: hidden;
+	transition: all 0.2s ease;
+}
+
+/* The Header becomes whitespace with a focused icon */
+.team-card-header,
+.card-header {
+	background: white !important; /* No more colored bars */
+	color: var(--text-dark) !important;
+	padding: 20px 24px !important;
+	border-bottom: 1px solid var(--bg-cool-gray);
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+/* The Icon: Subtle Tint instead of Solid Color */
+/* This assumes the icon container has a class or style applying the color */
+.team-icon-container {
+	width: 48px;
+	height: 48px;
+	border-radius: 10px; /* Squircle */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.5rem;
+
+	/* FORCE A CALM LOOK: */
+	/* If the element has inline style="background: red", this forces it to be subtle */
+	background-color: var(--bg-cool-gray) !important;
+	color: var(--text-dark) !important;
+	/* Ideally, you'd use dynamic opacity in your code: bg-blue-50 text-blue-600 */
+}
+
+/* The Content Area */
+.team-card-body {
+	padding: 20px 24px;
+	color: var(--text-muted);
+	font-size: 0.95rem;
+}
+
+/* "Position" Chips - Soft Gray */
+.position-badge,
+.badge {
+	background-color: var(--bg-cool-gray) !important;
+	color: var(--text-dark) !important;
+	border: none !important;
+	padding: 4px 10px;
+	border-radius: 6px;
+	font-weight: 500;
+	font-size: 0.8rem;
+	margin-right: 4px;
+	margin-bottom: 4px;
+	display: inline-block;
+}
+
+/* --- 2. CLEANING UP THE BUTTON NOISE --- */
+/* The footer holding the 3 buttons */
+.team-card-footer {
+	background: white !important;
+	border-top: 1px solid var(--bg-cool-gray);
+	padding: 12px 24px;
+	display: flex;
+	justify-content: flex-end; /* Align right */
+	gap: 8px;
+}
+
+/* Standardize the buttons to be quiet */
+.team-card-footer button {
+	background: white !important;
+	border: 1px solid var(--border-light) !important;
+	color: var(--text-muted) !important;
+	border-radius: 6px;
+	font-size: 0.85rem;
+	padding: 6px 12px;
+	box-shadow: none !important;
+}
+
+/* Only color them on hover */
+.team-card-footer button:hover {
+	border-color: var(--brand-primary) !important;
+	color: var(--brand-primary) !important;
+	background: var(--brand-primary-light) !important;
+}
+
+/* --- 3. THE "CALM" MODAL --- */
+/* Fix the popup container */
+.modal-content,
+.dialog-content {
+	background: white !important;
+	border-radius: 16px !important; /* Modern rounded */
+	box-shadow:
+		0 20px 25px -5px rgba(0, 0, 0, 0.1),
+		0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+	border: 1px solid var(--border-light);
+	max-width: 500px; /* Keep it focused */
+}
+
+/* Remove the heavy blue header from the modal */
+.modal-header {
+	background: white !important;
+	color: var(--text-dark) !important;
+	border-bottom: 1px solid var(--bg-cool-gray);
+	padding: 20px 24px;
+}
+
+.modal-header h2 {
+	font-size: 1.25rem;
+	font-weight: 600;
+}
+
+/* Form Inputs */
+.modal-body input,
+.modal-body textarea {
+	border: 1px solid var(--border-light) !important;
+	background: var(--bg-cool-gray) !important; /* Light gray input background */
+	border-radius: 8px;
+	padding: 10px 12px;
+	width: 100%;
+	margin-bottom: 16px;
+	font-size: 0.95rem;
+}
+
+.modal-body input:focus,
+.modal-body textarea:focus {
+	outline: none;
+	border-color: var(--brand-primary) !important;
+	background: white !important;
+	box-shadow: 0 0 0 3px var(--brand-primary-light);
+}
+
+/* The Color/Icon Picker Grids */
+/* This calms down the selection area */
+.picker-grid {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	padding: 10px 0;
+}
+
+.picker-item {
+	border: 1px solid var(--border-light);
+	border-radius: 8px;
+	padding: 8px;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.picker-item.selected {
+	border-color: var(--brand-primary);
+	background: var(--brand-primary-light);
 }
 
 /* ----------- Base ----------- */
@@ -264,7 +564,9 @@ body {
 	background: transparent;
 	color: var(--sys-muted);
 	cursor: pointer;
-	transition: background 0.15s ease, color 0.15s ease;
+	transition:
+		background 0.15s ease,
+		color 0.15s ease;
 }
 
 .sys-toggle-btn:hover {
@@ -318,6 +620,7 @@ body {
 	transition:
 		border-color 0.15s ease,
 		box-shadow 0.15s ease;
+	border: 1px solid var(--sys-border);
 }
 .sys-card:hover {
 	border-color: #cfcfcf;
@@ -342,15 +645,19 @@ body {
 /* Start page tinted cards (semantic) */
 .sys-card.people {
 	background: var(--people-bg);
+	border-top: 3px solid var(--people-accent); /* Adds a color bar at the top */
 }
 .sys-card.gatherings {
 	background: var(--gatherings-bg);
+	border-top: 3px solid var(--gatherings-accent);
 }
 .sys-card.families {
 	background: var(--families-bg);
+	border-top: 3px solid var(--families-accent);
 }
 .sys-card.songs {
 	background: var(--songs-bg);
+	border-top: 3px solid var(--songs-accent);
 }
 
 /* ----------- Forms ----------- */

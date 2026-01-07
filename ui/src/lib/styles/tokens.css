@@ -38,4 +38,20 @@
 	--ui-shadow-sm: 0 4px 10px rgba(15, 23, 42, 0.06);
 	--ui-shadow-md: 0 10px 20px rgba(15, 23, 42, 0.08);
 	--ui-shadow-lg: 0 25px 45px rgba(15, 23, 42, 0.12);
+
+	:root {
+		/* ... existing vars ... */
+
+		/* UPDATE: Darken the border just a hair so the Header clearly separates from the Body */
+		--ui-color-border: #d1d5db; /* Was #e0e6f0 - this is closer to Tailwind gray-300 */
+
+		/* UPDATE: Darken the muted text so it passes A11y on white backgrounds */
+		--ui-color-text-muted: #4b5563; /* Was #677289 - this is Tailwind gray-600 */
+
+		/* NEW: A strong text color for active states/headings */
+		--ui-color-text-strong: #111827; /* Tailwind gray-900 */
+
+		/* NEW: A very subtle interaction hover state */
+		--ui-color-hover: #f3f4f6;
+	}
 }

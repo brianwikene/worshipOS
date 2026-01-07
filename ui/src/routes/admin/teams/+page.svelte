@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { apiFetch, apiJson } from '$lib/api';
   import { onMount } from 'svelte';
-  import { apiJson, apiFetch } from '$lib/api';
 
   interface Role {
     id: string;
@@ -178,38 +178,42 @@
     <div class="teams-grid">
       {#each activeTeams as team}
         <div class="team-card">
-          <div class="team-header" style="background: {team.color}">
-            <span class="team-icon">{team.icon}</span>
+
+          <div class="team-card-header">
+            <div class="team-icon-container" style="color: {team.color}; background-color: {team.color}15;">
+              {team.icon}
+            </div>
             <h2>{team.name}</h2>
           </div>
 
-          <div class="team-body">
+          <div class="team-card-body">
             {#if team.description}
               <p class="team-description">{team.description}</p>
             {/if}
 
             <div class="roles-section">
-              <h3>Positions ({team.roles.length})</h3>
               {#if team.roles.length === 0}
-                <p class="no-roles">No positions assigned yet</p>
+                <p class="text-muted text-sm italic">No positions defined</p>
               {:else}
                 <div class="roles-list">
                   {#each team.roles as role}
-                    <span class="role-tag">{role.name}</span>
+                    <span class="position-badge">{role.name}</span>
                   {/each}
                 </div>
               {/if}
             </div>
           </div>
 
-          <div class="team-actions">
-            <button class="btn-edit" on:click={() => openEditModal(team)}>
+          <div class="team-card-footer">
+            <button class="btn btn-sm" on:click={() => openEditModal(team)}>
               Edit
             </button>
-            <a href="/admin/roles?team={team.id}" class="btn-manage">
+
+            <a href="/admin/roles?team={team.id}" class="btn btn-sm">
               Manage Roles
             </a>
-            <button class="btn-deactivate" on:click={() => toggleActive(team)}>
+
+            <button class="btn btn-sm hover:text-red-600" on:click={() => toggleActive(team)}>
               Deactivate
             </button>
           </div>
@@ -249,50 +253,58 @@
   {/if}
 </div>
 
-<!-- Add/Edit Team Modal -->
 {#if showModal}
 <div class="sys-modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
   <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-    <div class="sys-modal-header" style="background: {formColor}">
-      <div class="modal-title">
-        <span class="preview-icon">{formIcon}</span>
-        <h2>{editingTeam ? 'Edit Team' : 'Add New Team'}</h2>
+
+    <div class="modal-header">
+      <div class="flex items-center gap-4">
+        <div
+          class="team-icon-container"
+          style="color: {formColor}; background-color: {formColor}15; width: 40px; height: 40px; font-size: 1.25rem;"
+        >
+          {formIcon}
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">{editingTeam ? 'Edit Team' : 'New Team'}</h2>
+          <p class="text-sm text-gray-500">Define the identity for this group.</p>
+        </div>
       </div>
-      <button class="sys-modal-close" on:click={closeModal}>×</button>
+      <button class="text-gray-400 hover:text-gray-600 text-2xl" on:click={closeModal}>×</button>
     </div>
 
-    <div class="sys-modal-body">
-      <div class="sys-form-group">
-        <label for="team-name">Team Name *</label>
+    <div class="sys-modal-body p-6">
+      <div class="sys-form-group mb-4">
+        <label for="team-name" class="block text-sm font-medium text-gray-700 mb-1">Team Name</label>
         <input
           id="team-name"
-          class="sys-input"
+          class="w-full rounded-lg border-gray-300 bg-gray-50 p-2.5 text-sm focus:bg-white focus:ring-2 focus:ring-brand-primary/20 transition-all"
           type="text"
           bind:value={formName}
-          placeholder="e.g., Worship, Hospitality, Kids"
+          placeholder="e.g. Worship, Hospitality, Kids"
         />
       </div>
 
-      <div class="sys-form-group">
-        <label for="team-desc">Description</label>
+      <div class="sys-form-group mb-6">
+        <label for="team-desc" class="block text-sm font-medium text-gray-700 mb-1">Purpose / Description</label>
         <textarea
           id="team-desc"
-          class="sys-input"
+          class="w-full rounded-lg border-gray-300 bg-gray-50 p-2.5 text-sm focus:bg-white focus:ring-2 focus:ring-brand-primary/20 transition-all"
           bind:value={formDescription}
-          placeholder="What does this team do?"
+          placeholder="What is the primary care or service responsibility?"
           rows="2"
         ></textarea>
       </div>
 
-      <div class="form-row">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
         <div class="sys-form-group">
-          <label>Icon</label>
-          <div class="icon-grid">
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Icon</label>
+          <div class="picker-grid grid grid-cols-5 gap-2">
             {#each availableIcons as icon}
               <button
                 type="button"
-                class="icon-btn"
-                class:selected={formIcon === icon}
+                class="w-10 h-10 flex items-center justify-center rounded-lg border transition-all {formIcon === icon ? 'border-brand-primary bg-brand-primary-light text-brand-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}"
                 on:click={() => formIcon = icon}
               >
                 {icon}
@@ -302,17 +314,18 @@
         </div>
 
         <div class="sys-form-group">
-          <label>Color</label>
-          <div class="color-grid">
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Accent Color</label>
+          <div class="picker-grid grid grid-cols-5 gap-2">
             {#each availableColors as color}
               <button
                 type="button"
-                class="color-btn"
-                class:selected={formColor === color}
+                class="w-10 h-10 rounded-full flex items-center justify-center transition-transform {formColor === color ? 'ring-2 ring-offset-2 ring-gray-300 scale-110' : 'hover:scale-105'}"
                 style="background: {color}"
                 on:click={() => formColor = color}
               >
-                {#if formColor === color}✓{/if}
+                {#if formColor === color}
+                  <span class="text-white text-xs drop-shadow-md">✓</span>
+                {/if}
               </button>
             {/each}
           </div>
@@ -320,11 +333,16 @@
       </div>
     </div>
 
-    <div class="sys-modal-actions">
-      <button class="sys-btn sys-btn--secondary" on:click={closeModal}>Cancel</button>
+    <div class="sys-modal-actions border-t border-gray-100 p-4 bg-gray-50 rounded-b-xl flex justify-end gap-3">
       <button
-        class="sys-btn sys-btn--primary"
-        style="background: {formColor}"
+        class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors"
+        on:click={closeModal}
+      >
+        Cancel
+      </button>
+      <button
+        class="px-4 py-2 rounded-lg text-sm font-medium text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        style="background-color: var(--brand-primary);"
         on:click={saveTeam}
         disabled={saving || !formName.trim()}
       >
