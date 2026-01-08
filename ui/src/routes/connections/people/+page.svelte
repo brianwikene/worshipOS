@@ -160,7 +160,7 @@
   const peopleTableAffordances: TableAffordances<Person, PeopleSortOption, PeopleRowAction> = {
     searchPlaceholder: 'Search people...',
     rowLink: (person: Person) => ({
-      href: `/people/${person.id}`,
+      href: `/connections/people/${person.id}`,
       label: `Open ${person.display_name}`
     }),
     sortFields: [

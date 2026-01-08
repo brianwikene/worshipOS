@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
-  import { apiJson, apiFetch } from '$lib/api';
+  import { page } from '$app/stores';
+  import { apiFetch, apiJson } from '$lib/api';
   import FamilyModal from '$lib/components/FamilyModal.svelte';
+  import { onMount } from 'svelte';
 
   interface FamilyMember {
     membership_id: string;
@@ -356,7 +356,7 @@
 </script>
 
 <div class="sys-page sys-page--narrow">
-  <a href="/families" class="sys-back-link">← Back to Families</a>
+  <a href="/connections/families" class="sys-back-link">← Back to Families</a>
 
   {#if loading}
     <div class="sys-state">Loading family details...</div>
@@ -469,7 +469,7 @@
         <div class="members-list">
           {#each activeMembers as member}
             <div class="member-card" class:temporary={member.is_temporary}>
-              <a href={`/people/${member.person_id}`} class="member-link">
+              <a href={`/connections/people/${member.person_id}`} class="member-link">
                 <div class="member-avatar">
                   {member.display_name.charAt(0).toUpperCase()}
                 </div>

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
-  import { apiJson, apiFetch } from '$lib/api';
+  import { page } from '$app/stores';
+  import { apiFetch, apiJson } from '$lib/api';
   import PersonModal from '$lib/components/PersonModal.svelte';
+  import { onMount } from 'svelte';
 
   interface ContactMethod {
     type: string;
@@ -294,17 +294,17 @@
 
   async function handleSave(e: CustomEvent<{ first_name: string; last_name: string; goes_by: string }>) {
     if (!person) return;
-    
+
     const { first_name, last_name, goes_by } = e.detail;
-    
+
     try {
       modalComponent.setSaving(true);
-      
+
       await apiFetch(`/api/people/${person.id}`, {
         method: 'PUT',
         body: JSON.stringify({ first_name, last_name, goes_by })
       });
-      
+
       closeModal();
       await loadPerson(); // Reload to show updated data
     } catch (err) {
@@ -314,7 +314,7 @@
 
   async function handleArchive() {
     if (!person) return;
-    
+
     if (!confirm(`Archive "${person.display_name}"? They can be restored later.`)) {
       return;
     }
@@ -351,7 +351,7 @@
 </script>
 
 <div class="sys-page sys-page--narrow">
-  <a href="/people" class="sys-back-link">← Back to People</a>
+  <a href="/connections/people" class="sys-back-link">← Back to People</a>
 
   {#if loading}
     <div class="sys-state">Loading person details...</div>
@@ -370,7 +370,7 @@
         {#if person.goes_by && person.first_name && person.goes_by !== person.first_name}
           <p class="legal-name">Legal name: {person.first_name} {person.last_name}</p>
         {/if}
-        
+
         <div class="header-actions">
           <button class="sys-btn sys-btn--primary" on:click={openEditModal}>
             ✏️ Edit
@@ -453,7 +453,7 @@
                 <span class="value">{formatAddress(addr)}</span>
               </div>
               <div class="row-actions">
-                <a href="/families/{addr.family_id}" class="btn-icon" title="Edit on family page">↗️</a>
+                <a href="/connections/families/{addr.family_id}" class="btn-icon" title="Edit on family page">↗️</a>
               </div>
             </div>
           {/each}
