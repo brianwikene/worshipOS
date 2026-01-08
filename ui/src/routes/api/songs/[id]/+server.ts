@@ -1,10 +1,10 @@
-import { json, error } from '@sveltejs/kit';
-import type { HttpError } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
 import { pool } from '$lib/server/db';
 import { sanitizeSongPayload } from '$lib/server/songs/input';
 import { parseSongText } from '$lib/server/songs/parser';
 import { fetchSongById } from '$lib/server/songs/repository';
+import type { HttpError } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals, params }) => {
 	const churchId = locals.churchId;
@@ -77,14 +77,43 @@ export const DELETE: RequestHandler = async ({ locals, params }) => {
 	const churchId = locals.churchId;
 	if (!churchId) throw error(400, 'church_id is required');
 
-	const result = await pool.query('DELETE FROM songs WHERE church_id = $1 AND id = $2', [
-		churchId,
-		params.id
-	]);
+	try {
+		// Check usage
+		const usage = await pool.query(
+			`
+      SELECT COUNT(si.id) as count
+      FROM service_items si
+      JOIN song_variants sv ON si.song_variant_id = sv.id
+      WHERE sv.song_id = $1
+      `,
+			[params.id]
+		);
 
-	if (result.rowCount === 0) throw error(404, 'Song not found');
+		const isUsed = parseInt(usage.rows[0].count) > 0;
+		let result;
 
-	return new Response(null, { status: 204 });
+		if (isUsed) {
+			// Soft delete (archive)
+			result = await pool.query(
+				'UPDATE songs SET archived_at = NOW() WHERE church_id = $1 AND id = $2',
+				[churchId, params.id]
+			);
+		} else {
+			// Hard delete
+			result = await pool.query('DELETE FROM songs WHERE church_id = $1 AND id = $2', [
+				churchId,
+				params.id
+			]);
+		}
+
+		if (result.rowCount === 0) throw error(404, 'Song not found');
+
+		return new Response(null, { status: 204 });
+	} catch (err) {
+		if (isHttpError(err)) throw err;
+		console.error('DELETE /api/songs/:id failed:', err);
+		throw error(500, 'Failed to delete song');
+	}
 };
 
 function isHttpError(err: unknown): err is HttpError {

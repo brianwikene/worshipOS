@@ -1,10 +1,10 @@
-import { json, error } from '@sveltejs/kit';
-import type { HttpError } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
 import { pool } from '$lib/server/db';
 import { sanitizeSongPayload } from '$lib/server/songs/input';
 import { parseSongText } from '$lib/server/songs/parser';
 import { SONG_SELECT, fetchSongById, mapSongRow, type SongRow } from '$lib/server/songs/repository';
+import type { HttpError } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals, url }) => {
 	const churchId = locals.churchId;
@@ -17,6 +17,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			`
       ${SONG_SELECT}
       WHERE s.church_id = $1
+        AND s.archived_at IS NULL
         AND (
           $2::text IS NULL
           OR s.title ILIKE '%' || $2 || '%'
