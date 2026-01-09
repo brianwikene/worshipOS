@@ -376,6 +376,18 @@ body {
 	margin: 0 auto;
 	padding: 2.5rem 1.5rem;
 }
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .sys-page--narrow {
 	max-width: 900px;
 } /* for Start / simpler pages */
@@ -694,6 +706,35 @@ body {
 	color: var(--sys-muted);
 }
 
+/* ----------- Tabs ----------- */
+.sys-tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--sys-border);
+  margin-top: 24px;
+}
+
+.sys-tab {
+  background: none;
+  border: none;
+  padding: 12px 4px;
+  font-size: 0.95rem;
+  color: var(--sys-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.sys-tab:hover {
+  color: var(--sys-text);
+}
+
+.sys-tab.active {
+  color: var(--ui-color-accent);
+  border-bottom-color: var(--ui-color-accent);
+  font-weight: 500;
+}
+
 /* ----------- Back Link ----------- */
 .sys-back-link {
 	display: inline-block;
@@ -706,6 +747,18 @@ body {
 }
 .sys-back-link:hover {
 	color: var(--gatherings-accent-start);
+}
+
+.sys-back-arrow {
+  font-size: 1.5rem;
+  text-decoration: none;
+  color: var(--sys-muted);
+  line-height: 1;
+  padding-bottom: 4px;
+}
+
+.sys-back-arrow:hover {
+  color: var(--ui-color-accent);
 }
 
 /* ----------- Search ----------- */
