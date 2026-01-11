@@ -1,10 +1,11 @@
 <!-- /src/routes/care/+page.svelte -->
 <!-- See /docs/TEND-CARE-ARCHITECTURE.md for boundary rules -->
 <!--
-  CARE: A case container with ownership.
+CARE: A case container with ownership.
   - Tightly controlled access (RLS)
   - May contain sensitive pastoral content
   - TEND may trigger, but never modify
+  - CARE does not generate signals on its own
   See also /docs/CARE.md
 -->
 
