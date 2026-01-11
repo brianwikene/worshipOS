@@ -1,3 +1,5 @@
+<!-- /src/routes/songs/[id]/+page.svelte -->
+
 <script lang="ts">
   import { page } from '$app/stores';
   import { apiFetch, apiJson } from '$lib/api';

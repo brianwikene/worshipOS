@@ -1,3 +1,5 @@
+<!-- /src/routes/connections/people/+page.svelte -->
+
 <script lang="ts">
   import { apiFetch, apiJson } from '$lib/api';
   import PersonModal from '$lib/components/PersonModal.svelte';

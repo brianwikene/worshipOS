@@ -1,8 +1,10 @@
+<!-- /src/routes/gatherings/[id]/+page.svelte -->
+
 <script lang="ts">
-  import { get } from 'svelte/store';
   import { page } from '$app/stores';
+  import { apiFetch, apiJson } from '$lib/api';
   import { onMount } from 'svelte';
-  import { apiJson, apiFetch } from '$lib/api';
+  import { get } from 'svelte/store';
 
   interface Assignment {
     id: string | null;  // null when no assignment record exists yet

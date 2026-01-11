@@ -1,3 +1,5 @@
+<!-- /src/routes/start/+page.svelte -->
+
 <script lang="ts">
 	// Placeholder flags — wire these later
 	const hasRecentActivity = false;

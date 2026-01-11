@@ -1,3 +1,5 @@
+<!-- /src/routes/songs/+page.svelte -->
+
 <script lang="ts">
   import { apiFetch, apiJson } from '$lib/api';
   import SongModal from '$lib/components/SongModal.svelte';

@@ -1,8 +1,10 @@
+<!-- /src/routes/gatherings/+page.svelte -->
+
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { apiJson, apiFetch } from '$lib/api';
   import { page } from '$app/stores';
+  import { apiFetch, apiJson } from '$lib/api';
   import { getActiveChurchId } from '$lib/tenant';
+  import { onMount } from 'svelte';
 
   type ViewMode = 'upcoming' | 'past';
   let view: ViewMode = 'upcoming';
@@ -922,7 +924,7 @@ $: visibleServices = services
     margin: 0 0 1.5rem 0;
   }
 
-  
+
   /* Modal styles */
   .modal-overlay {
     position: fixed;
