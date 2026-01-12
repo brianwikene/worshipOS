@@ -1,0 +1,17 @@
+-- supabase/seed.sql
+
+-- Create people and capture IDs
+WITH jen AS (
+  INSERT INTO people (id, display_name /*, church_id, ... */)
+  VALUES (gen_random_uuid(), 'Jen')
+  RETURNING id
+),
+case1 AS (
+  INSERT INTO care_cases (id, person_id, title, status /*, church_id, ... */)
+  SELECT gen_random_uuid(), jen.id, 'Check-in', 'open'
+  FROM jen
+  RETURNING id
+)
+INSERT INTO care_notes (id, case_id, body /*, church_id, ... */)
+SELECT gen_random_uuid(), case1.id, 'Initial note'
+FROM case1;
