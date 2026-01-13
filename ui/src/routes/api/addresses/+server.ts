@@ -1,12 +1,17 @@
 // src/routes/api/addresses/+server.ts
 
-import { json, error } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pool } from '$lib/server/db';
 
 // GET - Get all addresses for the church (optionally filtered by person_id or family)
 export const GET: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;
+  /**
+   * RE: Church ID Check
+   * In a perfect world, we'd rely solely on RLS.
+   * However, since we filter by church_id in the query logic below,
+   * keeping this check ensures we don't accidentally return data if RLS is misconfigured.
+   */
   if (!churchId) throw error(400, 'X-Church-Id is required');
 
   const personId = event.url.searchParams.get('person_id');

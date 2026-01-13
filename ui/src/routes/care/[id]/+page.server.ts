@@ -1,50 +1,74 @@
-import { db } from '$lib/server/db';
+// ui/src/routes/care/[id]/+page.server.ts
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
-	// 1. Secure Context: Get the current App User & Permissions
-	// (This relies on the "app_users" table we just created)
+export const load: PageServerLoad = async ({ locals, params }) => {
+	const supabase = locals.supabase;
+	const user = locals.user;
 
-	// MOCK: For local dev, we assume the "admin" user ID we created.
-	// In prod, this comes from: locals.user.id
-	const currentUserId = '00000000-0000-0000-0000-000000000000';
+	if (!user) throw error(401, 'Please sign in.');
 
-	const currentUser = await db.query(
-		`SELECT role, can_view_care_notes FROM app_users WHERE id = $1`,
-		[currentUserId]
-	);
+	const userId = user.id;
+	const caseId = params.id;
 
-	const permissions = currentUser.rows[0];
+	// Prefer cookie church context; fallback to first membership
+	let churchId = locals.churchId;
 
-	// 2. The "Software Firewall"
-	// We block access here to save a DB trip, but RLS is the ultimate backup.
-	if (!permissions || !permissions.can_view_care_notes) {
-		// If they don't have the badge, they don't get in.
-		throw error(403, 'Access Denied: You do not have Care permissions.');
+	let role: string | null = null;
+
+	if (!churchId) {
+		const { data: memberships, error: memErr } = await supabase
+			.from('church_memberships')
+			.select('church_id, role')
+			.eq('user_id', userId)
+			.order('created_at', { ascending: true })
+			.limit(1);
+
+		if (memErr) throw error(500, memErr.message);
+		if (!memberships || memberships.length === 0) throw error(403, 'No church membership found.');
+
+		churchId = memberships[0].church_id;
+		role = memberships[0].role;
+	} else {
+		const { data: membership, error: memErr } = await supabase
+			.from('church_memberships')
+			.select('role')
+			.eq('church_id', churchId)
+			.eq('user_id', userId)
+			.maybeSingle();
+
+		if (memErr) throw error(500, memErr.message);
+		if (!membership) throw error(403, 'Not a member of this church.');
+
+		role = membership.role;
 	}
 
-	// 3. Fetch the Cases (Stories)
-	// We JOIN with people to get the names, but we DO NOT join the notes content yet.
-	// That should be a separate load on the individual [id] page for security.
-	const cases = await db.query(`
-        SELECT
-            c.id,
-            c.title,
-            c.status,
-            c.sensitivity_level,
-            c.updated_at,
-            p.display_name as person_name,
-            p.avatar_url as person_avatar,
-            (SELECT COUNT(*) FROM care_notes WHERE case_id = c.id) as note_count
-        FROM care_cases c
-        JOIN people p ON c.person_id = p.id
-        WHERE c.status != 'closed' -- Default to active cases
-        ORDER BY c.updated_at DESC
-    `);
+	const { data: careCase, error: caseErr } = await supabase
+		.from('v_care_cases')
+		.select(
+			[
+				'id',
+				'title',
+				'status',
+				'sensitivity_level',
+				'created_at',
+				'person_id',
+				'subject_name',
+				'assigned_to',
+				'assigned_to_name'
+			].join(',')
+		)
+		.eq('church_id', churchId)
+		.eq('id', caseId)
+		.maybeSingle();
+
+	if (caseErr) throw error(500, caseErr.message);
+	if (!careCase) throw error(404, 'Care case not found (or you do not have access).');
 
 	return {
-		cases: cases.rows,
-		userPermissions: permissions
+		user,
+		role,
+		churchId,
+		careCase
 	};
 };

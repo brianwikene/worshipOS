@@ -1,9 +1,8 @@
 // This route uses legacy service_* database tables while the API surface and domain language use "gatherings".
 
 // src/routes/api/gatherings/+server.ts
-import { json, error } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pool } from '$lib/server/db';
 
 export const GET: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;

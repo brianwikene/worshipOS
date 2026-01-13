@@ -1,8 +1,8 @@
 // Duplicate detection algorithm
 
-import { pool } from '$lib/server/db';
-import { soundex, jaroWinkler, phoneLast7, normalizeEmail, isCommonEmailDomain, getEmailDomain, normalizeName } from './string-utils';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { areNicknames, couldBeInitials } from './nicknames';
+import { getEmailDomain, isCommonEmailDomain, jaroWinkler, normalizeEmail, normalizeName, phoneLast7, soundex } from './string-utils';
 
 // ============================================================================
 // Types
@@ -294,60 +294,70 @@ function detectGoesByLastNameIssue(a: PersonForMatching, b: PersonForMatching): 
 /**
  * Load all active people for a church with contact info
  */
-export async function loadPeopleForMatching(churchId: string): Promise<PersonForMatching[]> {
-  const result = await pool.query(
-    `SELECT
-      p.id,
-      p.church_id,
-      p.first_name,
-      p.last_name,
-      p.goes_by,
-      p.display_name,
-      COALESCE(
-        (SELECT array_agg(cm.value)
-         FROM contact_methods cm
-         WHERE cm.person_id = p.id AND cm.type = 'email'),
-        '{}'
-      ) as emails,
-      COALESCE(
-        (SELECT array_agg(cm.value)
-         FROM contact_methods cm
-         WHERE cm.person_id = p.id AND cm.type = 'phone'),
-        '{}'
-      ) as phones,
-      COALESCE(
-        (SELECT array_agg(fm.family_id)
-         FROM family_members fm
-         WHERE fm.person_id = p.id AND fm.is_active = true),
-        '{}'
-      ) as family_ids
-    FROM people p
-    WHERE p.church_id = $1
-      AND p.is_active = true
-      AND p.merged_at IS NULL`,
-    [churchId]
-  );
+export async function loadPeopleForMatching(supabase: SupabaseClient, churchId: string): Promise<PersonForMatching[]> {
+  // Use nested select to fetch contact methods and family memberships efficiently
+  const { data: people, error } = await supabase
+    .from('people')
+    .select(`
+        id,
+        church_id,
+        first_name,
+        last_name,
+        goes_by,
+        display_name,
+        contact_methods(type, value),
+        family_members(family_id, is_active)
+    `)
+    .eq('church_id', churchId)
+    .eq('is_active', true)
+    .is('merged_at', null);
 
-  return result.rows;
+  if (error) {
+      console.error('Error loading people for matching:', error);
+      throw error;
+  }
+
+  // Transform to flat format
+  return (people || []).map((p: any) => ({
+      id: p.id,
+      church_id: p.church_id,
+      first_name: p.first_name,
+      last_name: p.last_name,
+      goes_by: p.goes_by,
+      display_name: p.display_name,
+      emails: (p.contact_methods || [])
+        .filter((cm: any) => cm.type === 'email')
+        .map((cm: any) => cm.value),
+      phones: (p.contact_methods || [])
+        .filter((cm: any) => cm.type === 'phone')
+        .map((cm: any) => cm.value),
+      family_ids: (p.family_members || [])
+        .filter((fm: any) => fm.is_active)
+        .map((fm: any) => fm.family_id)
+  }));
 }
 
 /**
  * Load existing identity links for a church
  */
-export async function loadExistingLinks(churchId: string): Promise<Array<{ person_a_id: string; person_b_id: string; status: string }>> {
-  const result = await pool.query(
-    `SELECT person_a_id, person_b_id, status
-     FROM identity_links
-     WHERE church_id = $1`,
-    [churchId]
-  );
-  return result.rows;
+export async function loadExistingLinks(supabase: SupabaseClient, churchId: string): Promise<Array<{ person_a_id: string; person_b_id: string; status: string }>> {
+  const { data, error } = await supabase
+    .from('identity_links')
+    .select('person_a_id, person_b_id, status')
+    .eq('church_id', churchId);
+
+  if (error) {
+      console.error('Error loading existing links:', error);
+      return [];
+  }
+  return data || [];
 }
 
 /**
  * Find all duplicate candidates for a church
  */
 export async function findDuplicates(
+  supabase: SupabaseClient,
   churchId: string,
   options: {
     minScore?: number;
@@ -358,7 +368,7 @@ export async function findDuplicates(
   const { minScore = 50, limit = 100, includeExisting = false } = options;
 
   // 1. Load all active people
-  const people = await loadPeopleForMatching(churchId);
+  const people = await loadPeopleForMatching(supabase, churchId);
   if (people.length < 2) return [];
 
   // 2. Build blocking index
@@ -388,7 +398,7 @@ export async function findDuplicates(
   }
 
   // 4. Load existing links (to exclude unless includeExisting)
-  const existingLinks = await loadExistingLinks(churchId);
+  const existingLinks = await loadExistingLinks(supabase, churchId);
   const existingPairs = new Set(
     existingLinks.map(l => `${l.person_a_id}:${l.person_b_id}`)
   );
@@ -428,6 +438,7 @@ export async function findDuplicates(
  * Find duplicates for a specific person
  */
 export async function findDuplicatesForPerson(
+  supabase: SupabaseClient,
   churchId: string,
   personId: string,
   options: { minScore?: number; limit?: number } = {}
@@ -435,7 +446,7 @@ export async function findDuplicatesForPerson(
   const { minScore = 40, limit = 20 } = options;
 
   // Load all people
-  const people = await loadPeopleForMatching(churchId);
+  const people = await loadPeopleForMatching(supabase, churchId);
   const targetPerson = people.find(p => p.id === personId);
 
   if (!targetPerson) return [];
@@ -479,6 +490,7 @@ export async function findDuplicatesForPerson(
  * Save detected duplicates to identity_links table
  */
 export async function saveDetectedDuplicates(
+  supabase: SupabaseClient,
   churchId: string,
   candidates: DuplicateCandidate[],
   detectedBy: string = 'system'
@@ -488,30 +500,27 @@ export async function saveDetectedDuplicates(
   let inserted = 0;
 
   for (const candidate of candidates) {
-    try {
-      await pool.query(
-        `INSERT INTO identity_links
-          (church_id, person_a_id, person_b_id, confidence_score, match_reasons, detected_by)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (church_id, person_a_id, person_b_id) DO UPDATE
-         SET confidence_score = EXCLUDED.confidence_score,
-             match_reasons = EXCLUDED.match_reasons,
-             updated_at = now()
-         WHERE identity_links.status = 'suggested'`,
-        [
-          churchId,
-          candidate.person_a_id,
-          candidate.person_b_id,
-          candidate.confidence_score,
-          JSON.stringify(candidate.match_reasons),
-          detectedBy
-        ]
-      );
-      inserted++;
-    } catch (err) {
-      // Log but continue - constraint violations expected for existing links
-      console.error('Failed to save duplicate candidate:', err);
-    }
+      const { error } = await supabase
+        .from('identity_links')
+        .upsert({
+            church_id: churchId,
+            person_a_id: candidate.person_a_id,
+            person_b_id: candidate.person_b_id,
+            confidence_score: candidate.confidence_score,
+            match_reasons: candidate.match_reasons,
+            detected_by: detectedBy,
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'church_id,person_a_id,person_b_id',
+            // Upsert will update if conflict
+            ignoreDuplicates: false
+        });
+
+      if (error) {
+           console.error('Failed to save duplicate candidate:', error);
+      } else {
+           inserted++;
+      }
   }
 
   return inserted;

@@ -1,8 +1,8 @@
 // POST /api/admin/duplicates/scan - Trigger duplicate detection scan
 
-import { json, error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
 import { findDuplicates, saveDetectedDuplicates } from '$lib/server/duplicates/detector';
+import { error, json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 
 /**
  * POST /api/admin/duplicates/scan
@@ -28,14 +28,15 @@ export const POST: RequestHandler = async ({ locals, request }) => {
     const startTime = Date.now();
 
     // Find duplicates
-    const candidates = await findDuplicates(churchId, {
+    const candidates = await findDuplicates(locals.supabase, churchId, {
       minScore,
       limit,
       includeExisting: false
     });
 
     // Save to database
-    const savedCount = await saveDetectedDuplicates(churchId, candidates, 'system');
+    const savedCount = await saveDetectedDuplicates(locals.supabase, churchId, candidates, 'system');
+
 
     const duration = Date.now() - startTime;
 

@@ -1,8 +1,7 @@
 // src/routes/api/people/[id]/capabilities/+server.ts
 
-import { json, error } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pool } from '$lib/server/db';
 
 // GET - List all role capabilities for a person
 export const GET: RequestHandler = async (event) => {
@@ -11,25 +10,49 @@ export const GET: RequestHandler = async (event) => {
 
   const personId = event.params.id;
 
-  const result = await pool.query(
-    `SELECT
-      prc.id,
-      prc.role_id,
-      r.name AS role_name,
-      r.ministry_area,
-      r.body_parts,
-      prc.proficiency,
-      prc.is_primary,
-      prc.is_approved,
-      prc.notes
-    FROM person_role_capabilities prc
-    JOIN roles r ON r.id = prc.role_id
-    WHERE prc.church_id = $1 AND prc.person_id = $2
-    ORDER BY prc.is_primary DESC, r.ministry_area NULLS LAST, r.name`,
-    [churchId, personId]
-  );
+  const { data: capabilities, error: dbError } = await event.locals.supabase
+    .from('person_role_capabilities')
+    .select(`
+      id,
+      role_id,
+      role:roles(name, ministry_area, body_parts),
+      proficiency,
+      is_primary,
+      is_approved,
+      notes
+    `)
+    .eq('church_id', churchId)
+    .eq('person_id', personId);
 
-  return json(result.rows);
+  if (dbError) {
+    console.error('GET /api/people/.../capabilities failed:', dbError);
+    throw error(500, 'Failed to list capabilities');
+  }
+
+  // Flatten and Sort in JS to match previous logic
+  const flattened = (capabilities || []).map((c: any) => ({
+      id: c.id,
+      role_id: c.role_id,
+      role_name: c.role?.name,
+      ministry_area: c.role?.ministry_area,
+      body_parts: c.role?.body_parts,
+      proficiency: c.proficiency,
+      is_primary: c.is_primary,
+      is_approved: c.is_approved,
+      notes: c.notes
+  }));
+
+  flattened.sort((a: any, b: any) => {
+      if (a.is_primary !== b.is_primary) return (a.is_primary ? -1 : 1);
+      if (a.ministry_area !== b.ministry_area) {
+          if (!a.ministry_area) return 1;
+          if (!b.ministry_area) return -1;
+          return (a.ministry_area || '').localeCompare(b.ministry_area || '');
+      }
+      return (a.role_name || '').localeCompare(b.role_name || '');
+  });
+
+  return json(flattened);
 };
 
 // POST - Add a role capability to a person
@@ -46,40 +69,53 @@ export const POST: RequestHandler = async (event) => {
   }
 
   // Verify the role exists and belongs to this church
-  const roleCheck = await pool.query(
-    'SELECT id FROM roles WHERE id = $1 AND church_id = $2',
-    [role_id, churchId]
-  );
+  const { count } = await event.locals.supabase
+    .from('roles')
+    .select('id', { count: 'exact', head: true })
+    .eq('id', role_id)
+    .eq('church_id', churchId);
 
-  if (roleCheck.rows.length === 0) {
-    throw error(404, 'Role not found');
-  }
+  if (!count) throw error(404, 'Role not found');
 
   // Check if already exists
-  const existing = await pool.query(
-    'SELECT id FROM person_role_capabilities WHERE church_id = $1 AND person_id = $2 AND role_id = $3',
-    [churchId, personId, role_id]
-  );
+  const { count: existsCount } = await event.locals.supabase
+    .from('person_role_capabilities')
+    .select('id', { count: 'exact', head: true })
+    .eq('church_id', churchId)
+    .eq('person_id', personId)
+    .eq('role_id', role_id);
 
-  if (existing.rows.length > 0) {
+  if ((existsCount || 0) > 0) {
     throw error(409, 'Person already has this role capability');
   }
 
   // If setting as primary, unset other primaries first
   if (is_primary) {
-    await pool.query(
-      'UPDATE person_role_capabilities SET is_primary = false WHERE church_id = $1 AND person_id = $2',
-      [churchId, personId]
-    );
+    await event.locals.supabase
+        .from('person_role_capabilities')
+        .update({ is_primary: false })
+        .eq('church_id', churchId)
+        .eq('person_id', personId);
   }
 
-  const result = await pool.query(
-    `INSERT INTO person_role_capabilities
-     (church_id, person_id, role_id, proficiency, is_primary, is_approved, notes)
-     VALUES ($1, $2, $3, $4, $5, true, $6)
-     RETURNING id`,
-    [churchId, personId, role_id, proficiency, is_primary, notes]
-  );
+  const { data: newCapability, error: insertError } = await event.locals.supabase
+    .from('person_role_capabilities')
+    .insert({
+      church_id: churchId,
+      person_id: personId,
+      role_id,
+      proficiency,
+      is_primary,
+      is_approved: true,
+      notes
+    })
+    .select('id')
+    .single();
 
-  return json({ success: true, id: result.rows[0].id }, { status: 201 });
+  if (insertError) {
+      console.error('POST /api/people/.../capabilities failed:', insertError);
+      throw error(500, 'Failed to add capability');
+  }
+
+  return json({ success: true, id: newCapability.id }, { status: 201 });
 };

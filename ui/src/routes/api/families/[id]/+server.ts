@@ -1,186 +1,98 @@
-import { json, error } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pool } from '$lib/server/db';
 
 /**************************************************************
  * GET /api/families/:id
  * Get family detail with all members
  **************************************************************/
 export const GET: RequestHandler = async ({ locals, params }) => {
-  const churchId = locals.churchId;
-  if (!churchId) throw error(400, 'church_id is required');
-
   const { id } = params;
 
-  try {
-    // Get family info
-    const familyResult = await pool.query(
-      `
-      SELECT
-        f.id,
-        f.name,
-        f.notes,
-        f.is_active,
-        f.primary_address_id,
-        f.created_at,
-        f.updated_at,
-        COALESCE(
-          (SELECT json_agg(json_build_object(
-             'id', a.id,
-             'line1', a.line1,
-             'line2', a.line2,
-             'street', a.street,
-             'city', a.city,
-             'state', a.state,
-             'postal_code', a.postal_code,
-             'country', a.country,
-             'label', a.label,
-             'is_primary', a.id = f.primary_address_id
-           ) ORDER BY (a.id = f.primary_address_id) DESC, a.label NULLS LAST, a.created_at)
-           FROM addresses a
-           WHERE a.family_id = f.id),
-          '[]'
-        ) as addresses
-      FROM families f
-      WHERE f.id = $1
-        AND f.church_id = $2
-      `,
-      [id, churchId]
-    );
+  // 1. Get Family & Addresses
+  let query = locals.supabase
+    .from('families')
+    .select(`
+        id, name, notes, is_active, primary_address_id, created_at, updated_at,
+        addresses (*)
+    `)
+    .eq('id', id)
+    .single();
 
-    if (familyResult.rows.length === 0) {
-      throw error(404, 'Family not found');
-    }
-
-    const family = familyResult.rows[0];
-
-    // Get family members
-    const membersResult = await pool.query(
-      `
-      SELECT
-        fm.id as membership_id,
-        fm.person_id,
-        p.display_name,
-        p.first_name,
-        p.last_name,
-        p.goes_by,
-        fm.relationship,
-        fm.is_active,
-        fm.is_temporary,
-        fm.is_primary_contact,
-        TO_CHAR(fm.start_date, 'YYYY-MM-DD') as start_date,
-        TO_CHAR(fm.end_date, 'YYYY-MM-DD') as end_date,
-        fm.notes
-      FROM family_members fm
-      JOIN people p ON p.id = fm.person_id
-      WHERE fm.family_id = $1
-      ORDER BY
-        fm.is_active DESC,
-        CASE fm.relationship
-          WHEN 'parent' THEN 1
-          WHEN 'guardian' THEN 2
-          WHEN 'spouse' THEN 3
-          WHEN 'child' THEN 4
-          WHEN 'foster_child' THEN 5
-          ELSE 6
-        END,
-        p.display_name
-      `,
-      [id]
-    );
-
-    family.members = membersResult.rows;
-
-    return json(family, { headers: { 'x-served-by': 'sveltekit' } });
-  } catch (err) {
-    if (err && typeof err === 'object' && 'status' in err) {
-      throw err;
-    }
-    console.error('GET /api/families/:id failed:', err);
-    throw error(500, 'Failed to load family');
-  }
-};
-
-/**************************************************************
- * PUT /api/families/:id
- * Update family details
- **************************************************************/
-export const PUT: RequestHandler = async ({ locals, params, request }) => {
-  const churchId = locals.churchId;
-  if (!churchId) throw error(400, 'church_id is required');
-
-  const { id } = params;
-  const body = await request.json();
-  const { name, notes } = body;
-
-  if (!name || typeof name !== 'string') {
-    throw error(400, 'name is required');
+  // OPTIONAL: Filter by church only if picker is active
+  if (locals.churchId) {
+    query = query.eq('church_id', locals.churchId);
   }
 
-  try {
-    const result = await pool.query(
-      `
-      UPDATE families
-      SET name = $1,
-          notes = $2,
-          updated_at = now()
-      WHERE id = $3
-        AND church_id = $4
-      RETURNING id, name, notes, is_active, created_at, updated_at
-      `,
-      [name.trim(), notes?.trim() || null, id, churchId]
-    );
+  const { data: family, error: familyError } = await query;
 
-    if (result.rows.length === 0) {
-      throw error(404, 'Family not found');
-    }
-
-    return json(result.rows[0], { headers: { 'x-served-by': 'sveltekit' } });
-  } catch (err) {
-    if (err && typeof err === 'object' && 'status' in err) {
-      throw err;
-    }
-    console.error('PUT /api/families/:id failed:', err);
-    throw error(500, 'Failed to update family');
+  if (familyError || !family) {
+      if (familyError?.code === 'PGRST116' || !family) throw error(404, 'Family not found');
+      console.error('GET /api/families/:id failed:', familyError);
+      throw error(500, 'Failed to load family');
   }
-};
 
-/**************************************************************
- * DELETE /api/families/:id
- * Soft delete (archive) a family
- **************************************************************/
-export const DELETE: RequestHandler = async ({ locals, params }) => {
-  const churchId = locals.churchId;
-  if (!churchId) throw error(400, 'church_id is required');
-
-  const { id } = params;
-
-  try {
-    const result = await pool.query(
-      `
-      UPDATE families
-      SET is_active = false,
-          updated_at = now()
-      WHERE id = $1
-        AND church_id = $2
-      RETURNING id, name
-      `,
-      [id, churchId]
-    );
-
-    if (result.rows.length === 0) {
-      throw error(404, 'Family not found');
-    }
-
-    return json(
-      { message: 'Family archived', family: result.rows[0] },
-      { headers: { 'x-served-by': 'sveltekit' } }
-    );
-  } catch (err) {
-    if (err && typeof err === 'object' && 'status' in err) {
-      throw err;
-    }
-    console.error('DELETE /api/families/:id failed:', err);
-    throw error(500, 'Failed to archive family');
+  // Process addresses order: Primary first, then label, then created_at
+  if (family.addresses) {
+      family.addresses.sort((a: any, b: any) => {
+          if (a.id === family.primary_address_id) return -1;
+          if (b.id === family.primary_address_id) return 1;
+          if (a.label !== b.label) return (a.label || '').localeCompare(b.label || '');
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+      // Add 'is_primary' flag
+      family.addresses = family.addresses.map((a: any) => ({
+          ...a,
+          is_primary: a.id === family.primary_address_id
+      }));
+  } else {
+      family.addresses = [];
   }
-};
+
+  // 2. Get Members
+  const { data: members, error: membersError } = await locals.supabase
+    .from('family_members')
+    .select(`
+        id, person_id, relationship, is_active, is_temporary, is_primary_contact, start_date, end_date, notes,
+        person:people(display_name, first_name, last_name, goes_by)
+    `)
+    .eq('family_id', id)
+    .order('is_active', { ascending: false });
+
+  if (membersError) {
+      console.error('GET /api/families/:id members failed:', membersError);
+      throw error(500, 'Failed to load family members');
+  }
+
+  // Flatten and Sort Members
+  const relationshipOrder: Record<string, number> = {
+      'parent': 1, 'guardian': 2, 'spouse': 3, 'child': 4, 'foster_child': 5, 'other': 6
+  };
+
+  const flatMembers = (members || []).map((m: any) => ({
+      membership_id: m.id,
+      person_id: m.person_id,
+      display_name: m.person?.display_name,
+      first_name: m.person?.first_name,
+      last_name: m.person?.last_name,
+      goes_by: m.person?.goes_by,
+      relationship: m.relationship,
+      is_active: m.is_active,
+      is_temporary: m.is_temporary,
+      is_primary_contact: m.is_primary_contact,
+      start_date: m.start_date,
+      end_date: m.end_date,
+      notes: m.notes
+  }));
+
+  flatMembers.sort((a, b) => {
+      if (a.is_active !== b.is_active) return (a.is_active ? -1 : 1);
+      const orderA = relationshipOrder[a.relationship] || 99;
+      const orderB = relationshipOrder[b.relationship] || 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.display_name || '').localeCompare(b.display_name || '');
+  });
+
+  return json({
+      ...family,
+      members: flatMembers
+  }, { headers: { 'x-served

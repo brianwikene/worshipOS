@@ -1,8 +1,6 @@
-import { pool } from '$lib/server/db';
 import { sanitizeSongPayload } from '$lib/server/songs/input';
 import { parseSongText } from '$lib/server/songs/parser';
-import { SONG_SELECT, fetchSongById, mapSongRow, type SongRow } from '$lib/server/songs/repository';
-import type { HttpError } from '@sveltejs/kit';
+import { fetchSongById, mapSongRow } from '$lib/server/songs/repository';
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 

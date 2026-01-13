@@ -2,7 +2,7 @@
 
 // src/routes/api/gatherings/[id]/copy/+server.ts
 
-import { json, error } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async (event) => {
@@ -16,6 +16,8 @@ export const POST: RequestHandler = async (event) => {
   // TODO: Implement service copying logic
   // This would copy assignments, songs, segments from one service to another
   // Implementation depends on exact requirements
+  // We mark this as "migrated" effectively since it doesn't use `pool` (it was just returning JSON).
+  // But we ensure it has no imports of pool.
 
   return json(
     { message: 'Gathering copied', source_id: sourceId, target_date },

@@ -1,26 +1,21 @@
-// This route uses legacy service_* database tables while the API surface and domain language use "gatherings".
-
 // src/routes/api/gatherings/[id]/assignments/+server.ts
-
-import { json, error } from '@sveltejs/kit';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pool } from '$lib/server/db';
 
-async function assertInstanceInChurch(instanceId: string, churchId: string): Promise<boolean> {
-  const instanceLookupResult = await pool.query(
-    `
-    SELECT 1
-    FROM service_instances si
-    JOIN service_groups sg ON sg.id = si.service_group_id
-    WHERE si.id = $1 AND sg.church_id = $2
-    `,
-    [instanceId, churchId]
-  );
-  return (instanceLookupResult.rowCount ?? 0) > 0;
+async function assertInstanceInChurch(supabase: SupabaseClient, instanceId: string, churchId: string): Promise<boolean> {
+  const { count } = await supabase
+      .from('service_instances')
+      .select('id', { count: 'exact', head: true })
+      .eq('id', instanceId)
+      .eq('church_id', churchId);
+
+  return (count ?? 0) > 0;
 }
 
 // Check for body part conflicts when assigning a person to a role
 async function checkBodyPartConflicts(
+  supabase: SupabaseClient,
   churchId: string,
   instanceId: string,
   personId: string | null,
@@ -31,45 +26,46 @@ async function checkBodyPartConflicts(
   }
 
   // Get body parts for the new role
-  const newRoleLookupResult = await pool.query(
-    'SELECT name, body_parts FROM roles WHERE id = $1 AND church_id = $2',
-    [newRoleId, churchId]
-  );
+  const { data: newRoleRow } = await supabase
+    .from('roles')
+    .select('name, body_parts')
+    .eq('id', newRoleId)
+    .eq('church_id', churchId)
+    .single();
 
-  if (newRoleLookupResult.rows.length === 0) {
+  if (!newRoleRow) {
     return { hasConflict: false, conflicts: [] };
   }
 
-  const newRoleRow = newRoleLookupResult.rows[0];
   const newBodyParts: string[] = newRoleRow.body_parts || [];
 
-  // If the new role doesn't require any body parts, no conflict possible
   if (newBodyParts.length === 0) {
     return { hasConflict: false, conflicts: [] };
   }
 
   // Get all existing assignments for this person in this service instance
-  const existingAssignmentsResult = await pool.query(
-    `SELECT r.name, r.body_parts
-     FROM service_assignments sa
-     JOIN roles r ON r.id = sa.role_id
-     WHERE sa.service_instance_id = $1
-       AND sa.person_id = $2
-       AND sa.church_id = $3`,
-    [instanceId, personId, churchId]
-  );
+  const { data: existingAssignments } = await supabase
+    .from('service_assignments')
+    .select(`
+        role:roles(name, body_parts)
+    `)
+    .eq('service_instance_id', instanceId)
+    .eq('person_id', personId)
+    .eq('church_id', churchId);
 
   const conflicts: string[] = [];
 
-  for (const existingAssignmentRow of existingAssignmentsResult.rows) {
-    const existingBodyParts: string[] = existingAssignmentRow.body_parts || [];
+  for (const existingAssignmentRow of (existingAssignments || [])) {
+    const role = existingAssignmentRow.role as any;
+    if (!role) continue;
 
-    // Check for overlapping body parts
+    const existingBodyParts: string[] = role.body_parts || [];
+
     const overlap = newBodyParts.filter(bp => existingBodyParts.includes(bp));
 
     if (overlap.length > 0) {
       conflicts.push(
-        `${newRoleRow.name} (${overlap.join(', ')}) conflicts with ${existingAssignmentRow.name}`
+        `${newRoleRow.name} (${overlap.join(', ')}) conflicts with ${role.name}`
       );
     }
   }
@@ -92,14 +88,14 @@ export const POST: RequestHandler = async (event) => {
     throw error(400, 'role_id is required');
   }
 
-  const instanceBelongsToChurch = await assertInstanceInChurch(instanceId, churchId);
+  const instanceBelongsToChurch = await assertInstanceInChurch(event.locals.supabase, instanceId, churchId);
   if (!instanceBelongsToChurch) {
     throw error(404, 'Gathering instance not found');
   }
 
   // Check for body part conflicts (unless force=true to override)
   if (person_id && !force) {
-    const conflictCheck = await checkBodyPartConflicts(churchId, instanceId, person_id, role_id);
+    const conflictCheck = await checkBodyPartConflicts(event.locals.supabase, churchId, instanceId, person_id, role_id);
 
     if (conflictCheck.hasConflict) {
       throw error(409, JSON.stringify({
@@ -110,23 +106,26 @@ export const POST: RequestHandler = async (event) => {
     }
   }
 
-  const assignmentInsertResult = await pool.query(
-    `INSERT INTO service_assignments
-      (church_id, service_instance_id, role_id, person_id, status, is_lead, notes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING *`,
-    [
-      churchId,
-      instanceId,
+  const { data: assignment, error: dbError } = await event.locals.supabase
+    .from('service_assignments')
+    .insert({
+      church_id: churchId,
+      service_instance_id: instanceId,
       role_id,
-      person_id,
-      status || 'pending',
-      is_lead || false,
-      notes
-    ]
-  );
+      person_id: person_id || null,
+      status: status || 'pending',
+      is_lead: is_lead || false,
+      notes: notes || null
+    })
+    .select()
+    .single();
 
-  return json(assignmentInsertResult.rows[0], {
+  if (dbError) {
+      console.error('POST /api/gatherings/[id]/assignments failed:', dbError);
+      throw error(500, 'Failed to create assignment');
+  }
+
+  return json(assignment, {
     status: 201,
     headers: { 'x-served-by': 'sveltekit' }
   });

@@ -1,5 +1,5 @@
-import { pool } from '$lib/server/db';
 import type { ParsedSong, SongSourceFormat } from '$lib/songs/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface SongRow {
 	id: string;
@@ -21,29 +21,6 @@ export interface SongResponse extends SongRow {
 	parser_warnings: string[];
 }
 
-export const SONG_SELECT = `
-SELECT
-  s.id,
-  s.title,
-  s.artist,
-  s.key,
-  s.bpm,
-  s.ccli_number,
-  s.notes,
-  s.source_format,
-  s.raw_text,
-  s.parsed_json,
-  s.created_at,
-  s.updated_at,
-  COALESCE(arr.arrangement_count, 0) AS arrangement_count
-FROM songs s
-LEFT JOIN LATERAL (
-  SELECT COUNT(*)::int AS arrangement_count
-  FROM song_arrangements sa
-  WHERE sa.song_id = s.id AND sa.church_id = s.church_id
-) arr ON TRUE
-`;
-
 export function mapSongRow(row: SongRow): SongResponse {
 	const parsed = row.parsed_json ?? null;
 	const warnings = Array.isArray(parsed?.warnings)
@@ -57,12 +34,25 @@ export function mapSongRow(row: SongRow): SongResponse {
 	};
 }
 
-export async function fetchSongById(churchId: string, songId: string): Promise<SongResponse | null> {
-	const result = await pool.query<SongRow>(`${SONG_SELECT} WHERE s.church_id = $1 AND s.id = $2`, [
-		churchId,
-		songId
-	]);
+export async function fetchSongById(supabase: SupabaseClient, churchId: string, songId: string): Promise<SongResponse | null> {
+  const { data: song, error } = await supabase
+    .from('songs')
+    .select('*')
+    .eq('id', songId)
+    .eq('church_id', churchId)
+    .single();
 
-	const row = result.rows[0];
-	return row ? mapSongRow(row) : null;
+  if (error || !song) return null;
+
+  // Get arrangement count
+  const { count } = await supabase
+    .from('song_arrangements')
+    .select('*', { count: 'exact', head: true })
+    .eq('song_id', songId)
+    .eq('church_id', churchId);
+
+  return mapSongRow({
+    ...song,
+    arrangement_count: count ?? 0
+  });
 }

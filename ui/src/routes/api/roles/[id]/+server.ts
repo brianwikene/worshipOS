@@ -1,8 +1,7 @@
 // src/routes/api/roles/[id]/+server.ts
 
-import { json, error } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pool } from '$lib/server/db';
 
 // GET - Get a single role
 export const GET: RequestHandler = async (event) => {

@@ -1,29 +1,27 @@
-// This route uses legacy service_* database tables while the API surface and domain language use "gatherings".
-
 // src/routes/api/gatherings/[id]/assignments/[assignmentId]/+server.ts
-
-import { json, error } from '@sveltejs/kit';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pool } from '$lib/server/db';
 
 async function assertAssignmentInChurch(
+    supabase: SupabaseClient,
   assignmentId: string,
   instanceId: string,
   churchId: string
 ): Promise<boolean> {
-  const assignmentLookupResult = await pool.query(
-    `SELECT 1
-     FROM service_assignments sa
-     WHERE sa.id = $1
-       AND sa.service_instance_id = $2
-       AND sa.church_id = $3`,
-    [assignmentId, instanceId, churchId]
-  );
-  return (assignmentLookupResult.rowCount ?? 0) > 0;
+  const { count } = await supabase
+    .from('service_assignments')
+    .select('id', { count: 'exact', head: true })
+    .eq('id', assignmentId)
+    .eq('service_instance_id', instanceId)
+    .eq('church_id', churchId);
+
+  return (count ?? 0) > 0;
 }
 
 // Check for body part conflicts when assigning a person to a role
 async function checkBodyPartConflicts(
+  supabase: SupabaseClient,
   churchId: string,
   instanceId: string,
   personId: string | null,
@@ -35,16 +33,17 @@ async function checkBodyPartConflicts(
   }
 
   // Get body parts for the role being assigned
-  const roleLookupResult = await pool.query(
-    'SELECT name, body_parts FROM roles WHERE id = $1 AND church_id = $2',
-    [roleId, churchId]
-  );
+  const { data: roleRow } = await supabase
+    .from('roles')
+    .select('name, body_parts')
+    .eq('id', roleId)
+    .eq('church_id', churchId)
+    .single();
 
-  if (roleLookupResult.rows.length === 0) {
+  if (!roleRow) {
     return { hasConflict: false, conflicts: [] };
   }
 
-  const roleRow = roleLookupResult.rows[0];
   const roleBodyParts: string[] = roleRow.body_parts || [];
 
   if (roleBodyParts.length === 0) {
@@ -52,26 +51,25 @@ async function checkBodyPartConflicts(
   }
 
   // Get all other assignments for this person in this service instance
-  const existingAssignmentsResult = await pool.query(
-    `SELECT sa.id, r.name, r.body_parts
-     FROM service_assignments sa
-     JOIN roles r ON r.id = sa.role_id
-     WHERE sa.service_instance_id = $1
-       AND sa.person_id = $2
-       AND sa.church_id = $3
-       AND sa.id != $4`,
-    [instanceId, personId, churchId, excludeAssignmentId]
-  );
+  const { data: existingAssignments } = await supabase
+    .from('service_assignments')
+    .select(`
+        id, role:roles(name, body_parts)
+    `)
+    .eq('service_instance_id', instanceId)
+    .eq('person_id', personId)
+    .eq('church_id', churchId)
+    .neq('id', excludeAssignmentId); // Exclude self
 
   const conflicts: string[] = [];
 
-  for (const existingAssignmentRow of existingAssignmentsResult.rows) {
-    const existingBodyParts: string[] = existingAssignmentRow.body_parts || [];
+  for (const existingAssignmentRow of (existingAssignments || [])) {
+    const existingBodyParts: string[] = (existingAssignmentRow.role as any)?.body_parts || [];
     const overlap = roleBodyParts.filter(bp => existingBodyParts.includes(bp));
 
     if (overlap.length > 0) {
       conflicts.push(
-        `${roleRow.name} (${overlap.join(', ')}) conflicts with ${existingAssignmentRow.name}`
+        `${roleRow.name} (${overlap.join(', ')}) conflicts with ${(existingAssignmentRow.role as any)?.name}`
       );
     }
   }
@@ -91,26 +89,28 @@ export const PUT: RequestHandler = async (event) => {
   const body = await event.request.json();
   const { person_id, status, is_lead, notes, force = false } = body;
 
-  const assignmentBelongsToChurch = await assertAssignmentInChurch(assignmentId, instanceId, churchId);
+  const assignmentBelongsToChurch = await assertAssignmentInChurch(event.locals.supabase, assignmentId, instanceId, churchId);
   if (!assignmentBelongsToChurch) {
     throw error(404, 'Assignment not found');
   }
 
   // Get current assignment to know the role_id
-  const currentAssignmentResult = await pool.query(
-    'SELECT role_id FROM service_assignments WHERE id = $1',
-    [assignmentId]
-  );
+  const { data: currentAssignment } = await event.locals.supabase
+    .from('service_assignments')
+    .select('role_id')
+    .eq('id', assignmentId)
+    .single();
 
-  if (currentAssignmentResult.rows.length === 0) {
+  if (!currentAssignment) {
     throw error(404, 'Assignment not found');
   }
 
-  const roleId = currentAssignmentResult.rows[0].role_id;
+  const roleId = currentAssignment.role_id;
 
   // Check for body part conflicts if assigning a person
   if (person_id && !force) {
     const conflictCheck = await checkBodyPartConflicts(
+      event.locals.supabase,
       churchId,
       instanceId,
       person_id,
@@ -128,42 +128,31 @@ export const PUT: RequestHandler = async (event) => {
   }
 
   // Build dynamic update
-  const updates: string[] = [];
-  const values: unknown[] = [];
-  let paramIndex = 1;
+  const updates: Record<string, any> = {};
 
-  if (person_id !== undefined) {
-    updates.push(`person_id = $${paramIndex++}`);
-    values.push(person_id || null);
-  }
-  if (status !== undefined) {
-    updates.push(`status = $${paramIndex++}`);
-    values.push(status);
-  }
-  if (is_lead !== undefined) {
-    updates.push(`is_lead = $${paramIndex++}`);
-    values.push(is_lead);
-  }
-  if (notes !== undefined) {
-    updates.push(`notes = $${paramIndex++}`);
-    values.push(notes || null);
-  }
+  if (person_id !== undefined) updates.person_id = person_id || null;
+  if (status !== undefined) updates.status = status;
+  if (is_lead !== undefined) updates.is_lead = is_lead;
+  if (notes !== undefined) updates.notes = notes || null;
 
-  if (updates.length === 0) {
+  if (Object.keys(updates).length === 0) {
     throw error(400, 'No fields to update');
   }
 
-  values.push(assignmentId, churchId);
+  const { data: updatedAssignment, error: updateError } = await event.locals.supabase
+    .from('service_assignments')
+    .update(updates)
+    .eq('id', assignmentId)
+    .eq('church_id', churchId)
+    .select()
+    .single();
 
-  const assignmentUpdateResult = await pool.query(
-    `UPDATE service_assignments
-     SET ${updates.join(', ')}
-     WHERE id = $${paramIndex++} AND church_id = $${paramIndex}
-     RETURNING *`,
-    values
-  );
+  if (updateError) {
+      console.error('PUT /api/gatherings/.../assignments/[id] failed:', updateError);
+      throw error(500, 'Failed to update assignment');
+  }
 
-  return json(assignmentUpdateResult.rows[0]);
+  return json(updatedAssignment);
 };
 
 // DELETE - Remove an assignment entirely
@@ -173,15 +162,21 @@ export const DELETE: RequestHandler = async (event) => {
 
   const { id: instanceId, assignmentId } = event.params;
 
-  const ok = await assertAssignmentInChurch(assignmentId, instanceId, churchId);
+  const ok = await assertAssignmentInChurch(event.locals.supabase, assignmentId, instanceId, churchId);
   if (!ok) {
     throw error(404, 'Assignment not found');
   }
 
-  await pool.query(
-    'DELETE FROM service_assignments WHERE id = $1 AND church_id = $2',
-    [assignmentId, churchId]
-  );
+  const { error: dbError } = await event.locals.supabase
+    .from('service_assignments')
+    .delete()
+    .eq('id', assignmentId)
+    .eq('church_id', churchId);
+
+  if (dbError) {
+      console.error('DELETE /api/gatherings/.../assignments/[id] failed:', dbError);
+      throw error(500, 'Failed to delete assignment');
+  }
 
   return json({ success: true });
 };

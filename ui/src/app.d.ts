@@ -7,9 +7,11 @@ declare global {
 			supabase: SupabaseClient;
 			getSession(): Promise<Session | null>;
 			user: User | null;
+			churchId: string | null;
 		}
 		// ... other interfaces
 	}
 }
 
-export {};
+export { };
+
