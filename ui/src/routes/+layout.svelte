@@ -1,30 +1,51 @@
 <script lang="ts">
+  // ui/src/routes/+layout.svelte
   import TopNavigation from '$lib/components/layout/TopNavigation.svelte';
-  import { onMount } from 'svelte';
-// Existing tenant logic
   import { getActiveChurchId, listTenants, setActiveChurchId } from '$lib/tenant';
+  import { onMount } from 'svelte';
   import '../app.css';
 
   let { children } = $props();
 
-  // 1. Get the list of tenants (Bethany, Vineyard, etc.)
   const tenants = listTenants();
-
-  // 2. Track the active one
   let activeChurchId = $state('');
 
-  // 3. Handle the switch
-  function onTenantChange(e: Event) {
+  // Handle tenant switch (localStorage + server cookie)
+  async function onTenantChange(e: Event) {
     const id = (e.target as HTMLSelectElement).value;
+
     setActiveChurchId(id);
-    // Force reload so all API calls use the new Church ID
+    activeChurchId = id;
+
+    const res = await fetch('/api/tenant/active-church', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ churchId: id })
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error('Failed to set active church cookie:', res.status, text);
+    }
+
+    // Reload so SSR loads use the cookie immediately
     window.location.reload();
   }
 
-  onMount(() => {
+  // On first load: sync cookie from localStorage once
+  onMount(async () => {
     activeChurchId = getActiveChurchId();
+
+    if (activeChurchId) {
+      await fetch('/api/tenant/active-church', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ churchId: activeChurchId })
+      });
+    }
   });
 </script>
+
 
 <svelte:head>
   <title>Worship OS</title>

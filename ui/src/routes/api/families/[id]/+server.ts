@@ -9,21 +9,20 @@ export const GET: RequestHandler = async ({ locals, params }) => {
   const { id } = params;
 
   // 1. Get Family & Addresses
-  let query = locals.supabase
-    .from('families')
-    .select(`
-        id, name, notes, is_active, primary_address_id, created_at, updated_at,
-        addresses (*)
-    `)
-    .eq('id', id)
-    .single();
+let query = locals.supabase
+  .from('families')
+  .select(`
+    id, name, notes, is_active, primary_address_id, created_at, updated_at,
+    addresses (*)
+  `)
+  .eq('id', id);
 
-  // OPTIONAL: Filter by church only if picker is active
-  if (locals.churchId) {
-    query = query.eq('church_id', locals.churchId);
-  }
+// OPTIONAL: Filter by church only if picker is active
+if (locals.churchId) {
+  query = query.eq('church_id', locals.churchId);
+}
 
-  const { data: family, error: familyError } = await query;
+const { data: family, error: familyError } = await query.single();
 
   if (familyError || !family) {
       if (familyError?.code === 'PGRST116' || !family) throw error(404, 'Family not found');
@@ -91,8 +90,11 @@ export const GET: RequestHandler = async ({ locals, params }) => {
       if (orderA !== orderB) return orderA - orderB;
       return (a.display_name || '').localeCompare(b.display_name || '');
   });
-
-  return json({
-      ...family,
-      members: flatMembers
-  }, { headers: { 'x-served
+return json(
+  {
+    ...family,
+    members: flatMembers
+  },
+  { headers: { 'x-served-by': 'sveltekit' } }
+);
+}

@@ -12,48 +12,51 @@ export const GET: RequestHandler = async (event) => {
    * However, since we filter by church_id in the query logic below,
    * keeping this check ensures we don't accidentally return data if RLS is misconfigured.
    */
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const personId = event.url.searchParams.get('person_id');
   const familyId = event.url.searchParams.get('family_id');
 
-  let query = `
-    SELECT a.id, a.person_id, a.line1, a.line2, a.city, a.state, a.region,
-           a.postal_code, a.country, a.label, a.lat, a.lng, a.timezone,
-           a.street, a.created_at
-    FROM addresses a
-    WHERE a.church_id = $1
-  `;
-  const params: unknown[] = [churchId];
+  try {
+    let query = event.locals.supabase
+      .from('addresses')
+      .select('id, person_id, line1, line2, city, state, region, postal_code, country, label, lat, lng, timezone, street, created_at')
+      .eq('church_id', churchId)
+      .order('created_at', { ascending: false });
 
-  if (personId) {
-    query += ` AND a.person_id = $2`;
-    params.push(personId);
-  } else if (familyId) {
-    // Get addresses linked to family via primary_address_id
-    query = `
-      SELECT a.id, a.person_id, a.line1, a.line2, a.city, a.state, a.region,
-             a.postal_code, a.country, a.label, a.lat, a.lng, a.timezone,
-             a.street, a.created_at
-      FROM addresses a
-      JOIN families f ON f.primary_address_id = a.id
-      WHERE a.church_id = $1 AND f.id = $2
-    `;
-    params.push(familyId);
+    if (personId) {
+      query = query.eq('person_id', personId);
+    } else if (familyId) {
+      // Get addresses linked to family via primary_address_id
+      // We need to filter addresses where they are the primary_address of the given familyId
+      // This requires joining families.
+      // families.primary_address_id refers to addresses.id
+      query = event.locals.supabase
+        .from('addresses')
+        .select('id, person_id, line1, line2, city, state, region, postal_code, country, label, lat, lng, timezone, street, created_at, families!inner(id)')
+        .eq('church_id', churchId)
+        .eq('families.id', familyId)
+        .order('created_at', { ascending: false });
+    }
+
+    const { data: addresses, error: dbError } = await query;
+
+    if (dbError) throw dbError;
+
+    return json(addresses);
+  } catch (err: any) {
+    if (err && typeof err === 'object' && 'status' in err) throw err;
+    console.error('[API] /api/addresses GET', err);
+    throw error(500, 'Database error');
   }
-
-  query += ` ORDER BY a.created_at DESC`;
-
-  const result = await pool.query(query, params);
-  return json(result.rows);
 };
 
 // POST - Create a new address
 export const POST: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
-  const body = await event.request.json();
+  const body = await event.request.json().catch(() => ({}));
   const {
     person_id,
     line1,
@@ -70,13 +73,34 @@ export const POST: RequestHandler = async (event) => {
     timezone
   } = body;
 
-  const result = await pool.query(
-    `INSERT INTO addresses
-       (church_id, person_id, line1, line2, street, city, state, region, postal_code, country, label, lat, lng, timezone)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-     RETURNING *`,
-    [churchId, person_id || null, line1, line2, street, city, state, region, postal_code, country, label, lat, lng, timezone]
-  );
+  try {
+    const { data: newAddress, error: insertError } = await event.locals.supabase
+      .from('addresses')
+      .insert({
+        church_id: churchId,
+        person_id: person_id || null,
+        line1,
+        line2,
+        street,
+        city,
+        state,
+        region,
+        postal_code,
+        country,
+        label,
+        lat,
+        lng,
+        timezone
+      })
+      .select()
+      .single();
 
-  return json(result.rows[0], { status: 201 });
+    if (insertError) throw insertError;
+
+    return json(newAddress, { status: 201 });
+  } catch (err: any) {
+    if (err && typeof err === 'object' && 'status' in err) throw err;
+    console.error('[API] /api/addresses POST', err);
+    throw error(500, 'Database error');
+  }
 };

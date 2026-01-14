@@ -1,103 +1,114 @@
-import { sanitizeSongPayload } from '$lib/server/songs/input';
-import { parseSongText } from '$lib/server/songs/parser';
-import { fetchSongById, mapSongRow } from '$lib/server/songs/repository';
+// ui/src/routes/api/songs/+server.ts
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
+import { sanitizeSongPayload } from '$lib/server/songs/input';
+import { parseSongText } from '$lib/server/songs/parser';
+import { mapSongRow, type SongRow } from '$lib/server/songs/repository';
+
+type SongRowWithArrangements = SongRow & {
+  song_arrangements?: Array<{ count: number }>;
+};
+
+const SONG_SELECT = `
+  id,
+  title,
+  artist,
+  key,
+  bpm,
+  ccli_number,
+  notes,
+  source_format,
+  raw_text,
+  parsed_json,
+  created_at,
+  updated_at,
+  song_arrangements(count)
+`;
+
+function normalizeArrangementCount(row: SongRowWithArrangements): SongRow {
+  const arrangement_count = Number(row.song_arrangements?.[0]?.count ?? 0);
+  const { song_arrangements, ...rest } = row as any;
+  return { ...rest, arrangement_count } as SongRow;
+}
+
 export const GET: RequestHandler = async ({ locals, url }) => {
-	const churchId = locals.churchId;
-	if (!churchId) throw error(400, 'church_id is required');
+  const churchId = locals.churchId;
+  if (!churchId) throw error(400, 'Active church is required');
 
-	const search = url.searchParams.get('search')?.trim() || null;
+  const search = url.searchParams.get('search')?.trim() || null;
 
-	try {
-		const result = await pool.query<SongRow>(
-			`
-      ${SONG_SELECT}
-      WHERE s.church_id = $1
-        AND s.archived_at IS NULL
-        AND (
-          $2::text IS NULL
-          OR s.title ILIKE '%' || $2 || '%'
-          OR s.artist ILIKE '%' || $2 || '%'
-          OR s.notes ILIKE '%' || $2 || '%'
-          OR s.raw_text ILIKE '%' || $2 || '%'
-        )
-      ORDER BY LOWER(s.title) ASC, s.created_at DESC
-      `,
-			[churchId, search]
-		);
+  let query = locals.supabase
+    .from('songs')
+    .select(SONG_SELECT)
+    .eq('church_id', churchId)
+    .is('archived_at', null)
+    .order('title', { ascending: true });
 
-		return json(result.rows.map(mapSongRow), {
-			headers: { 'x-served-by': 'sveltekit' }
-		});
-	} catch (err) {
-		if (isHttpError(err)) throw err;
-		console.error('GET /api/songs failed:', err);
-		throw error(500, 'Failed to load songs');
-	}
+  if (search) {
+    query = query.or(
+      [
+        `title.ilike.%${search}%`,
+        `artist.ilike.%${search}%`,
+        `notes.ilike.%${search}%`,
+        `raw_text.ilike.%${search}%`
+      ].join(',')
+    );
+  }
+
+  const { data, error: dbError } = await query;
+
+  if (dbError) {
+    console.error('[API] /api/songs GET failed:', dbError);
+    throw error(500, 'Failed to load songs');
+  }
+
+  const rows = (data ?? []) as SongRowWithArrangements[];
+  const normalized = rows.map(normalizeArrangementCount);
+
+  return json(normalized.map(mapSongRow), {
+    headers: { 'x-served-by': 'sveltekit' }
+  });
 };
 
 export const POST: RequestHandler = async ({ locals, request }) => {
-	const churchId = locals.churchId;
-	if (!churchId) throw error(400, 'church_id is required');
+  const churchId = locals.churchId;
+  if (!churchId) throw error(400, 'Active church is required');
 
-	const rawBody = await request.json();
-	const payload = sanitizeSongPayload(rawBody);
-	if (!payload.title) throw error(400, 'Title is required');
+  const rawBody = await request.json().catch(() => ({}));
+  const payload = sanitizeSongPayload(rawBody);
+  if (!payload.title) throw error(400, 'Title is required');
 
-	const parserResult = parseSongText(payload.raw_text ?? '', {
-		formatHint: payload.source_format
-	});
+  const parserResult = parseSongText(payload.raw_text ?? '', {
+    formatHint: payload.source_format
+  });
 
-	try {
-		const inserted = await pool.query<{ id: string }>(
-			`
-      INSERT INTO songs (
-        church_id,
-        title,
-        artist,
-        "key",
-        bpm,
-        ccli_number,
-        notes,
-        source_format,
-        raw_text,
-        parsed_json
-      )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-      RETURNING id
-      `,
-			[
-				churchId,
-				payload.title,
-				payload.artist,
-				payload.key,
-				payload.bpm,
-				payload.ccli_number,
-				payload.notes,
-				payload.source_format,
-				payload.raw_text,
-				parserResult
-			]
-		);
+  const { data: inserted, error: insertError } = await locals.supabase
+    .from('songs')
+    .insert({
+      church_id: churchId,
+      title: payload.title,
+      artist: payload.artist,
+      key: payload.key,
+      bpm: payload.bpm,
+      ccli_number: payload.ccli_number,
+      notes: payload.notes,
+      source_format: payload.source_format,
+      raw_text: payload.raw_text,
+      parsed_json: parserResult
+    })
+    .select(SONG_SELECT)
+    .single();
 
-		const song = await fetchSongById(churchId, inserted.rows[0]?.id);
-		if (!song) {
-			throw error(500, 'Song created but could not be loaded');
-		}
+  if (insertError || !inserted) {
+    console.error('[API] /api/songs POST failed:', insertError);
+    throw error(500, 'Failed to create song');
+  }
 
-		return json(song, {
-			status: 201,
-			headers: { 'x-served-by': 'sveltekit' }
-		});
-	} catch (err) {
-		if (isHttpError(err)) throw err;
-		console.error('POST /api/songs failed:', err);
-		throw error(500, 'Failed to create song');
-	}
+  const normalized = normalizeArrangementCount(inserted as SongRowWithArrangements);
+
+  return json(mapSongRow(normalized), {
+    status: 201,
+    headers: { 'x-served-by': 'sveltekit' }
+  });
 };
-
-function isHttpError(err: unknown): err is HttpError {
-	return typeof err === 'object' && err !== null && 'status' in err;
-}

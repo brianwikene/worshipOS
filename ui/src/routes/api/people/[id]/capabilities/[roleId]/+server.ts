@@ -6,81 +6,86 @@ import type { RequestHandler } from './$types';
 // DELETE - Remove a role capability from a person
 export const DELETE: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const personId = event.params.id;
   const roleId = event.params.roleId;
 
-  const result = await pool.query(
-    `DELETE FROM person_role_capabilities
-     WHERE church_id = $1 AND person_id = $2 AND role_id = $3
-     RETURNING id`,
-    [churchId, personId, roleId]
-  );
+  try {
+    const { data, error: delError } = await event.locals.supabase
+      .from('person_role_capabilities')
+      .delete()
+      .eq('church_id', churchId)
+      .eq('person_id', personId)
+      .eq('role_id', roleId)
+      .select('id')
+      .maybeSingle();
 
-  if (result.rows.length === 0) {
-    throw error(404, 'Capability not found');
+    if (delError) throw delError;
+
+    if (!data) {
+      throw error(404, 'Capability not found');
+    }
+
+    return json({ success: true });
+  } catch (err: any) {
+    if (err && typeof err === 'object' && 'status' in err) throw err;
+    console.error('[API] /api/people/[id]/capabilities/[roleId] DELETE', err);
+    throw error(500, err.message || 'Database error');
   }
-
-  return json({ success: true });
 };
 
 // PATCH - Update a role capability (proficiency, primary status, etc.)
 export const PATCH: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const personId = event.params.id;
   const roleId = event.params.roleId;
-  const body = await event.request.json();
+  const body = await event.request.json().catch(() => ({}));
   const { proficiency, is_primary, is_approved, notes } = body;
 
-  // If setting as primary, unset other primaries first
-  if (is_primary === true) {
-    await pool.query(
-      'UPDATE person_role_capabilities SET is_primary = false WHERE church_id = $1 AND person_id = $2',
-      [churchId, personId]
-    );
-  }
+  try {
+    // If setting as primary, unset other primaries first
+    if (is_primary === true) {
+      const { error: resetError } = await event.locals.supabase
+        .from('person_role_capabilities')
+        .update({ is_primary: false })
+        .eq('church_id', churchId)
+        .eq('person_id', personId);
 
-  const updates: string[] = [];
-  const values: any[] = [];
-  let paramIndex = 1;
+      if (resetError) throw resetError;
+    }
 
-  if (proficiency !== undefined) {
-    updates.push(`proficiency = $${paramIndex++}`);
-    values.push(proficiency);
-  }
-  if (is_primary !== undefined) {
-    updates.push(`is_primary = $${paramIndex++}`);
-    values.push(is_primary);
-  }
-  if (is_approved !== undefined) {
-    updates.push(`is_approved = $${paramIndex++}`);
-    values.push(is_approved);
-  }
-  if (notes !== undefined) {
-    updates.push(`notes = $${paramIndex++}`);
-    values.push(notes);
-  }
+    const updates: Record<string, any> = {};
+    if (proficiency !== undefined) updates.proficiency = proficiency;
+    if (is_primary !== undefined) updates.is_primary = is_primary;
+    if (is_approved !== undefined) updates.is_approved = is_approved;
+    if (notes !== undefined) updates.notes = notes;
 
-  if (updates.length === 0) {
-    throw error(400, 'No fields to update');
+    if (Object.keys(updates).length === 0) {
+      throw error(400, 'No fields to update');
+    }
+
+    const { data: updated, error: updateError } = await event.locals.supabase
+      .from('person_role_capabilities')
+      .update(updates)
+      .eq('church_id', churchId)
+      .eq('person_id', personId)
+      .eq('role_id', roleId)
+      .select('id')
+      .maybeSingle();
+
+    if (updateError) throw updateError;
+
+    if (!updated) {
+      throw error(404, 'Capability not found');
+    }
+
+    return json({ success: true });
+  } catch (err: any) {
+    if (err && typeof err === 'object' && 'status' in err) throw err;
+    console.error('[API] /api/people/[id]/capabilities/[roleId] PATCH', err);
+    throw error(500, err.message || 'Database error');
   }
-
-  values.push(churchId, personId, roleId);
-
-  const result = await pool.query(
-    `UPDATE person_role_capabilities
-     SET ${updates.join(', ')}
-     WHERE church_id = $${paramIndex++} AND person_id = $${paramIndex++} AND role_id = $${paramIndex}
-     RETURNING id`,
-    values
-  );
-
-  if (result.rows.length === 0) {
-    throw error(404, 'Capability not found');
-  }
-
-  return json({ success: true });
 };

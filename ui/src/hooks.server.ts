@@ -3,7 +3,6 @@ import { createServerClient } from '@supabase/ssr'
 import { type Handle } from '@sveltejs/kit'
 
 export const handle: Handle = async ({ event, resolve }) => {
-  // 1. Initialize Supabase Client (This reads the cookies)
   event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
     cookies: {
       getAll: () => event.cookies.getAll(),
@@ -15,17 +14,11 @@ export const handle: Handle = async ({ event, resolve }) => {
     },
   })
 
-  // 2. GET THE USER (This is the missing step!)
-  // We ask Supabase: "Who does this cookie belong to?"
-  const {
-    data: { user },
-  } = await event.locals.supabase.auth.getUser()
-
-  // 3. Attach User to the Server Request
+  const { data: { user } } = await event.locals.supabase.auth.getUser()
   event.locals.user = user
 
-  // 4. Get Church Context
-  event.locals.churchId = event.cookies.get('church_id') || null;
+  // Church Context (cookie-based)
+  event.locals.churchId = event.cookies.get('active_church_id') ?? null
 
   return resolve(event, {
     filterSerializedResponseHeaders(name) {

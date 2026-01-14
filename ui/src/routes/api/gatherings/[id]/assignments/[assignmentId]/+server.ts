@@ -83,7 +83,7 @@ async function checkBodyPartConflicts(
 // PUT - Update an assignment (assign/change person, update status)
 export const PUT: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const { id: instanceId, assignmentId } = event.params;
   const body = await event.request.json();
@@ -158,7 +158,7 @@ export const PUT: RequestHandler = async (event) => {
 // DELETE - Remove an assignment entirely
 export const DELETE: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const { id: instanceId, assignmentId } = event.params;
 

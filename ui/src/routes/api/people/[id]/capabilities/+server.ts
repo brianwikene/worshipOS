@@ -6,7 +6,7 @@ import type { RequestHandler } from './$types';
 // GET - List all role capabilities for a person
 export const GET: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const personId = event.params.id;
 
@@ -58,7 +58,7 @@ export const GET: RequestHandler = async (event) => {
 // POST - Add a role capability to a person
 export const POST: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const personId = event.params.id;
   const body = await event.request.json();

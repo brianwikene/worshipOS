@@ -1,100 +1,171 @@
-# GEMINI Code Assistant Context
+# GEMINI.md — WorshipOS Context for AI
 
-This document provides context for the Gemini code assistant to understand the WorshipOS project.
+> **This document is derived from `AGENTS.md`. Refer to `AGENTS.md` for the full instruction set.**
 
-## Project Overview
+## 1. Project Overview
 
-WorshipOS is a multi-tenant worship planning and team coordination platform designed for churches. It is a SvelteKit application with a PostgreSQL database. The application serves both the UI and the API. The architecture is designed to be simple and maintainable, with a SQL-first approach to data access (no ORM).
+WorshipOS is a multi-tenant worship planning and team coordination platform for churches. It prioritizes **soul care over logistics** — we build for pastors, not project managers.
 
-A key concept is the "Church" which acts as a hard isolation boundary for multi-tenancy. All data belongs to a single church.
+### Tech Stack
+- **Framework**: SvelteKit (UI + API in one runtime)
+- **Database**: PostgreSQL via Supabase (migrating from legacy `pg` pool)
+- **Auth**: Supabase Auth with RLS
+- **Styling**: Tailwind CSS + system classes (`sys-*`)
+- **Migrations**: `supabase/migrations/`
 
-The project is in active early development, so the focus is on architectural correctness and conceptual clarity over feature completeness.
+## 2. Constitutional Document
 
-## Building and Running
+**`docs/Guidebook-4.md` is the canonical source of truth.** Nothing in the codebase may contradict it. Deviations require updating the Guidebook first — only for security, accessibility, or best practices.
 
-The primary application is in the `ui` directory.
+### Core Principles
 
-### Development
+| Principle | Meaning |
+|-----------|---------|
+| **Trust is the primary feature** | No features that treat people like cogs |
+| **We don't rewrite reality** | Past events preserved; changes appended, not overwritten |
+| **Metrics serve people** | No scoring, ranking, or inferring spiritual maturity |
+| **The Calm Interface Mandate** | Reduce cognitive load, avoid urgency, never shame |
+| **Archive, don't delete** | Deletion is a lie about history |
 
-To run the development server:
+## 3. The TEND / CARE Boundary
 
-```bash
-cd ui
-npm install
-npm run dev
+**One rule governs everything:** "TEND notices. CARE responds."
+
+### TEND (`/tend`)
+- **Lens**, not container.
+- Signals, patterns, thresholds.
+- Answers: "Who might need attention?"
+- **Never** acts inside a Care case.
+- Uses `v_tend_burnout_signals` view.
+
+### CARE (`/care`)
+- **Container**, not lens.
+- Cases, owners, notes.
+- Answers: "What are we doing about this?"
+- Persists as history.
+- Tightly controlled access (RLS).
+
+TEND may trigger CARE (one-way handoff). No shared mutable state between modules.
+
+## 4. Domain Language
+
+The system uses different terminology at different layers:
+
+| Public/API | Database (Legacy) |
+|------------|-------------------|
+| **Gathering** | `service_instances` |
+| **Gathering Group** | `service_groups` |
+| **gathering_id** | `service_instance_id` |
+
+**Rules:**
+- API and UI must use "gatherings".
+- Database uses legacy `service_*` names intentionally.
+- Alias queries: `SELECT service_instance_id AS gathering_id`
+- Do NOT rename DB tables without following `DB_MIGRATION_PLAN.md`.
+
+## 5. Multi-Tenancy
+
+- **Tenant boundary**: Church (`church_id` column).
+- **Required header**: `X-Church-Id` in API requests.
+- **Access in code**: `event.locals.churchId`.
+- Hard isolation boundary.
+
+## 6. Database Access
+
+**Status**: Migrating from legacy `pg` pool to Supabase client.
+
+- **New/Refactored Code**: Use Supabase client.
+  ```typescript
+  const { data, error } = await locals.supabase
+    .from('table_name')
+    .select('*')
+    .eq('church_id', locals.churchId);
+  ```
+- **Legacy Code**: `pool` from `$lib/server/db` (Avoid for new code; rewrite when touching).
+
+## 7. Data Loading Pattern
+
+Prefer `+page.ts` load functions over `$page` store or `onMount` to enable SSR.
+
+```typescript
+// +page.ts
+export const load = async ({ fetch, locals }) => {
+  const { data } = await locals.supabase.from('gatherings').select('*');
+  return { gatherings: data };
+};
 ```
 
-### Building
+## 8. API Patterns
 
-To build the application for production:
+Endpoints follow REST conventions nested under `/api`.
+- Use `json_agg` and `json_build_object` for aggregated responses.
+- Return domain language (e.g., `gathering_id`) in JSON, not DB column names.
 
-```bash
-cd ui
-npm run build
-```
+## 9. Accessibility & UI
 
-### Previewing
+**WorshipOS treats accessibility as a first-class feature.**
 
-To preview the production build:
+1. **Semantic HTML** — Use `<button>`, `<a>`, `<label>`, `<input>`. No `div` buttons.
+2. **Keyboard-First** — All actions reachable by keyboard. Focus must be visible.
+3. **Labels required** — Every input has a `<label>`. Placeholder is not a label.
+4. **No focus on page load** — Focus moves only for dialogs, user action, error correction.
+5. **Zero a11y warnings** — `npm run dev` must emit no Svelte accessibility warnings.
+6. **No Warning Suppression** — Never use `svelte-ignore` or `eslint-disable` for a11y.
+7. **Scanability** — Table rows have visual anchors (Avatars for people, Icons for songs).
+8. **Consistency** — Use `sys-*` classes and existing components.
 
-```bash
-cd ui
-npm run preview
-```
+**AI Code Rule:** If generated code violates accessibility, regenerate — don't patch.
 
-### Database Migrations
+## 10. Development Commands
 
-To run database migrations:
-
-```bash
-npm run db:migrate
-```
-
-This script targets `postgres://worship:worship@127.0.0.1:5432/worshipos` by default, but can be overridden with the `DATABASE_URL` environment variable.
-
-## Testing
-
-The project uses Vitest for testing and Svelte Check for type checking.
-
-To run tests:
+All run from `ui/`:
 
 ```bash
-cd ui
-npm run test
+npm install          # Install dependencies
+npm run dev          # Start Vite server (port 5173)
+npm run build        # Production build
+npm run check        # TypeScript + Svelte type checking
+npm run test         # Unit tests (Vitest)
+npm run lint         # Format check
+npm run format       # Auto-format code
 ```
 
-To run type checking:
+## 11. File Structure
 
-```bash
-cd ui
-npm run check
+```
+ui/
+├── src/
+│   ├── routes/
+│   │   ├── api/          # API endpoints (+server.ts)
+│   │   ├── tend/         # TEND module (lens)
+│   │   ├── care/         # CARE module (container)
+│   ├── lib/
+│   │   ├── server/db.ts  # Legacy pg pool (being phased out)
+│   │   └── components/   # Shared components
+│   └── app.css           # Global styles
+
+supabase/
+└── migrations/           # Ordered SQL migration files
+
+docs/
+├── Guidebook-4.md        # Constitutional document
+└── ...
 ```
 
-## Development Conventions
+## 12. Key Documents
 
-### Domain Language
+| Document | Purpose |
+|----------|---------|
+| `AGENTS.md` | Complete AI agent instructions (master) |
+| `docs/Guidebook-4.md` | Constitutional document |
+| `ARCHITECTURE.md` | System boundaries and rationale |
+| `TODO.md` | Intentional deferred work |
+| `DB_MIGRATION_PLAN.md` | Future DB rename plan |
 
-The project has a canonical domain language that should be used in the UI and API. The most important concept is **"Gathering"**, which refers to a concrete, scheduled event. This term is used instead of "Service" to avoid ambiguity.
+## 13. Key Constraints
 
-### Database
-
-The database schema uses legacy naming conventions (e.g., `service_instances` instead of `gatherings`). This is an intentional, temporary state to avoid a high-risk migration. Do not attempt to "fix" this without consulting the `DB_MIGRATION_PLAN.md`. When writing new queries, it's acceptable to alias legacy names to the new domain language (e.g., `SELECT service_instance_id AS gathering_id FROM ...`).
-
-### Data Access
-
-All database access is done via raw SQL queries using the `pg` library. There is no ORM.
-
-### Data Loading (UI)
-
-The preferred way to load data in the UI is by using the `load()` function in `+page.ts` files. This enables server-side rendering and creates explicit data dependencies. Avoid using the `$page` store for core data.
-
-### Legacy Code
-
-The `dev/legacy/express-api` directory contains an inactive Express API for historical reference only. Do not add features to it.
-
-## Key Documents
-
--   **`ARCHITECTURE.md`**: The source of truth for the system's architecture, boundaries, and domain language.
--   **`TODO.md`**: A list of intentionally deferred work and technical debt.
--   **`DB_MIGRATION_PLAN.md`**: The plan for migrating the database schema to align with the canonical domain language.
--   **`docs/Guidebook-4.md`**: The guiding principles and philosophy of the project.
+1. **Do NOT rename DB tables** without following `DB_MIGRATION_PLAN.md`.
+2. **Prefer editing existing files** over creating new ones.
+3. **Use shared components** (`sys-*` classes) over per-page solutions.
+4. **Constitutional compliance** — All features must align with `docs/Guidebook-4.md`.
+5. **Accessibility is non-negotiable** — Regenerate code if it violates rules.

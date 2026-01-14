@@ -10,7 +10,7 @@ import type { RequestHandler } from './$types';
  */
 export const POST: RequestHandler = async ({ locals, request }) => {
   const churchId = locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   // Parse request body
   let minScore = 50;

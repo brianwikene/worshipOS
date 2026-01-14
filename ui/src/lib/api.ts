@@ -43,10 +43,15 @@ export async function apiFetch(
     throw new TypeError(`apiFetch expected a path string but got: ${String(path)}`);
   }
 
-  const churchId = getActiveChurchId();
+  // Build headers first (so SSR can pass X-Church-Id in init.headers)
+  const headers = new Headers(init.headers ?? {});
+
+  // Prefer explicitly-provided header (SSR), otherwise fall back to browser state
+  const explicitChurchId = headers.get('X-Church-Id');
+  const churchId = explicitChurchId || getActiveChurchId();
+
   if (!churchId) throw new Error('No active church selected (X-Church-Id missing).');
 
-  const headers = new Headers(init.headers ?? {});
   headers.set('X-Church-Id', churchId);
 
   // Only set Content-Type when sending a body
@@ -79,21 +84,28 @@ export async function apiJson<T>(
       ? await apiFetch(a, b as string, c)
       : await apiFetch(a, b as RequestInit);
 
-  // const contentType = res.headers.get('content-type') ?? '';
-  // if (!contentType.includes('application/json')) {
-  //   const text = await res.text().catch(() => '');
-  //   throw new Error(`Expected JSON but got "${contentType}". Body starts: ${text.slice(0, 200)}`);
-  // }
-
-  // return res.json() as Promise<T>;
   // NOTE: Don't read res.headers.get('content-type') here.
   // During SvelteKit hydration replay, headers are restricted unless whitelisted,
   // which causes hard-refresh 500s on routes like /gatherings.
   try {
-    return (await res.json()) as T;
+    const json = await res.json();
+
+    if (json && typeof json === 'object' && !Array.isArray(json)) {
+      const obj = json as Record<string, unknown>;
+
+      const hasData = 'data' in obj;
+      const looksLikeEnvelope = 'meta' in obj || 'error' in obj || 'ok' in obj;
+
+      if (hasData && looksLikeEnvelope) {
+        return obj.data as T;
+      }
+    }
+
+    return json as T;
   } catch {
-    // If the backend returned HTML/text, surface a useful error
     const text = await res.text().catch(() => '');
-    throw new Error(`Expected JSON but response was not JSON. Body starts: ${text.slice(0, 200)}`);
+    throw new Error(
+      `Expected JSON but response was not JSON. Body starts: ${text.slice(0, 200)}`
+    );
   }
 }

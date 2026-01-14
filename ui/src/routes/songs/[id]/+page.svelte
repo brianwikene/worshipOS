@@ -1,6 +1,5 @@
-<!-- /src/routes/songs/[id]/+page.svelte -->
-
 <script lang="ts">
+ // ui/src/routes/songs/[id]/+page.svelte
   import { page } from '$app/stores';
   import { apiFetch, apiJson } from '$lib/api';
   import ObjectMark from '$lib/components/identity/ObjectMark.svelte';

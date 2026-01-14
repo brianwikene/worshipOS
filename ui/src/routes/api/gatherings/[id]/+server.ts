@@ -7,41 +7,62 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const { id } = event.params;
 
-  const gatheringInstanceResult = await pool.query(
-    `
-    SELECT
-      si.id,
-      si.service_time,
-      si.campus_id,
-      sg.name AS service_name,
-      TO_CHAR(sg.group_date, 'YYYY-MM-DD') AS group_date,
-      c.name AS context_name,
-      camp.name AS campus_name
-    FROM service_instances si
-    JOIN service_groups sg
-      ON sg.id = si.service_group_id
-     AND sg.church_id = si.church_id
-    LEFT JOIN contexts c
-      ON c.id = sg.context_id
-     AND c.church_id = sg.church_id
-    LEFT JOIN campuses camp
-      ON camp.id = si.campus_id
-     AND camp.church_id = sg.church_id
-    WHERE si.id = $1
-      AND sg.church_id = $2;
-    `,
-    [id, churchId]
-  );
+  try {
+    const { data, error: err } = await event.locals.supabase
+      .from('service_instances')
+      .select(`
+        id,
+        service_time,
+        campus_id,
+        service_groups!inner (
+          name,
+          group_date,
+          contexts (
+            name
+          )
+        ),
+        campuses (
+          name
+        )
+      `)
+      .eq('id', id)
+      .eq('church_id', churchId)
+      .single();
 
-  if (gatheringInstanceResult.rows.length === 0) {
-    throw error(404, 'Gathering instance not found');
+    if (err) {
+      if (err.code === 'PGRST116') throw error(404, 'Gathering instance not found');
+      throw err;
+    }
+
+    if (!data) throw error(404, 'Gathering instance not found');
+
+    // Flatten to match legacy SQL output
+    // Cast to any to handle potential array inference in TS
+    const sg = Array.isArray(data.service_groups) ? data.service_groups[0] : (data.service_groups as any);
+    const campus = Array.isArray(data.campuses) ? data.campuses[0] : (data.campuses as any);
+    const context = sg?.contexts && Array.isArray(sg.contexts) ? sg.contexts[0] : sg?.contexts;
+
+    const flat = {
+      id: data.id,
+      service_time: data.service_time,
+      campus_id: data.campus_id,
+      service_name: sg?.name,
+      // Format date to YYYY-MM-DD to match SQL TO_CHAR
+      group_date: sg?.group_date,
+      context_name: context?.name,
+      campus_name: campus?.name
+    };
+
+    return json(flat, {
+      headers: { 'x-served-by': 'sveltekit' }
+    });
+  } catch (err: any) {
+    if (err && typeof err === 'object' && 'status' in err) throw err;
+    console.error('[API] /api/gatherings/[id] GET', err);
+    throw error(500, 'Database error');
   }
-
-  return json(gatheringInstanceResult.rows[0], {
-    headers: { 'x-served-by': 'sveltekit' }
-  });
 };

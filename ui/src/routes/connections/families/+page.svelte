@@ -2,9 +2,10 @@
 
 <script lang="ts">
   import { apiFetch, apiJson } from '$lib/api';
+  import { onMount } from 'svelte';
+
   import FamilyModal from '$lib/components/FamilyModal.svelte';
   import ObjectMark from '$lib/components/identity/ObjectMark.svelte';
-  import { onMount } from 'svelte';
 
   interface PrimaryContact {
     id: string;
@@ -23,35 +24,46 @@
 
   let families: Family[] = [];
   let loading = true;
-  let error = '';
+  let errorMsg = '';
   let searchQuery = '';
 
-  // View State (Default to Cards for "Tending")
   let viewMode: 'cards' | 'table' = 'cards';
 
-  // Modal state
   let modalOpen = false;
   let editingFamily: Family | null = null;
   let modalComponent: FamilyModal;
 
-  onMount(() => {
-    loadFamilies();
-  });
-
   async function loadFamilies() {
     loading = true;
-    error = '';
+    errorMsg = '';
+
     try {
       const url = searchQuery
         ? `/api/families?search=${encodeURIComponent(searchQuery)}`
         : '/api/families';
-      families = await apiJson<Family[]>(url);
+
+      const result = await apiJson<any[]>(url);
+
+      // Normalize shape so the UI never crashes on missing fields
+      families = (result ?? []).map((f) => ({
+        ...f,
+        member_count: Number(f.member_count ?? 0),
+        child_count: Number(f.child_count ?? 0),
+        primary_contacts: Array.isArray(f.primary_contacts) ? f.primary_contacts : []
+      }));
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load families';
+      errorMsg = e instanceof Error ? e.message : String(e);
+      families = [];
     } finally {
       loading = false;
     }
   }
+
+  onMount(() => {
+    console.log('[Families page] mounted');
+    loadFamilies();
+  });
+
 
   function handleSearch() {
     loadFamilies();
@@ -76,7 +88,7 @@
     const { name, notes } = e.detail;
 
     try {
-      modalComponent.setSaving(true);
+      modalComponent?.setSaving(true);
 
       if (editingFamily?.id) {
         await apiFetch(`/api/families/${editingFamily.id}`, {
@@ -93,15 +105,12 @@
       closeModal();
       await loadFamilies();
     } catch (err) {
-      modalComponent.setError(err instanceof Error ? err.message : 'Failed to save');
+      modalComponent?.setError(err instanceof Error ? err.message : 'Failed to save');
     }
   }
 
-  // Integrity Check: "Archive, Don't Delete"
   async function handleArchive(family: Family) {
-    if (!confirm(`Archive "${family.name}"? This family will be hidden but not deleted.`)) {
-      return;
-    }
+    if (!confirm(`Archive "${family.name}"? This family will be hidden but not deleted.`)) return;
 
     try {
       await apiFetch(`/api/families/${family.id}`, { method: 'DELETE' });
@@ -114,7 +123,7 @@
   function getInitials(name: string): string {
     return name
       .split(' ')
-      .map(word => word.charAt(0))
+      .map((w) => w.charAt(0))
       .join('')
       .toUpperCase()
       .slice(0, 2);
@@ -123,9 +132,7 @@
   function formatMemberCount(count: number, childCount: number): string {
     if (count === 0) return 'No members';
     const parts = [`${count} member${count !== 1 ? 's' : ''}`];
-    if (childCount > 0) {
-      parts.push(`${childCount} child${childCount !== 1 ? 'ren' : ''}`);
-    }
+    if (childCount > 0) parts.push(`${childCount} child${childCount !== 1 ? 'ren' : ''}`);
     return parts.join(', ');
   }
 </script>
@@ -176,25 +183,24 @@
     </div>
   </div>
 
-  {#if loading}
-    <div class="sys-state">Loading families...</div>
-  {:else if error}
-    <div class="sys-state sys-state--error">
-      <p>Error: {error}</p>
-      <button class="sys-btn sys-btn--danger" on:click={loadFamilies}>Retry</button>
-    </div>
-  {:else if families.length === 0}
-    <div class="sys-state sys-state--empty">
-      {#if searchQuery}
-        <p>No families found matching "{searchQuery}"</p>
-        <button class="sys-btn sys-btn--secondary" on:click={() => { searchQuery = ''; loadFamilies(); }}>Clear search</button>
-      {:else}
-        <p>No families found.</p>
-        <button class="sys-btn sys-btn--primary" on:click={openAddModal}>Create your first family</button>
-      {/if}
-    </div>
-  {:else}
-
+    {#if loading}
+      <div class="sys-state">Loading families...</div>
+    {:else if errorMsg}
+      <div class="sys-state sys-state--error">
+        <p>Error: {errorMsg}</p>
+        <button class="sys-btn sys-btn--danger" on:click={loadFamilies}>Retry</button>
+      </div>
+    {:else if families.length === 0}
+  <div class="sys-state sys-state--empty">
+    {#if searchQuery}
+      <p>No families found matching "{searchQuery}"</p>
+      <button class="sys-btn sys-btn--secondary" on:click={() => { searchQuery = ''; loadFamilies(); }}>Clear search</button>
+    {:else}
+      <p>No families found.</p>
+      <button class="sys-btn sys-btn--primary" on:click={openAddModal}>Create your first family</button>
+    {/if}
+  </div>
+{:else}
     {#if viewMode === 'cards'}
       <div class="sys-grid sys-grid--cards">
         {#each families as family}
@@ -211,9 +217,9 @@
                 <div class="member-count">
                   {formatMemberCount(Number(family.member_count), Number(family.child_count))}
                 </div>
-                {#if family.primary_contacts.length > 0}
+                {#if (family.primary_contacts?.length ?? 0) > 0}
                   <div class="primary-contacts">
-                    Contact: {family.primary_contacts.map(c => c.display_name).join(', ')}
+                    Contact: {(family.primary_contacts ?? []).map(c => c.display_name).join(', ')}
                   </div>
                 {/if}
               </div>
@@ -269,9 +275,9 @@
                   </td>
 
                   <td>
-                    {#if family.primary_contacts.length > 0}
+                    {#if (family.primary_contacts?.length ?? 0) > 0}
                       <span class="text-sm">
-                        {family.primary_contacts.map(c => c.display_name).join(', ')}
+                        {(family.primary_contacts ?? []).map(c => c.display_name).join(', ')}
                       </span>
                     {:else}
                       <span class="text-muted text-sm italic">—</span>
@@ -303,6 +309,8 @@
   on:close={closeModal}
   on:save={handleSave}
 />
+
+
 
 <style>
   /* Local layout overrides only */

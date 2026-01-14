@@ -6,144 +6,135 @@ import type { RequestHandler } from './$types';
 // GET - Get a single address
 export const GET: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const { id } = event.params;
 
-  const result = await pool.query(
-    `SELECT id, person_id, line1, line2, street, city, state, region,
-            postal_code, country, label, lat, lng, timezone, created_at
-     FROM addresses
-     WHERE id = $1 AND church_id = $2`,
-    [id, churchId]
-  );
+  try {
+    const { data: address, error: dbError } = await event.locals.supabase
+      .from('addresses')
+      .select('id, person_id, line1, line2, street, city, state, region, postal_code, country, label, lat, lng, timezone, created_at')
+      .eq('id', id)
+      .eq('church_id', churchId)
+      .single();
 
-  if (result.rows.length === 0) {
-    throw error(404, 'Address not found');
+    if (dbError) {
+      if (dbError.code === 'PGRST116') throw error(404, 'Address not found');
+      throw dbError;
+    }
+
+    return json(address);
+  } catch (err: any) {
+    if (err && typeof err === 'object' && 'status' in err) throw err;
+    console.error('[API] /api/addresses/[id] GET', err);
+    throw error(500, err.message || 'Database error');
   }
-
-  return json(result.rows[0]);
 };
 
 // PUT - Update an address
 export const PUT: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const { id } = event.params;
-  const body = await event.request.json();
+  const body = await event.request.json().catch(() => ({}));
   const { line1, line2, street, city, state, region, postal_code, country, label, lat, lng, timezone } = body;
 
-  // Check address exists
-  const existing = await pool.query(
-    'SELECT id FROM addresses WHERE id = $1 AND church_id = $2',
-    [id, churchId]
-  );
+  try {
+    // Check address exists
+    const { data: existing } = await event.locals.supabase
+      .from('addresses')
+      .select('id')
+      .eq('id', id)
+      .eq('church_id', churchId)
+      .maybeSingle();
 
-  if (existing.rows.length === 0) {
-    throw error(404, 'Address not found');
-  }
+    if (!existing) {
+      throw error(404, 'Address not found');
+    }
 
-  // Build dynamic update query
-  const updates: string[] = [];
-  const values: unknown[] = [];
-  let paramIndex = 1;
+    // Build dynamic update object
+    const updates: Record<string, any> = {};
+    if (line1 !== undefined) updates.line1 = line1 || null;
+    if (line2 !== undefined) updates.line2 = line2 || null;
+    if (street !== undefined) updates.street = street || null;
+    if (city !== undefined) updates.city = city || null;
+    if (state !== undefined) updates.state = state || null;
+    if (region !== undefined) updates.region = region || null;
+    if (postal_code !== undefined) updates.postal_code = postal_code || null;
+    if (country !== undefined) updates.country = country || null;
+    if (label !== undefined) updates.label = label || null;
+    if (lat !== undefined) updates.lat = lat;
+    if (lng !== undefined) updates.lng = lng;
+    if (timezone !== undefined) updates.timezone = timezone || null;
 
-  if (line1 !== undefined) {
-    updates.push(`line1 = $${paramIndex++}`);
-    values.push(line1 || null);
-  }
-  if (line2 !== undefined) {
-    updates.push(`line2 = $${paramIndex++}`);
-    values.push(line2 || null);
-  }
-  if (street !== undefined) {
-    updates.push(`street = $${paramIndex++}`);
-    values.push(street || null);
-  }
-  if (city !== undefined) {
-    updates.push(`city = $${paramIndex++}`);
-    values.push(city || null);
-  }
-  if (state !== undefined) {
-    updates.push(`state = $${paramIndex++}`);
-    values.push(state || null);
-  }
-  if (region !== undefined) {
-    updates.push(`region = $${paramIndex++}`);
-    values.push(region || null);
-  }
-  if (postal_code !== undefined) {
-    updates.push(`postal_code = $${paramIndex++}`);
-    values.push(postal_code || null);
-  }
-  if (country !== undefined) {
-    updates.push(`country = $${paramIndex++}`);
-    values.push(country || null);
-  }
-  if (label !== undefined) {
-    updates.push(`label = $${paramIndex++}`);
-    values.push(label || null);
-  }
-  if (lat !== undefined) {
-    updates.push(`lat = $${paramIndex++}`);
-    values.push(lat);
-  }
-  if (lng !== undefined) {
-    updates.push(`lng = $${paramIndex++}`);
-    values.push(lng);
-  }
-  if (timezone !== undefined) {
-    updates.push(`timezone = $${paramIndex++}`);
-    values.push(timezone || null);
-  }
+    if (Object.keys(updates).length === 0) {
+      throw error(400, 'No fields to update');
+    }
 
-  if (updates.length === 0) {
-    throw error(400, 'No fields to update');
+    const { data: updated, error: updateError } = await event.locals.supabase
+      .from('addresses')
+      .update(updates)
+      .eq('id', id)
+      .eq('church_id', churchId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    return json(updated);
+  } catch (err: any) {
+    if (err && typeof err === 'object' && 'status' in err) throw err;
+    console.error('[API] /api/addresses/[id] PUT', err);
+    throw error(500, err.message || 'Database error');
   }
-
-  values.push(id, churchId);
-
-  const result = await pool.query(
-    `UPDATE addresses
-     SET ${updates.join(', ')}
-     WHERE id = $${paramIndex++} AND church_id = $${paramIndex}
-     RETURNING *`,
-    values
-  );
-
-  return json(result.rows[0]);
 };
 
 // DELETE - Delete an address
 export const DELETE: RequestHandler = async (event) => {
   const churchId = event.locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const { id } = event.params;
 
-  // Check if address is used as primary_address for a family
-  const familyCheck = await pool.query(
-    'SELECT id, name FROM families WHERE primary_address_id = $1 AND church_id = $2',
-    [id, churchId]
-  );
+  try {
+    // Check if address is used as primary_address for a family
+    const { data: familyCheck, error: checkError } = await event.locals.supabase
+      .from('families')
+      .select('id, name')
+      .eq('primary_address_id', id)
+      .eq('church_id', churchId);
 
-  if (familyCheck.rows.length > 0) {
-    // Unlink from family before deleting
-    await pool.query(
-      'UPDATE families SET primary_address_id = NULL WHERE primary_address_id = $1',
-      [id]
-    );
+    if (checkError) throw checkError;
+
+    if (familyCheck && familyCheck.length > 0) {
+      // Unlink from family before deleting
+      const { error: unlinkError } = await event.locals.supabase
+        .from('families')
+        .update({ primary_address_id: null })
+        .eq('primary_address_id', id);
+
+      if (unlinkError) throw unlinkError;
+    }
+
+    const { data: deleted, error: delError } = await event.locals.supabase
+      .from('addresses')
+      .delete()
+      .eq('id', id)
+      .eq('church_id', churchId)
+      .select('id')
+      .maybeSingle();
+
+    if (delError) throw delError;
+
+    if (!deleted) {
+      throw error(404, 'Address not found');
+    }
+
+    return json({ success: true });
+  } catch (err: any) {
+    if (err && typeof err === 'object' && 'status' in err) throw err;
+    console.error('[API] /api/addresses/[id] DELETE', err);
+    throw error(500, err.message || 'Database error');
   }
-
-  const result = await pool.query(
-    'DELETE FROM addresses WHERE id = $1 AND church_id = $2 RETURNING id',
-    [id, churchId]
-  );
-
-  if (result.rows.length === 0) {
-    throw error(404, 'Address not found');
-  }
-
-  return json({ success: true });
 };

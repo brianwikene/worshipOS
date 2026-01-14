@@ -1,6 +1,7 @@
-import { json, error } from '@sveltejs/kit';
+// src/routes/api/families/[id]/members/[memberId]/+server.ts
+
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pool } from '$lib/server/db';
 
 /**************************************************************
  * PUT /api/families/:id/members/:memberId
@@ -8,49 +9,35 @@ import { pool } from '$lib/server/db';
  **************************************************************/
 export const PUT: RequestHandler = async ({ locals, params, request }) => {
   const churchId = locals.churchId;
+  const supabase = locals.supabase;
   if (!churchId) throw error(400, 'church_id is required');
 
   const { id: familyId, memberId } = params;
   const body = await request.json();
   const { relationship, is_primary_contact, is_temporary, notes } = body;
 
-  try {
-    const result = await pool.query(
-      `
-      UPDATE family_members
-      SET relationship = COALESCE($1, relationship),
-          is_primary_contact = COALESCE($2, is_primary_contact),
-          is_temporary = COALESCE($3, is_temporary),
-          notes = $4,
-          updated_at = now()
-      WHERE id = $5
-        AND family_id = $6
-        AND church_id = $7
-      RETURNING *
-      `,
-      [
-        relationship,
-        is_primary_contact,
-        is_temporary,
-        notes?.trim() || null,
-        memberId,
-        familyId,
-        churchId
-      ]
-    );
+  const updates: any = { updated_at: new Date().toISOString() };
+  if (relationship !== undefined) updates.relationship = relationship;
+  if (is_primary_contact !== undefined) updates.is_primary_contact = is_primary_contact;
+  if (is_temporary !== undefined) updates.is_temporary = is_temporary;
+  if (notes !== undefined) updates.notes = notes?.trim() || null;
 
-    if (result.rows.length === 0) {
-      throw error(404, 'Family member not found');
-    }
+  const { data, error: updateError } = await supabase
+    .from('family_members')
+    .update(updates)
+    .eq('id', memberId)
+    .eq('family_id', familyId)
+    .eq('church_id', churchId)
+    .select()
+    .single();
 
-    return json(result.rows[0], { headers: { 'x-served-by': 'sveltekit' } });
-  } catch (err) {
-    if (err && typeof err === 'object' && 'status' in err) {
-      throw err;
-    }
-    console.error('PUT /api/families/:id/members/:memberId failed:', err);
-    throw error(500, 'Failed to update family member');
+  if (updateError) {
+      console.error('PUT member failed:', updateError);
+      throw error(500, 'Failed to update family member');
   }
+  if (!data) throw error(404, 'Family member not found');
+
+  return json(data, { headers: { 'x-served-by': 'sveltekit' } });
 };
 
 /**************************************************************
@@ -59,38 +46,32 @@ export const PUT: RequestHandler = async ({ locals, params, request }) => {
  **************************************************************/
 export const DELETE: RequestHandler = async ({ locals, params }) => {
   const churchId = locals.churchId;
+  const supabase = locals.supabase;
   if (!churchId) throw error(400, 'church_id is required');
 
   const { id: familyId, memberId } = params;
 
-  try {
-    const result = await pool.query(
-      `
-      UPDATE family_members
-      SET is_active = false,
-          end_date = CURRENT_DATE,
-          updated_at = now()
-      WHERE id = $1
-        AND family_id = $2
-        AND church_id = $3
-      RETURNING id, person_id
-      `,
-      [memberId, familyId, churchId]
-    );
+  const { data, error: updateError } = await supabase
+    .from('family_members')
+    .update({
+        is_active: false,
+        end_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+        updated_at: new Date().toISOString()
+    })
+    .eq('id', memberId)
+    .eq('family_id', familyId)
+    .eq('church_id', churchId)
+    .select('id, person_id')
+    .single();
 
-    if (result.rows.length === 0) {
-      throw error(404, 'Family member not found');
-    }
-
-    return json(
-      { message: 'Member removed from family', member: result.rows[0] },
-      { headers: { 'x-served-by': 'sveltekit' } }
-    );
-  } catch (err) {
-    if (err && typeof err === 'object' && 'status' in err) {
-      throw err;
-    }
-    console.error('DELETE /api/families/:id/members/:memberId failed:', err);
-    throw error(500, 'Failed to remove family member');
+  if (updateError) {
+      console.error('DELETE member failed:', updateError);
+      throw error(500, 'Failed to remove family member');
   }
+  if (!data) throw error(404, 'Family member not found');
+
+  return json(
+    { message: 'Member removed from family', member: data },
+    { headers: { 'x-served-by': 'sveltekit' } }
+  );
 };

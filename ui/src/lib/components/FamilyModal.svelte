@@ -1,67 +1,74 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-
-  export let open = false;
-  export let family: {
+  type Family = {
     id?: string;
     name?: string;
     notes?: string | null;
-  } | null = null;
+  };
 
-  const dispatch = createEventDispatcher<{
-    close: void;
-    save: { name: string; notes: string };
-  }>();
+  export let open = false;
+  export let family: Family | null = null;
+
+  // ✅ Callback props instead of dispatch
+  export let onClose: () => void = () => {};
+  export let onSave: (payload: { name: string; notes: string }) => void | Promise<void> =
+    async () => {};
 
   let name = '';
   let notes = '';
   let saving = false;
-  let error = '';
+  let errorMsg = '';
 
-  // Reset form when modal opens
-  $: if (open) {
+  // Derived state
+  $: isEdit = Boolean(family?.id);
+  $: title = isEdit ? 'Edit Family' : 'Add Family';
+  $: canSave = name.trim().length > 0 && !saving;
+
+  // Reset form only when modal opens
+  let wasOpen = false;
+  $: if (open && !wasOpen) {
     name = family?.name ?? '';
     notes = family?.notes ?? '';
-    error = '';
+    errorMsg = '';
     saving = false;
   }
+  $: wasOpen = open;
 
-  $: isEdit = !!family?.id;
-  $: title = isEdit ? 'Edit Family' : 'Add Family';
-  $: canSave = name.trim() && !saving;
+  function close() {
+    if (saving) return;
 
-  function handleClose() {
-    if (!saving) {
-      dispatch('close');
-    }
+    open = false;      // ✅ makes bind:open work
+    onClose();         // ✅ parent callback
   }
 
-  function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) {
-      handleClose();
-    }
+  function onBackdropClick(e: MouseEvent) {
+    if (e.target === e.currentTarget) close();
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      handleClose();
-    }
+  function onKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') close();
   }
 
-  async function handleSubmit() {
+  async function submit() {
     if (!canSave) return;
 
-    error = '';
+    errorMsg = '';
     saving = true;
 
-    dispatch('save', {
-      name: name.trim(),
-      notes: notes.trim()
-    });
+    try {
+      await onSave({
+        name: name.trim(),
+        notes: notes.trim()
+      });
+    } catch (err) {
+      // If parent throws, surface it here
+      errorMsg = err instanceof Error ? err.message : String(err);
+      saving = false;
+    }
   }
 
+  // Parent can still control state via bind:this
   export function setError(msg: string) {
-    error = msg;
+    errorMsg = msg;
     saving = false;
   }
 
@@ -70,30 +77,29 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window on:keydown={onKeydown} />
 
 {#if open}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="modal-backdrop" on:click={handleBackdropClick} on:keydown={handleKeydown}>
+  <div class="modal-backdrop" on:click={onBackdropClick}>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <header class="modal-header">
         <h2 id="modal-title">{title}</h2>
-        <button class="close-btn" on:click={handleClose} aria-label="Close" disabled={saving}>
+        <button class="close-btn" on:click={close} aria-label="Close" disabled={saving}>
           ✕
         </button>
       </header>
 
-      <form on:submit|preventDefault={handleSubmit}>
+      <form on:submit|preventDefault={submit}>
         <div class="modal-body">
-          {#if error}
-            <div class="error-message">{error}</div>
+          {#if errorMsg}
+            <div class="error-message">{errorMsg}</div>
           {/if}
 
           <div class="form-group">
             <label for="family_name">Family Name <span class="required">*</span></label>
             <input
-              type="text"
               id="family_name"
+              type="text"
               bind:value={name}
               placeholder="e.g. The Wikene Family"
               disabled={saving}
@@ -110,20 +116,17 @@
               placeholder="Any notes about this family..."
               rows="3"
               disabled={saving}
-            ></textarea>
+            />
           </div>
         </div>
 
         <footer class="modal-footer">
-          <button type="button" class="btn-secondary" on:click={handleClose} disabled={saving}>
+          <button type="button" class="btn-secondary" on:click={close} disabled={saving}>
             Cancel
           </button>
+
           <button type="submit" class="btn-primary" disabled={!canSave}>
-            {#if saving}
-              Saving...
-            {:else}
-              {isEdit ? 'Save Changes' : 'Create Family'}
-            {/if}
+            {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Family'}
           </button>
         </footer>
       </form>
@@ -132,6 +135,7 @@
 {/if}
 
 <style>
+  /* same styles as before */
   .modal-backdrop {
     position: fixed;
     inset: 0;

@@ -1,159 +1,154 @@
-<!-- GitHub Copilot instructions tailored for contributors and AI agents -->
+# GitHub Copilot Instructions — WorshipOS
 
-# Copilot / Agent Guide — worshipOS
-
-Purpose: quick, actionable guidance for AI coding agents to be productive in this repo.
-
-- **Big picture:** This is a small monorepo with a Node/Express API (api/) and a Svelte UI (ui/). Postgres is the primary DB with SQL migrations under `api/migrations/` and several raw SQL queries embedded in `api/index.js`.
-
-- **Key files & folders:**
-
-  - `api/index.js` — main API server, exposes endpoints (gatherings, people, families, roles, assignments, songs). Many SQL queries are inlined here and are the primary integration surface to the DB.
-  - `api/migrations/` — ordered SQL files to create schema (apply in sequence).
-  - `db/` — reference schema and seed SQL files.
-  - `ui/` — Svelte frontend (Vite); the API CORS is set for `http://localhost:5173`.
-  - `test-crud-api.sh`, `start.sh` — helpful local-run/test scripts at repo root.
-
-- **Run & debug (local):**
-
-  - API: `cd api && npm install && node index.js` (starts on port 3000).
-  - UI: `cd ui && npm install && npm run dev` (Vite dev on port 5173).
-  - DB migrations: run `psql` against your local Postgres using files in `api/migrations/` in numeric order (001*.., 002*.., ...). Example used in code hints:
-    psql "postgres://worship:worship@127.0.0.1:5432/worshipos" -f api/migrations/001_extensions.sql
-
-- **Database conventions & patterns:**
-
-  - Postgres is used via `pg.Pool`. SQL is embedded directly in `api/index.js` (no ORM). Expect `json_agg` and `json_build_object` in queries.
-  - Many endpoints accept `org_id` as the primary tenant identifier. Note: some code uses `church_id` (in `GET /gatherings`) — prefer `org_id` and verify parameter names when editing.
-
-- **API patterns & expectations:**
-
-  - Endpoints return JSON and often return full aggregated rows (group + gatherings + assignments). See `GET /gatherings` and `GET /gatherings/:id/roster` for examples of aggregation and joins.
-  - Error handling includes explicit hints for missing DB relations/columns (see error branches in `api/index.js`) — keep these intact when modifying error behavior.
-
-- **Common edits agents will make:**
-
-  - Add new endpoints to `api/index.js` following the existing style: `app.METHOD(path, async (req,res)=>{ try{ const r=await pool.query(...); res.json(r.rows) } catch(err){...} })`.
-  - When changing SQL, prefer minimal diffs: keep existing aliases and named columns (e.g., `group_id`, `instance_id`, `assignments`) to avoid b
-
-  # Accessibility & UI Integrity Rules (MANDATORY)
-
-WorshipOS treats accessibility as a first-class feature, not a post-hoc fix.
-
-All code generated or modified by Copilot MUST follow these rules.
+> **Source of truth:** See `AGENTS.md` in the project root for the complete instruction set.
+> This file emphasizes accessibility and UI generation rules for Copilot.
 
 ---
 
-## 1. Semantic HTML First (No Exceptions)
+## Project Context
 
-- Use native elements whenever possible:
-  - button → <button>
-  - link → <a>
-  - input → <input>, <textarea>, <select>
-- Do NOT use <div> or <span> for interactive behavior unless there is a documented constraint.
+WorshipOS is a SvelteKit worship planning platform for churches. We prioritize **soul care over logistics**.
 
-ARIA is a fallback, not a shortcut.
+- **Database**: PostgreSQL via Supabase
+- **Styling**: Tailwind CSS + `sys-*` system classes
+- **Philosophy**: Calm interfaces, semantic HTML, accessibility-first
+
+### Constitutional Document
+`docs/Guidebook-4.md` is the source of truth. All features must align with its principles:
+- Trust is the primary feature
+- The Calm Interface Mandate (reduce cognitive load, never shame)
+- Archive, don't delete
 
 ---
 
-## 2. Interactive Elements Contract
+## Accessibility Rules (MANDATORY)
+
+WorshipOS treats accessibility as a **first-class feature**. All generated code must conform.
+
+### 1. Semantic HTML First (No Exceptions)
+
+Use native elements:
+- `<button>` for buttons
+- `<a>` for links
+- `<input>`, `<textarea>`, `<select>` for form controls
+
+**Do NOT** use `<div>` or `<span>` for interactive behavior. ARIA is a fallback, not a shortcut.
+
+### 2. Interactive Elements Contract
 
 Any interactive element MUST:
+- Be reachable via keyboard (Tab)
+- Activate via Enter/Space when appropriate
+- Have a visible focus state
+- Expose correct semantics to screen readers
 
-- be reachable via keyboard (Tab)
-- activate via Enter/Space when appropriate
-- have a visible focus state
-- expose correct semantics to screen readers
+### 3. Forms & Labels Are Non-Negotiable
 
-If a <div> is interactive, it MUST include:
+- Every `<label>` MUST be associated with a control
+- Acceptable: `<label for="id">` or wrapping the control inside `<label>`
+- **Placeholder text is NOT a label**
 
-- role
-- tabindex="0"
-- keyboard handlers
+### 4. Focus Behavior
 
-Prefer replacing it with a semantic element instead.
+- Focus must always be visible
+- **No focus on page load**
+- Focus moves only for: dialogs, explicit user action, error correction
 
----
+### 5. No Warning Suppression
 
-## 3. Forms & Labels Are Non-Negotiable
+- **Never** use `svelte-ignore` or `eslint-disable` for a11y warnings
+- Warnings indicate architectural drift—resolve at source
 
-- Every <label> MUST be associated with a control.
-- Acceptable patterns:
-  - <label for="id"> + matching id
-  - wrapping the control inside <label>
-
-For custom Input/Textarea components:
-
-- Forward `id`, `name`, `aria-*`, and `required` props to the native element.
-- Never swallow accessibility attributes.
-
----
-
-## 4. Scoped CSS Discipline
-
-- Remove unused scoped CSS selectors immediately.
-- Do NOT keep speculative or “maybe later” styles without a TODO comment.
-- CSS in a component should reflect rendered markup exactly.
-
----
-
-## 5. No Warning Suppression
-
-- Do NOT use svelte-ignore, eslint-disable, or similar to silence warnings.
-- Warnings indicate architectural drift and must be resolved at the source.
-
----
-
-## 6. Standardization Over Local Fixes
-
-When fixing:
-
-- icons
-- tables
-- inputs
-- sorting
-- row indicators
-
-Prefer shared components or patterns over per-page solutions.
-
-Assume changes will be reused.
-
----
-
-## 7. Definition of Done (Accessibility)
+### 6. Definition of Done
 
 A change is NOT complete unless:
+- `npm run dev` emits **zero** Svelte a11y warnings
+- Keyboard navigation works
+- Screen reader semantics are correct
 
-- `npm run dev` (or equivalent) emits ZERO Svelte a11y warnings
-- keyboard navigation works
-- screen reader semantics are correct by inspection
+---
 
-Copilot should proactively enforce these rules while generating code.
+## AI Code Rule
 
-# WorshipOS Copilot Instructions
+If AI-generated UI code violates accessibility rules:
+- **Regenerate** — Do not patch structural mistakes
+- The prompt is wrong, not the review process
 
-## UI philosophy: iconography + density
+---
 
-- Tables are interaction surfaces, not just layouts.
-- People tables are relational/pastoral: identity anchors (Avatar), actions recede.
-- Songs tables are operational/catalog: strong scanability, actions recede.
+## UI Conventions
 
-## Scanability rules (tables)
+### Tables
+- Tables are interaction surfaces
+- Every row has a leading visual anchor (Avatar for people, ObjectMark for songs)
+- Row actions are visually secondary (`sys-icon-btn--ghost`)
 
-- Every table row must have a leading visual anchor in the first column:
-  - People: Avatar (existing)
-  - Songs: ObjectMark (existing) or a stable-width anchor element.
-- Row actions must be visually secondary:
-  - Prefer `sys-icon-btn--ghost` for non-destructive actions.
-  - Destructive actions may also be ghosted but must retain danger emphasis on hover/focus.
+### Consistency
+- Reuse `sys-*` classes and existing components
+- Do not invent new icon systems
+- Add `type="button"` to buttons inside table rows
+- Preserve ARIA labels and keyboard behavior
 
-## Consistency rules
+### When Editing Routes
+- Keep changes local unless shared across pages
+- Shared styles go in `ui/src/app.css` using existing tokens
 
-- Reuse existing system classes (`sys-*`) and existing SVGs/components. Do not invent new icon systems.
-- Prefer small, reversible diffs. Avoid redesigns unless explicitly requested.
-- Preserve ARIA labels and keyboard behavior. Add `type="button"` to buttons inside rows.
+---
 
-## When editing routes
+## Quick Architecture Reference
 
-- Keep changes local to the target page unless a shared type/style is clearly reused across multiple pages.
-- If adding shared styles, add them to `ui/src/app.css` using existing tokens/variables.
+### Domain Language
+
+| Public/API | Database (Legacy) |
+|------------|-------------------|
+| Gathering | service_instances |
+| gathering_id | service_instance_id |
+
+**API and UI must use "gatherings"**. Do not expose `service_*` names.
+
+### Database Access
+Use Supabase client (not legacy `pg` pool):
+```typescript
+const { data } = await locals.supabase
+  .from('table_name')
+  .select('*')
+  .eq('church_id', locals.churchId);
+```
+
+### Multi-Tenancy
+- `church_id` on all tables
+- `X-Church-Id` header required
+- Access via `event.locals.churchId`
+
+### TEND / CARE Boundary
+> TEND notices. CARE responds.
+
+- TEND: Lens (signals, dashboards). Never stores narratives.
+- CARE: Container (cases, notes). RLS-protected.
+- One-way handoff from TEND → CARE only.
+
+---
+
+## Key Constraints
+
+1. Do not rename DB tables without `DB_MIGRATION_PLAN.md`
+2. Prefer editing existing files over creating new ones
+3. Use shared `sys-*` components
+4. All features must align with `docs/Guidebook-4.md`
+5. **Accessibility is non-negotiable**
+
+---
+
+## Global Prompt Footer (Include in UI Requests)
+
+When requesting UI generation, append:
+
+> **WorshipOS Accessibility Baseline:**
+> - Semantic HTML only (`button`, `a`, `label`, `input`)
+> - No div/span as interactive elements
+> - No `role="button"` or `tabindex` hacks
+> - Keyboard navigation must work
+> - Focus visible and predictable
+> - No focus on page load
+> - Inputs must have real labels
+> - ARIA only when semantic HTML cannot express intent

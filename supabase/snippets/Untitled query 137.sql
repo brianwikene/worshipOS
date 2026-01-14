@@ -1,8 +1,5 @@
-select
-  c.relrowsecurity as rls_enabled,
-  c.relforcerowsecurity as rls_forced
-from pg_class c
-join pg_namespace n on n.oid = c.relnamespace
-where n.nspname = 'public'
-  and c.relname = 'care_cases';
-
+select policyname, cmd, roles, qual
+from pg_policies
+where schemaname='public'
+  and tablename='care_cases'
+order by cmd, policyname;

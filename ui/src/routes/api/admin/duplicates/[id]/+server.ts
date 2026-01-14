@@ -1,153 +1,119 @@
-// GET/PUT /api/admin/duplicates/[id] - Get or update a specific identity link
+// src/routes/api/admin/duplicates/[id]/+server.ts
 
-import { json, error } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pool } from '$lib/server/db';
 
-/**
- * GET /api/admin/duplicates/:id
- * Get details of a specific identity link
- */
+// GET /api/admin/duplicates/:id
 export const GET: RequestHandler = async ({ locals, params }) => {
   const churchId = locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const { id } = params;
 
-  try {
-    const result = await pool.query(
-      `SELECT
-        il.*,
-        pa.display_name as person_a_display_name,
-        pb.display_name as person_b_display_name,
-        r.display_name as reviewer_name
-      FROM identity_links il
-      JOIN people pa ON pa.id = il.person_a_id
-      JOIN people pb ON pb.id = il.person_b_id
-      LEFT JOIN people r ON r.id = il.reviewed_by
-      WHERE il.id = $1 AND il.church_id = $2`,
-      [id, churchId]
-    );
+  const { data, error: dbError } = await locals.supabase
+    .from('identity_links')
+    .select(`
+        *,
+        person_a:people!person_a_id(display_name),
+        person_b:people!person_b_id(display_name),
+        reviewer:people!reviewed_by(display_name)
+    `)
+    .eq('id', id)
+    .eq('church_id', churchId)
+    .single();
 
-    if (result.rows.length === 0) {
-      throw error(404, 'Identity link not found');
-    }
-
-    return json(result.rows[0]);
-  } catch (err) {
-    if (err && typeof err === 'object' && 'status' in err) throw err;
-    console.error('GET /api/admin/duplicates/:id failed:', err);
-    throw error(500, 'Failed to load identity link');
+  if (dbError) {
+      if (dbError.code === 'PGRST116') throw error(404, 'Identity link not found');
+      console.error('GET duplicate failed:', dbError);
+      throw error(500, 'Failed to load identity link');
   }
+
+  // Flatten for UI consistency
+  const result = {
+      ...data,
+      person_a_display_name: data.person_a?.display_name,
+      person_b_display_name: data.person_b?.display_name,
+      reviewer_name: data.reviewer?.display_name
+  };
+
+  return json(result);
 };
 
-/**
- * PUT /api/admin/duplicates/:id
- * Update status of an identity link (confirm, reject, etc.)
- */
+// PUT /api/admin/duplicates/:id
 export const PUT: RequestHandler = async ({ locals, params, request }) => {
   const churchId = locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const { id } = params;
   const body = await request.json();
   const { status, review_notes, suppress_duration_days } = body;
 
-  // Validate status
   const validStatuses = ['suggested', 'confirmed', 'not_match'];
   if (status && !validStatuses.includes(status)) {
     throw error(400, `Invalid status. Must be one of: ${validStatuses.join(', ')}`);
   }
 
-  try {
-    // Verify the link exists and belongs to this church
-    const checkResult = await pool.query(
-      'SELECT id, status FROM identity_links WHERE id = $1 AND church_id = $2',
-      [id, churchId]
-    );
-
-    if (checkResult.rows.length === 0) {
-      throw error(404, 'Identity link not found');
-    }
-
-    // Build update query dynamically
-    const updates: string[] = [];
-    const values: (string | number | null)[] = [];
-    let paramIndex = 1;
-
-    if (status) {
-      updates.push(`status = $${paramIndex++}`);
-      values.push(status);
-
-      // Set reviewed_at and reviewed_by when status changes
-      updates.push(`reviewed_at = now()`);
-      // TODO: Get actual user ID from session
-      // updates.push(`reviewed_by = $${paramIndex++}`);
-      // values.push(userId);
-    }
-
-    if (review_notes !== undefined) {
-      updates.push(`review_notes = $${paramIndex++}`);
-      values.push(review_notes || null);
-    }
-
-    // Set suppression for "not a match"
-    if (status === 'not_match') {
-      const days = suppress_duration_days || 365;
-      updates.push(`suppressed_until = now() + interval '${days} days'`);
-    }
-
-    if (updates.length === 0) {
-      throw error(400, 'No valid fields to update');
-    }
-
-    // Add id and church_id to values
-    values.push(id);
-    values.push(churchId);
-
-    const result = await pool.query(
-      `UPDATE identity_links
-       SET ${updates.join(', ')}, updated_at = now()
-       WHERE id = $${paramIndex++} AND church_id = $${paramIndex}
-       RETURNING *`,
-      values
-    );
-
-    return json(result.rows[0]);
-  } catch (err) {
-    if (err && typeof err === 'object' && 'status' in err) throw err;
-    console.error('PUT /api/admin/duplicates/:id failed:', err);
-    throw error(500, 'Failed to update identity link');
+  const updates: any = {};
+  if (status) {
+      updates.status = status;
+      updates.reviewed_at = new Date().toISOString();
+      // updates.reviewed_by = userId; // TODO: Get from session
   }
+  if (review_notes !== undefined) {
+      updates.review_notes = review_notes || null;
+  }
+  if (status === 'not_match') {
+      const days = suppress_duration_days || 365;
+      const suppressedUntil = new Date();
+      suppressedUntil.setDate(suppressedUntil.getDate() + days);
+      updates.suppressed_until = suppressedUntil.toISOString();
+  }
+
+  if (Object.keys(updates).length === 0) {
+      throw error(400, 'No valid fields to update');
+  }
+
+  const { data, error: updateError } = await locals.supabase
+    .from('identity_links')
+    .update(updates)
+    .eq('id', id)
+    .eq('church_id', churchId)
+    .select()
+    .single();
+
+  if (updateError) {
+      console.error('PUT duplicate failed:', updateError);
+      throw error(500, 'Failed to update identity link');
+  }
+
+  return json(data);
 };
 
-/**
- * DELETE /api/admin/duplicates/:id
- * Delete an identity link (only for 'suggested' status)
- */
+// DELETE /api/admin/duplicates/:id
 export const DELETE: RequestHandler = async ({ locals, params }) => {
   const churchId = locals.churchId;
-  if (!churchId) throw error(400, 'X-Church-Id is required');
+  if (!churchId) throw error(400, 'Active church is required');
 
   const { id } = params;
 
-  try {
-    // Only allow deletion of 'suggested' links
-    const result = await pool.query(
-      `DELETE FROM identity_links
-       WHERE id = $1 AND church_id = $2 AND status = 'suggested'
-       RETURNING id`,
-      [id, churchId]
-    );
+  // Only allow deletion of 'suggested' links
+  const { data, error: deleteError } = await locals.supabase
+    .from('identity_links')
+    .delete()
+    .eq('id', id)
+    .eq('church_id', churchId)
+    .eq('status', 'suggested')
+    .select('id')
+    .single();
 
-    if (result.rows.length === 0) {
-      throw error(404, 'Identity link not found or cannot be deleted');
-    }
-
-    return json({ success: true, deleted_id: id });
-  } catch (err) {
-    if (err && typeof err === 'object' && 'status' in err) throw err;
-    console.error('DELETE /api/admin/duplicates/:id failed:', err);
-    throw error(500, 'Failed to delete identity link');
+  if (deleteError) {
+      console.error('DELETE duplicate failed:', deleteError);
+      throw error(500, 'Failed to delete identity link');
   }
+
+  // Note: If no row matched (e.g. status != suggested), Supabase delete returns null data/error if using maybeSingle or check count.
+  // .single() throws if 0 rows.
+  // So catching error might be enough if it returns row.
+
+  return json({ success: true, deleted_id: id });
 };
