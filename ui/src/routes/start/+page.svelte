@@ -19,7 +19,7 @@
 </header>
 
 	<section class="sys-grid sys-grid--cards">
-  <a href="/people" class="sys-card people sys-card-link">
+  <a href="/connections/people" class="sys-card people sys-card-link">
     <h2 class="sys-card-title">People</h2>
     <p class="sys-card-body">
       View, update, or add people in your community.
@@ -33,7 +33,7 @@
     </p>
   </a>
 
-  <a href="/families" class="sys-card families sys-card-link">
+  <a href="/connections/families" class="sys-card families sys-card-link">
     <h2 class="sys-card-title">Families</h2>
     <p class="sys-card-body">
       See households and shared contact details.

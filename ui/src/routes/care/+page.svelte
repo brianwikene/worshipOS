@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   export let data;
 
   const badge = (role: string) => {
@@ -7,7 +9,12 @@
     if (role === 'admin') return 'Admin';
     return 'Member';
   };
+
+  onMount(() => {
+    console.log('PrPrPr 🐾  (Prayer, Presence, Practical help)');
+  });
 </script>
+
 
 
 <div class="p-8">

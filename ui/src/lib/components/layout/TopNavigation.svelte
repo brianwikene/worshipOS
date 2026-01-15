@@ -4,7 +4,7 @@
 
   type Tenant = { id: string; name: string };
 
-  // Svelte 5 props (keeps your current layout call working)
+  // Props (keeps your layout call working)
   let {
     tenants = [],
     activeChurchId = '',
@@ -14,38 +14,67 @@
   } = $props<{
     tenants?: Tenant[];
     activeChurchId?: string;
-    onTenantChange: (e: Event) => void;
+    onTenantChange?: (e: Event) => void;
     loginHref?: string;
     appName?: string;
   }>();
 
+  let mobileOpen = false;
+  let buttonEl: HTMLButtonElement | null = null;
+  let menuEl: HTMLElement | null = null;
+
+  // Basic auth link logic (swap to avatar/profile later)
+  const authItem = {
+    href: loginHref,
+    label: 'Log in'
+  };
+
+  // Primary nav (desktop)
+  // NOTE: Connections & Care are rendered as dropdowns (not in this list)
   const navItems = [
-    { label: 'Start', href: '/start' },
-    { label: 'Gatherings', href: '/gatherings' },
-    { label: 'Connections', href: '/connections' },
-    { label: 'Songs', href: '/songs' },
-    { label: 'Care', href: '/care' },
-    { label: 'Tend', href: '/tend' }
+    { href: '/start', label: 'Start' },
+    { href: '/gatherings', label: 'Gatherings' },
+    { href: '/songs', label: 'Songs' }
   ];
 
-  const adminItem = { label: 'Admin', href: '/admin' };
-  const authItem = $derived(() => ({ label: 'Login', href: loginHref }));
+  const adminItem = { href: '/admin', label: 'Admin' };
 
-  const isActive = (path: string) => $page.url.pathname.startsWith(path);
+  const connections = {
+    label: 'Connections',
+    defaultHref: '/connections/people',
+    items: [
+      { href: '/connections/people', label: 'People' },
+      { href: '/connections/families', label: 'Families' },
+      { href: '/connections/teams', label: 'Teams' }
+    ]
+  };
 
-  const activeTenantName = $derived(
-    () => tenants.find((t) => t.id === activeChurchId)?.name ?? 'Select Church'
-  );
+  const care = {
+    label: 'Care',
+    defaultHref: '/care',
+    items: [
+      { href: '/care', label: 'Care' },
+      { href: '/tend', label: 'Tend' }
+    ]
+  };
 
-  // Mobile menu state
-  let mobileOpen = $state(false);
-  let menuEl: HTMLElement | null = null;
-  let buttonEl: HTMLButtonElement | null = null;
+  // Active helpers
+  const isActive = (href: string) => {
+    const path = $page.url.pathname;
+    if (href === '/start') return path === '/' || path === '/start';
+    return path === href || path.startsWith(href + '/');
+  };
+
+  const isPrefixActive = (prefix: string) => {
+    const path = $page.url.pathname;
+    return path === prefix || path.startsWith(prefix + '/');
+  };
+
+  const activeTenantName =
+    tenants.find((t) => t.id === activeChurchId)?.name ?? (activeChurchId ? 'Selected' : 'None');
 
   function closeMobileMenu() {
-    if (!mobileOpen) return;
     mobileOpen = false;
-    // return focus to the toggle for accessibility
     queueMicrotask(() => buttonEl?.focus());
   }
 
@@ -54,7 +83,6 @@
     if (!mobileOpen) {
       queueMicrotask(() => buttonEl?.focus());
     } else {
-      // optionally focus first link/select inside menu
       queueMicrotask(() => {
         const firstFocusable = menuEl?.querySelector<HTMLElement>(
           'a, button, select, input, [tabindex]:not([tabindex="-1"])'
@@ -64,23 +92,18 @@
     }
   }
 
-  // Close on Escape + close on click outside
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') closeMobileMenu();
   };
 
   const onDocClick = (e: MouseEvent) => {
     if (!mobileOpen) return;
-    const target = e.target as Node | null;
-    if (!target) return;
-
-    // if click is outside both button and menu, close
-    const clickedButton = !!buttonEl && buttonEl.contains(target);
-    const clickedMenu = !!menuEl && menuEl.contains(target);
-    if (!clickedButton && !clickedMenu) closeMobileMenu();
+    const target = e.target as Node;
+    if (menuEl && menuEl.contains(target)) return;
+    if (buttonEl && buttonEl.contains(target)) return;
+    closeMobileMenu();
   };
 
-  // Attach listeners (only in browser)
   if (typeof window !== 'undefined') {
     window.addEventListener('keydown', onKeyDown);
     document.addEventListener('click', onDocClick, { capture: true });
@@ -90,101 +113,138 @@
     });
   }
 
-// Close mobile menu when route changes
-$effect(() => {
-  // This makes the effect re-run whenever the route changes
-  const _path = $page.url.pathname;
+  // Close mobile menu when route changes
+  $effect(() => {
+    const _path = $page.url.pathname;
+    if (mobileOpen) closeMobileMenu();
+  });
 
-  if (mobileOpen) closeMobileMenu();
-});
+  // Shared classes (keeps visual consistency)
+  const baseLink =
+    'px-3 py-1.5 rounded-md text-[0.9375rem] font-medium whitespace-nowrap transition-all duration-200';
+  const activeLink =
+    'bg-[var(--ui-color-hover)] text-[var(--gatherings-accent)] font-semibold shadow-sm ring-1 ring-black/5';
+  const idleLink =
+    'text-[var(--ui-color-text-muted)] hover:bg-[var(--ui-color-hover)] hover:text-[var(--ui-color-text-strong)]';
 
+  const dropdownPanel =
+    'absolute left-0 mt-2 w-52 bg-white border border-[var(--sys-border)] rounded-md shadow-lg overflow-hidden z-50';
+  const dropdownItem =
+    'block px-3 py-2 text-sm text-[var(--ui-color-text-strong)] hover:bg-[var(--ui-color-hover)]';
 </script>
 
 <header class="w-full bg-white border-b border-[var(--sys-border)] sticky top-0 z-50">
-  <div class="max-w-[1200px] mx-auto px-4 h-16 flex items-center justify-between gap-4">
-    <!-- Left: Brand + Desktop Nav -->
-    <div class="flex items-center gap-6 min-w-0">
-      <a
-        href="/"
-        class="shrink-0 text-lg font-extrabold tracking-tight text-[var(--ui-color-text-strong)] hover:opacity-70 transition-opacity"
-      >
-        {appName}
-      </a>
+  <div class="max-w-[1400px] mx-auto px-4">
+    <!-- Row 1: Brand + Primary Nav + Mobile hamburger -->
+    <div class="py-3 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-6 min-w-0">
+        <a
+          href="/"
+          class="shrink-0 text-lg font-extrabold tracking-tight text-[var(--ui-color-text-strong)] hover:opacity-70 transition-opacity"
+        >
+          {appName}
+        </a>
 
-      <nav class="hidden md:block min-w-0" aria-label="Primary">
-        <ul class="flex items-center gap-1 overflow-x-auto no-scrollbar">
-          {#each navItems as item}
-            <li>
+        <nav class="hidden md:block min-w-0" aria-label="Primary">
+          <!-- flex-wrap prevents the horizontal scrollbar problem -->
+          <ul class="flex flex-wrap items-center gap-1">
+            {#each navItems as item}
+              <li>
+                <a
+                  href={item.href}
+                  class={`${baseLink} ${isActive(item.href) ? activeLink : idleLink}`}
+                  aria-current={isActive(item.href) ? 'page' : undefined}
+                >
+                  {item.label}
+                </a>
+              </li>
+            {/each}
+
+            <!-- Connections dropdown -->
+            <li class="relative group">
               <a
-                href={item.href}
-                class="
-                  px-3 py-1.5 rounded-md text-[0.9375rem] font-medium whitespace-nowrap transition-all duration-200
-                  {isActive(item.href)
-                    ? 'bg-[var(--ui-color-hover)] text-[var(--gatherings-accent)] font-semibold shadow-sm ring-1 ring-black/5'
-                    : 'text-[var(--ui-color-text-muted)] hover:bg-[var(--ui-color-hover)] hover:text-[var(--ui-color-text-strong)]'}
-                "
-                aria-current={isActive(item.href) ? 'page' : undefined}
+                href={connections.defaultHref}
+                class={`${baseLink} ${isPrefixActive('/connections') ? activeLink : idleLink}`}
+                aria-haspopup="menu"
               >
-                {item.label}
+                {connections.label}
               </a>
+
+              <div class={`hidden group-hover:block ${dropdownPanel}`} role="menu" aria-label="Connections menu">
+                {#each connections.items as item}
+                  <a href={item.href} class={dropdownItem} role="menuitem">
+                    {item.label}
+                  </a>
+                {/each}
+              </div>
             </li>
-          {/each}
-        </ul>
-      </nav>
+
+            <!-- Care dropdown -->
+            <li class="relative group">
+              <a
+                href={care.defaultHref}
+                class={`${baseLink} ${isPrefixActive('/care') || isPrefixActive('/tend') ? activeLink : idleLink}`}
+                aria-haspopup="menu"
+              >
+                {care.label}
+              </a>
+
+              <div class={`hidden group-hover:block ${dropdownPanel}`} role="menu" aria-label="Care menu">
+                {#each care.items as item}
+                  <a href={item.href} class={dropdownItem} role="menuitem">
+                    {item.label}
+                  </a>
+                {/each}
+              </div>
+            </li>
+          </ul>
+        </nav>
+      </div>
+
+      <!-- Right (Row 1): Mobile hamburger only -->
+      <div class="flex items-center gap-3 shrink-0">
+        <button
+          bind:this={buttonEl}
+          type="button"
+          class="md:hidden inline-flex items-center justify-center rounded-md px-2 py-2 text-[var(--ui-color-text-muted)] hover:text-[var(--ui-color-text-strong)] hover:bg-[var(--ui-color-hover)] focus:ring-2 focus:ring-offset-1 focus:ring-[var(--gatherings-accent)] focus:outline-none"
+          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          aria-controls="mobile-menu"
+          aria-expanded={mobileOpen}
+          onclick={toggleMobileMenu}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            stroke="currentColor"
+            class="w-5 h-5"
+          >
+            {#if mobileOpen}
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            {:else}
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            {/if}
+          </svg>
+        </button>
+      </div>
     </div>
 
-    <!-- Right: Actions -->
-    <div class="flex items-center gap-3 shrink-0">
-      <!-- Mobile hamburger -->
-      <button
-        bind:this={buttonEl}
-        type="button"
-        class="md:hidden inline-flex items-center justify-center rounded-md border border-[var(--sys-border)] px-3 py-2 text-sm font-medium text-[var(--ui-color-text-muted)] hover:text-[var(--ui-color-text-strong)] hover:border-[var(--gatherings-accent)] focus:ring-2 focus:ring-offset-1 focus:ring-[var(--gatherings-accent)] focus:outline-none"
-        aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-        aria-controls="mobile-menu"
-        aria-expanded={mobileOpen}
-        onclick={toggleMobileMenu}
-      >
-        <!-- icon -->
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-          {#if mobileOpen}
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          {:else}
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-          {/if}
-        </svg>
-      </button>
-
-      <!-- Desktop auth -->
-      <a
-        href={authItem.href}
-        class="hidden md:flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors
-          {isActive(authItem.href)
-            ? 'text-[var(--ui-color-text-strong)] bg-[var(--ui-color-hover)]'
-            : 'text-[var(--ui-color-text-muted)] hover:text-[var(--ui-color-text-strong)] hover:bg-[var(--ui-color-hover)]'}"
-      >
-        {authItem.label}
-      </a>
-
-      <!-- Desktop admin -->
+    <!-- Row 2 (Desktop): Admin + tenant + auth/profile -->
+    <div class="hidden md:flex items-center justify-end gap-3 pb-3 pt-1 border-t border-[var(--sys-border)]">
       <a
         href={adminItem.href}
-        class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors
+        class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors
           {isActive(adminItem.href)
             ? 'text-[var(--ui-color-text-strong)] bg-[var(--ui-color-hover)]'
             : 'text-[var(--ui-color-text-muted)] hover:text-[var(--ui-color-text-strong)] hover:bg-[var(--ui-color-hover)]'}"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
         Admin
       </a>
 
-      <div class="hidden md:block w-px h-6 bg-[var(--sys-border)] mx-1"></div>
+      <div class="w-px h-6 bg-[var(--sys-border)] mx-1"></div>
 
-      <!-- Tenant select (Desktop) -->
-      <div class="hidden md:block relative">
+      <div class="relative">
         <label class="sr-only" for="tenant-select">Active church</label>
         <select
           id="tenant-select"
@@ -196,9 +256,8 @@ $effect(() => {
             bg-white border border-[var(--sys-border)] rounded-md
             text-sm font-medium text-[var(--ui-color-text-muted)]
             hover:border-[var(--gatherings-accent)] hover:text-[var(--ui-color-text-strong)]
-            focus:ring-2 focus:ring-offset-1 focus:ring-[var(--gatherings-accent)] focus:outline-none
-            cursor-pointer transition-all
-            max-w-[220px] truncate
+            focus:ring-2 focus:ring-[var(--gatherings-accent)] focus:border-[var(--gatherings-accent)] focus:outline-none
+            max-w-[260px]
           "
         >
           {#if tenants.length === 0}
@@ -216,6 +275,18 @@ $effect(() => {
           </svg>
         </div>
       </div>
+
+      <div class="w-px h-6 bg-[var(--sys-border)] mx-1"></div>
+
+      <a
+        href={authItem.href}
+        class="flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors
+          {isActive(authItem.href)
+            ? 'text-[var(--ui-color-text-strong)] bg-[var(--ui-color-hover)]'
+            : 'text-[var(--ui-color-text-muted)] hover:text-[var(--ui-color-text-strong)] hover:bg-[var(--ui-color-hover)]'}"
+      >
+        {authItem.label}
+      </a>
     </div>
   </div>
 
@@ -226,27 +297,73 @@ $effect(() => {
       bind:this={menuEl}
       class="md:hidden border-t border-[var(--sys-border)] bg-white"
     >
-      <nav aria-label="Mobile Primary" class="max-w-[1200px] mx-auto px-4 py-3">
+      <nav aria-label="Mobile Primary" class="max-w-[1400px] mx-auto px-4 py-3">
         <ul class="flex flex-col gap-1">
-          {#each navItems as item}
-            <li>
+          <li>
+            <a
+              href="/start"
+              class="block px-3 py-2 rounded-md text-sm font-medium text-[var(--ui-color-text-muted)] hover:bg-[var(--ui-color-hover)] hover:text-[var(--ui-color-text-strong)]"
+              onclick={closeMobileMenu}
+            >
+              Start
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="/gatherings"
+              class="block px-3 py-2 rounded-md text-sm font-medium text-[var(--ui-color-text-muted)] hover:bg-[var(--ui-color-hover)] hover:text-[var(--ui-color-text-strong)]"
+              onclick={closeMobileMenu}
+            >
+              Gatherings
+            </a>
+          </li>
+
+          <!-- Connections (mobile: expand as a simple grouped list) -->
+          <li class="mt-1">
+            <div class="px-3 py-2 text-xs font-semibold text-[var(--ui-color-text-muted)]">
+              Connections
+            </div>
+            {#each connections.items as item}
               <a
                 href={item.href}
-                class="
-                  block px-3 py-2 rounded-md text-sm font-medium transition-colors
-                  {isActive(item.href)
-                    ? 'bg-[var(--ui-color-hover)] text-[var(--gatherings-accent)]'
-                    : 'text-[var(--ui-color-text-muted)] hover:bg-[var(--ui-color-hover)] hover:text-[var(--ui-color-text-strong)]'}
-                "
-                aria-current={isActive(item.href) ? 'page' : undefined}
+                class="block px-6 py-2 rounded-md text-sm font-medium text-[var(--ui-color-text-muted)] hover:bg-[var(--ui-color-hover)] hover:text-[var(--ui-color-text-strong)]"
                 onclick={closeMobileMenu}
               >
                 {item.label}
               </a>
-            </li>
-          {/each}
+            {/each}
+          </li>
 
-          <li class="mt-2 pt-2 border-t border-[var(--sys-border)]">
+          <li>
+            <a
+              href="/songs"
+              class="block px-3 py-2 rounded-md text-sm font-medium text-[var(--ui-color-text-muted)] hover:bg-[var(--ui-color-hover)] hover:text-[var(--ui-color-text-strong)]"
+              onclick={closeMobileMenu}
+            >
+              Songs
+            </a>
+          </li>
+
+          <!-- Care (mobile grouped list) -->
+          <li class="mt-1">
+            <div class="px-3 py-2 text-xs font-semibold text-[var(--ui-color-text-muted)]">
+              Care
+            </div>
+            {#each care.items as item}
+              <a
+                href={item.href}
+                class="block px-6 py-2 rounded-md text-sm font-medium text-[var(--ui-color-text-muted)] hover:bg-[var(--ui-color-hover)] hover:text-[var(--ui-color-text-strong)]"
+                onclick={closeMobileMenu}
+              >
+                {item.label}
+              </a>
+            {/each}
+          </li>
+
+          <li><div class="h-px bg-[var(--sys-border)] my-2"></div></li>
+
+          <li>
             <a
               href={adminItem.href}
               class="block px-3 py-2 rounded-md text-sm font-medium text-[var(--ui-color-text-muted)] hover:bg-[var(--ui-color-hover)] hover:text-[var(--ui-color-text-strong)]"
@@ -266,23 +383,19 @@ $effect(() => {
             </a>
           </li>
 
-          <li class="mt-2 pt-2 border-t border-[var(--sys-border)]">
-            <label class="sr-only" for="tenant-select-mobile">Active church</label>
-            <div class="px-3">
-              <div class="text-xs text-[var(--ui-color-text-muted)] mb-1">Active church</div>
+          <li><div class="h-px bg-[var(--sys-border)] my-2"></div></li>
+
+          <li>
+            <div class="px-3 py-2">
+              <label class="block text-xs font-semibold text-[var(--ui-color-text-muted)] mb-1" for="tenant-select-mobile">
+                Active church
+              </label>
+
               <select
                 id="tenant-select-mobile"
                 value={activeChurchId}
                 onchange={onTenantChange}
-                class="
-                  w-full appearance-none
-                  pl-3 pr-8 py-2
-                  bg-white border border-[var(--sys-border)] rounded-md
-                  text-sm font-medium text-[var(--ui-color-text-strong)]
-                  hover:border-[var(--gatherings-accent)]
-                  focus:ring-2 focus:ring-offset-1 focus:ring-[var(--gatherings-accent)] focus:outline-none
-                  cursor-pointer transition-all
-                "
+                class="w-full appearance-none pl-3 pr-8 py-2 bg-white border border-[var(--sys-border)] rounded-md text-sm font-medium text-[var(--ui-color-text-strong)] focus:ring-2 focus:ring-[var(--gatherings-accent)] focus:border-[var(--gatherings-accent)] focus:outline-none"
               >
                 {#if tenants.length === 0}
                   <option value="">No churches</option>
@@ -292,6 +405,7 @@ $effect(() => {
                   {/each}
                 {/if}
               </select>
+
               <div class="mt-1 text-xs text-[var(--ui-color-text-muted)] truncate">
                 {activeTenantName}
               </div>

@@ -1,5 +1,11 @@
-select policyname, cmd, roles, qual
+select
+  schemaname,
+  tablename,
+  policyname,
+  roles,
+  cmd,
+  qual as using_expression,
+  with_check as with_check_expression
 from pg_policies
-where schemaname='public'
-  and tablename='care_cases'
-order by cmd, policyname;
+where schemaname = 'public'
+order by tablename, policyname;
