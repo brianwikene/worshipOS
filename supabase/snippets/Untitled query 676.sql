@@ -1,7 +1,3 @@
-drop policy if exists user_links_select_self on public.user_links;
-
-create policy user_links_select_self
-on public.user_links
-for select
-to authenticated
-using (user_id = auth.uid());
+SELECT column_name 
+FROM information_schema.columns 
+WHERE table_name = 'songs';

@@ -14,11 +14,8 @@
     console.log('PrPrPr 🐾  (Prayer, Presence, Practical help)');
   });
 </script>
-
-
-
-<div class="p-8">
-  <div class="bg-slate-800 text-white p-4 rounded mb-6 shadow-lg font-mono text-sm">
+<div class="sys-page space-y-6">
+  <div class="bg-slate-800 text-white p-4 rounded shadow-lg font-mono text-sm">
     <h2 class="text-green-400 font-bold mb-2">🕵️ DEBUG: Who am I?</h2>
     {#if data.user}
       <p><strong>Email:</strong> {data.user.email}</p>
@@ -37,18 +34,21 @@
     {/if}
   </div>
 
-  <div class="flex items-baseline justify-between mb-6">
-    <h1 class="text-2xl font-bold">Care Cases 🛡️</h1>
+  <div class="sys-page-header">
+    <div>
+      <h1 class="sys-title">Care Cases 🛡️</h1>
+      <p class="sys-subtitle">Assignments and escalations you can act on.</p>
+    </div>
 
     {#if data.showAll}
-      <a class="text-sm underline" href="/care">Show only my cases</a>
+      <a class="sys-btn sys-btn--secondary" href="/care">Show only my cases</a>
     {:else}
-      <a class="text-sm underline" href="/care?all=1">Show all I can see</a>
+      <a class="sys-btn sys-btn--secondary" href="/care?all=1">Show all I can see</a>
     {/if}
   </div>
 
 {#if (data.cases ?? []).length === 0}
-    <div class="p-8 text-center bg-gray-50 rounded border border-dashed border-gray-300">
+    <div class="sys-state sys-state--empty">
       <p class="text-gray-500 italic">
         {data.showAll ? 'No active cases you can see.' : 'No active cases assigned to you.'}
       </p>

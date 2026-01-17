@@ -141,10 +141,22 @@
     </div>
 
     <div class="sys-toggle" role="group">
-      <button class="sys-toggle-btn" class:active={viewMode === 'cards'} on:click={() => viewMode = 'cards'}>
+      <button
+        class="sys-toggle-btn"
+        class:active={viewMode === 'cards'}
+        on:click={() => viewMode = 'cards'}
+        aria-label="Card view"
+        title="Card view"
+      >
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z" /></svg>
       </button>
-      <button class="sys-toggle-btn" class:active={viewMode === 'table'} on:click={() => viewMode = 'table'}>
+      <button
+        class="sys-toggle-btn"
+        class:active={viewMode === 'table'}
+        on:click={() => viewMode = 'table'}
+        aria-label="Table view"
+        title="Table view"
+      >
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" /></svg>
       </button>
     </div>

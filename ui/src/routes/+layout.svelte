@@ -16,11 +16,12 @@
 
     setActiveChurchId(id);
     activeChurchId = id;
+    const updatedChurchId = activeChurchId;
 
     const res = await fetch('/api/tenant/active-church', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ churchId: id })
+      body: JSON.stringify({ churchId: updatedChurchId })
     });
 
     if (!res.ok) {
@@ -59,8 +60,11 @@
     {onTenantChange}
   />
 
-  <main>
-    {@render children()}
+  <main class="sys-shell sys-shell--main">
+    <div class="sys-container">
+      {@render children()}
+    </div>
   </main>
+
 
 </div>
