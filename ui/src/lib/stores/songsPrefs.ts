@@ -1,3 +1,4 @@
+// /ui/src/lib/stores/songsPrefs.ts
 import { persisted } from './persisted';
 
 export type SongsViewMode = 'cards' | 'table';

@@ -1,3 +1,4 @@
+-- /migrations/003_duplicate_detection.sql
 -- Migration: Duplicate Detection & Merge System
 -- Description: Adds tables and columns for duplicate detection, identity linking, and merge tracking
 

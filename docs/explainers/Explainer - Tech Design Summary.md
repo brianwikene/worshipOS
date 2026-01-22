@@ -1,3 +1,4 @@
+// /docs/explainers/Explainer - Tech Design Summary.md
 # WorshipOS — Technical Design Summary
 
 This document explains how WorshipOS’s pastoral philosophy is enforced technically.

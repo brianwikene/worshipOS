@@ -1,3 +1,4 @@
+-- /db/archive/song-repository-schema.sql
 -- =====================================================
 -- SONG REPOSITORY SCHEMA - Phase 1
 -- Sections, Arrangements, and Service Integration

@@ -1,3 +1,4 @@
+// /docs/Guidebook-4.md
 # ***📘 WorshipOS Guidebook***
 
 *A living document for contributors, leaders, and future builders.*  

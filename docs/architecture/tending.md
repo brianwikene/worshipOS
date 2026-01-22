@@ -1,3 +1,4 @@
+// /docs/architecture/tending.md
 # DRAFT — Tending: Service Load Context & Follow-Up Prompts
 *(Work in Progress — Not Finalized)*
 

@@ -1,3 +1,4 @@
+// /ui/src/lib/types/table.ts
 export type TableRowLink = {
   href: string;
   label: string;

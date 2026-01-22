@@ -1,3 +1,4 @@
+-- /db/archive/complete-scheduling-setup.sql
 -- =====================================================
 -- COMPLETE SERVICE SCHEDULING SETUP
 -- Creates tables, then populates all roles and requirements

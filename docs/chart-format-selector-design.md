@@ -1,3 +1,4 @@
+// /docs/chart-format-selector-design.md
 # CHART FORMAT SELECTOR - WORSHIPTOOLS STYLE
 # UX Pattern for Song Input & Display
 # =====================================================

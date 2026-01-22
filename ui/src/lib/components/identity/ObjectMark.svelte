@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/identity/ObjectMark.svelte -->
 <script lang="ts">
   type MarkSize = 'xs' | 'sm' | 'md' | 'lg';
   type MarkVariant = 'songs' | 'families' | 'teams' | 'gatherings' | 'default';

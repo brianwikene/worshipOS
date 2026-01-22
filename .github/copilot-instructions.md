@@ -1,3 +1,4 @@
+// /.github/copilot-instructions.md
 # GitHub Copilot Instructions — WorshipOS
 
 > **Source of truth:** See `AGENTS.md` in the project root for the complete instruction set.

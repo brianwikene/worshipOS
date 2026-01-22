@@ -1,3 +1,4 @@
+-- /old_schema_dump.cleaned.sql
 --
 -- PostgreSQL database dump
 --
@@ -419,10 +420,14 @@ CREATE TYPE public.app_role_type AS ENUM (
 
 CREATE FUNCTION auth.uid() RETURNS uuid
     LANGUAGE sql STABLE
-    AS $$
-  -- Returns the ID of the "admin" dummy user we created earlier
-  -- OR null if no user is found.
-  SELECT id FROM auth.users LIMIT 1;
+    AS $$
+
+  -- Returns the ID of the "admin" dummy user we created earlier
+
+  -- OR null if no user is found.
+
+  SELECT id FROM auth.users LIMIT 1;
+
 $$;
 
 
@@ -432,15 +437,24 @@ $$;
 
 CREATE FUNCTION public.auto_deactivate_family_member() RETURNS trigger
     LANGUAGE plpgsql
-    AS $$
-BEGIN
-  -- If end_date is set and is in the past, set is_active to false
-  IF NEW.end_date IS NOT NULL AND NEW.end_date <= CURRENT_DATE THEN
-    NEW.is_active := false;
-  END IF;
-  
-  RETURN NEW;
-END;
+    AS $$
+
+BEGIN
+
+  -- If end_date is set and is in the past, set is_active to false
+
+  IF NEW.end_date IS NOT NULL AND NEW.end_date <= CURRENT_DATE THEN
+
+    NEW.is_active := false;
+
+  END IF;
+
+  
+
+  RETURN NEW;
+
+END;
+
 $$;
 
 
@@ -667,21 +681,36 @@ COMMENT ON FUNCTION public.copy_service_to_date(p_source_instance_id uuid, p_tar
 
 CREATE FUNCTION public.get_checkable_children(p_family_id uuid) RETURNS TABLE(person_id uuid, display_name text, relationship text)
     LANGUAGE plpgsql
-    AS $$
-BEGIN
-  RETURN QUERY
-  SELECT 
-    p.id,
-    p.display_name,
-    fm.relationship
-  FROM family_members fm
-  JOIN people p ON p.id = fm.person_id
-  WHERE fm.family_id = p_family_id
-    AND fm.is_active = true
-    AND fm.relationship IN ('child', 'foster_child')
-    AND (fm.end_date IS NULL OR fm.end_date > CURRENT_DATE)
-  ORDER BY p.display_name;
-END;
+    AS $$
+
+BEGIN
+
+  RETURN QUERY
+
+  SELECT 
+
+    p.id,
+
+    p.display_name,
+
+    fm.relationship
+
+  FROM family_members fm
+
+  JOIN people p ON p.id = fm.person_id
+
+  WHERE fm.family_id = p_family_id
+
+    AND fm.is_active = true
+
+    AND fm.relationship IN ('child', 'foster_child')
+
+    AND (fm.end_date IS NULL OR fm.end_date > CURRENT_DATE)
+
+  ORDER BY p.display_name;
+
+END;
+
 $$;
 
 
@@ -698,32 +727,58 @@ COMMENT ON FUNCTION public.get_checkable_children(p_family_id uuid) IS 'Returns 
 
 CREATE FUNCTION public.get_family_roster(p_family_id uuid) RETURNS TABLE(person_id uuid, display_name text, relationship text, is_active boolean, is_temporary boolean, start_date date, end_date date, is_primary_contact boolean)
     LANGUAGE plpgsql
-    AS $$
-BEGIN
-  RETURN QUERY
-  SELECT 
-    p.id,
-    p.display_name,
-    fm.relationship,
-    fm.is_active,
-    fm.is_temporary,
-    fm.start_date,
-    fm.end_date,
-    fm.is_primary_contact
-  FROM family_members fm
-  JOIN people p ON p.id = fm.person_id
-  WHERE fm.family_id = p_family_id
-  ORDER BY 
-    CASE fm.relationship
-      WHEN 'parent' THEN 1
-      WHEN 'guardian' THEN 2
-      WHEN 'spouse' THEN 3
-      WHEN 'child' THEN 4
-      WHEN 'foster_child' THEN 5
-      ELSE 6
-    END,
-    p.display_name;
-END;
+    AS $$
+
+BEGIN
+
+  RETURN QUERY
+
+  SELECT 
+
+    p.id,
+
+    p.display_name,
+
+    fm.relationship,
+
+    fm.is_active,
+
+    fm.is_temporary,
+
+    fm.start_date,
+
+    fm.end_date,
+
+    fm.is_primary_contact
+
+  FROM family_members fm
+
+  JOIN people p ON p.id = fm.person_id
+
+  WHERE fm.family_id = p_family_id
+
+  ORDER BY 
+
+    CASE fm.relationship
+
+      WHEN 'parent' THEN 1
+
+      WHEN 'guardian' THEN 2
+
+      WHEN 'spouse' THEN 3
+
+      WHEN 'child' THEN 4
+
+      WHEN 'foster_child' THEN 5
+
+      ELSE 6
+
+    END,
+
+    p.display_name;
+
+END;
+
 $$;
 
 
@@ -740,49 +795,92 @@ COMMENT ON FUNCTION public.get_family_roster(p_family_id uuid) IS 'Returns all f
 
 CREATE FUNCTION public.get_service_roster(p_service_id integer) RETURNS TABLE(role_name text, person_name text, person_status text, role_id integer, min_needed integer, currently_filled bigint, is_filled boolean)
     LANGUAGE plpgsql
-    AS $$
-BEGIN
-    RETURN QUERY
-    WITH role_counts AS (
-        -- Step 1: Calculate how many people are currently assigned to each role
-        -- We need this to compare against min_needed later
-        SELECT 
-            a.role_id, 
-            COUNT(a.person_id) as assigned_count
-        FROM service_assignments a
-        WHERE a.service_id = p_service_id
-        AND a.deleted_at IS NULL
-        GROUP BY a.role_id
-    )
-    SELECT 
-        r.name AS role_name,
-        -- If person is NULL, return 'VACANT' for clarity in UI logic
-        COALESCE(p.first_name || ' ' || p.last_name, NULL) AS person_name,
-        a.status AS person_status, -- e.g., 'CONFIRMED', 'PENDING', 'DECLINED'
-        r.id AS role_id,
-        req.min_needed,
-        COALESCE(rc.assigned_count, 0) AS currently_filled,
-        
-        -- THE FIX: The Logic Check
-        -- A role is only "Filled" if the assigned count >= min_needed
-        (COALESCE(rc.assigned_count, 0) >= req.min_needed) AS is_filled
-
-    FROM service_requirements req
-    JOIN roles r ON req.role_id = r.id
-    
-    -- We LEFT JOIN assignments so we still get a row even if nobody is scheduled
-    LEFT JOIN service_assignments a ON a.role_id = r.id AND a.service_id = p_service_id
-    LEFT JOIN people p ON a.person_id = p.id
-    LEFT JOIN role_counts rc ON rc.role_id = r.id
-    
-    WHERE req.service_id = p_service_id
-    
-    -- Sorting: Put unfilled critical roles at the top so the admin sees them first
-    ORDER BY 
-        (COALESCE(rc.assigned_count, 0) >= req.min_needed) ASC, -- FALSE (Unfilled) comes first
-        r.name ASC;
-
-END;
+    AS $$
+
+BEGIN
+
+    RETURN QUERY
+
+    WITH role_counts AS (
+
+        -- Step 1: Calculate how many people are currently assigned to each role
+
+        -- We need this to compare against min_needed later
+
+        SELECT 
+
+            a.role_id, 
+
+            COUNT(a.person_id) as assigned_count
+
+        FROM service_assignments a
+
+        WHERE a.service_id = p_service_id
+
+        AND a.deleted_at IS NULL
+
+        GROUP BY a.role_id
+
+    )
+
+    SELECT 
+
+        r.name AS role_name,
+
+        -- If person is NULL, return 'VACANT' for clarity in UI logic
+
+        COALESCE(p.first_name || ' ' || p.last_name, NULL) AS person_name,
+
+        a.status AS person_status, -- e.g., 'CONFIRMED', 'PENDING', 'DECLINED'
+
+        r.id AS role_id,
+
+        req.min_needed,
+
+        COALESCE(rc.assigned_count, 0) AS currently_filled,
+
+        
+
+        -- THE FIX: The Logic Check
+
+        -- A role is only "Filled" if the assigned count >= min_needed
+
+        (COALESCE(rc.assigned_count, 0) >= req.min_needed) AS is_filled
+
+
+
+    FROM service_requirements req
+
+    JOIN roles r ON req.role_id = r.id
+
+    
+
+    -- We LEFT JOIN assignments so we still get a row even if nobody is scheduled
+
+    LEFT JOIN service_assignments a ON a.role_id = r.id AND a.service_id = p_service_id
+
+    LEFT JOIN people p ON a.person_id = p.id
+
+    LEFT JOIN role_counts rc ON rc.role_id = r.id
+
+    
+
+    WHERE req.service_id = p_service_id
+
+    
+
+    -- Sorting: Put unfilled critical roles at the top so the admin sees them first
+
+    ORDER BY 
+
+        (COALESCE(rc.assigned_count, 0) >= req.min_needed) ASC, -- FALSE (Unfilled) comes first
+
+        r.name ASC;
+
+
+
+END;
+
 $$;
 
 
@@ -827,24 +925,42 @@ $$;
 
 CREATE FUNCTION public.is_variant_active(p_variant_id uuid, p_check_date date DEFAULT CURRENT_DATE) RETURNS boolean
     LANGUAGE plpgsql STABLE
-    AS $$
-DECLARE
-  v_dates DATERANGE;
-  v_tags TEXT[];
-BEGIN
-  SELECT active_dates, context_tags
-  INTO v_dates, v_tags
-  FROM song_variants
-  WHERE id = p_variant_id;
-  
-  -- If no date range, always active
-  IF v_dates IS NULL THEN
-    RETURN TRUE;
-  END IF;
-  
-  -- Check if current date is in range
-  RETURN v_dates @> p_check_date;
-END;
+    AS $$
+
+DECLARE
+
+  v_dates DATERANGE;
+
+  v_tags TEXT[];
+
+BEGIN
+
+  SELECT active_dates, context_tags
+
+  INTO v_dates, v_tags
+
+  FROM song_variants
+
+  WHERE id = p_variant_id;
+
+  
+
+  -- If no date range, always active
+
+  IF v_dates IS NULL THEN
+
+    RETURN TRUE;
+
+  END IF;
+
+  
+
+  -- Check if current date is in range
+
+  RETURN v_dates @> p_check_date;
+
+END;
+
 $$;
 
 
@@ -2235,16 +2351,26 @@ CREATE TABLE public.song_variants (
 -- Name: COLUMN song_variants.content; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.song_variants.content IS 'JSONB structure: 
-  {
-    "flow": [
-      {"section_id": "uuid", "repeat": 1, "notes": "optional"},
-      {"section_id": "uuid", "repeat": 2}
-    ],
-    "modifications": {
-      "skip_intro": true,
-      "extended_bridge": true
-    }
+COMMENT ON COLUMN public.song_variants.content IS 'JSONB structure: 
+
+  {
+
+    "flow": [
+
+      {"section_id": "uuid", "repeat": 1, "notes": "optional"},
+
+      {"section_id": "uuid", "repeat": 2}
+
+    ],
+
+    "modifications": {
+
+      "skip_intro": true,
+
+      "extended_bridge": true
+
+    }
+
   }';
 
 

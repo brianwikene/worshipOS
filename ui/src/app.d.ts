@@ -1,3 +1,4 @@
+// /ui/src/app.d.ts
 // src/app.d.ts
 import { Session, SupabaseClient, User } from '@supabase/supabase-js';
 

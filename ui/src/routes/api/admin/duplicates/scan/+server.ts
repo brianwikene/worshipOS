@@ -1,3 +1,4 @@
+// /ui/src/routes/api/admin/duplicates/scan/+server.ts
 // POST /api/admin/duplicates/scan - Trigger duplicate detection scan
 
 import { findDuplicates, saveDetectedDuplicates } from '$lib/server/duplicates/detector';

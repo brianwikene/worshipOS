@@ -1,3 +1,4 @@
+-- /db/archive/cleanup-duplicates-fixed.sql
 -- =====================================================
 -- Cleanup Duplicate Service Groups (FIXED)
 -- Keeps the OLDEST group for each date/name combo

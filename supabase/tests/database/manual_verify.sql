@@ -1,3 +1,4 @@
+-- /supabase/tests/database/manual_verify.sql
 -- 1. Setup: Clean slate
 TRUNCATE public.care_cases RESTART IDENTITY CASCADE;
 

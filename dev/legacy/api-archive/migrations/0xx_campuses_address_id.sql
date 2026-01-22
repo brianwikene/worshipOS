@@ -1,3 +1,4 @@
+-- /dev/legacy/api-archive/migrations/0xx_campuses_address_id.sql
 begin;
 
 alter table campuses

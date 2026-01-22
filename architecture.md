@@ -1,3 +1,4 @@
+// /architecture.md
 # Architecture Overview — worshipOS
 
 This document describes the **current architecture**, **intentional boundaries**, and **deferred decisions** of the worshipOS codebase.

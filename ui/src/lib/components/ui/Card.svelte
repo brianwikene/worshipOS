@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/ui/Card.svelte -->
 <script lang="ts">
 	export let elevated = false;
 </script>

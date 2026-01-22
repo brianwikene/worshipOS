@@ -1,3 +1,4 @@
+// /docs/philosophy/philosophy - formation and trust.md
 # Formation, Visibility, and Trust
 
 WorshipOS supports the tracking of formation and orientation experiences that help people serve safely and in alignment with a church’s philosophy of ministry. This tracking exists to support coordination and shared understanding—not to measure spiritual maturity, confer authority, or advance people through a predefined lifecycle.

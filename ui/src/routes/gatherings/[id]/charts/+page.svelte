@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/gatherings/[id]/charts/+page.svelte -->
 <script lang="ts">
   // Charts tab - coming soon
 </script>

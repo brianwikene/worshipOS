@@ -1,3 +1,4 @@
+-- /db/archive/crud-schema-additions.sql
 -- =====================================================
 -- SCHEMA ADDITIONS FOR CRUD OPERATIONS
 -- Missing tables and columns needed for full CRUD

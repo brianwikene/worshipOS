@@ -1,3 +1,4 @@
+// /docs/StartPage (framing).md
 # Start — Framing & Posture
 *(Canonical Copy)*
 

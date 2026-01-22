@@ -1,3 +1,4 @@
+-- /supabase/snippets/Untitled query 137.sql
 select
   schemaname,
   tablename,

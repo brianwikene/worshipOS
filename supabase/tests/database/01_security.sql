@@ -1,3 +1,4 @@
+-- /supabase/tests/database/01_security.sql
 BEGIN;
 SELECT plan(4); -- We are running 4 tests
 

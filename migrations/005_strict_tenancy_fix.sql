@@ -1,3 +1,4 @@
+-- /migrations/005_strict_tenancy_fix.sql
 BEGIN;
 
 -- 1. PREP PARENT: Ensure service_instances allows composite references

@@ -1,3 +1,4 @@
+// /ui/src/routes/api/admin/merges/[id]/undo/+server.ts
 // src/routes/api/admin/merges/[id]/undo/+server.ts
 
 import { error, json } from '@sveltejs/kit';

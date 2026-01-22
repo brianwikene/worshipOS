@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/gatherings/[id]/rehearse/+page.svelte -->
 <script lang="ts">
   // Rehearse tab - coming soon
 </script>

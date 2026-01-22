@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/gatherings/[id]/+layout.svelte -->
 <script lang="ts">
   import { page } from '$app/stores';
 

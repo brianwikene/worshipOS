@@ -1,3 +1,4 @@
+-- /db/archive/worshipos_schema.sql
 --
 -- PostgreSQL database dump
 --

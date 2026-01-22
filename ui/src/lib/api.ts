@@ -1,3 +1,4 @@
+// /ui/src/lib/api.ts
 // src/lib/api.ts
 import { getActiveChurchId } from '$lib/tenant';
 

@@ -1,3 +1,4 @@
+// /docs/WorshipOS Design Philosophy.md
 # Vineyard Values → WorshipOS Design Philosophy
 
 This document translates core Vineyard movement values into guiding design principles for WorshipOS.  

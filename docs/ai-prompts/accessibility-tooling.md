@@ -1,3 +1,4 @@
+// /docs/ai-prompts/accessibility-tooling.md
 # Accessibility Tooling (MVP) — WorshipOS
 
 This document defines the automated tooling posture for WorshipOS MVP.

@@ -1,3 +1,4 @@
+-- /dev/legacy/api-archive/seeds/020_bethany_demo.sql
 begin;
 
 -- 1) Create church (idempotent by name)

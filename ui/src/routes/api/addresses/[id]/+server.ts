@@ -1,3 +1,4 @@
+// /ui/src/routes/api/addresses/[id]/+server.ts
 // src/routes/api/addresses/[id]/+server.ts
 
 import { error, json } from '@sveltejs/kit';

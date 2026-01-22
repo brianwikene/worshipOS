@@ -1,3 +1,4 @@
+// /docs/TEND.md
 # TEND — Signal Layer
 
 > **Core principle:** TEND notices. It never responds.

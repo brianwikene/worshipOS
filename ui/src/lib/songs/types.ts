@@ -1,3 +1,4 @@
+// /ui/src/lib/songs/types.ts
 export type SongSourceFormat = 'plain_text' | 'chordpro';
 
 export type ParsedSectionKind =

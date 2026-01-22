@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/layout/TopNavigation.svelte -->
 <script lang="ts">
   import { page } from '$app/stores';
   import { onDestroy } from 'svelte';

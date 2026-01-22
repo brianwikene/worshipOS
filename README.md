@@ -1,3 +1,4 @@
+// /README.md
 # WorshipOS
 
 WorshipOS is a multi-tenant worship planning and team coordination platform designed for churches.

@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/admin/duplicates/+page.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { apiJson, apiFetch } from '$lib/api';

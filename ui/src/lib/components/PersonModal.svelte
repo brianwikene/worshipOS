@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/PersonModal.svelte -->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
 

@@ -1,3 +1,4 @@
+-- /old_data_dump.sql
 pg_dump: warning: there are circular foreign-key constraints on this table:
 pg_dump: detail: people
 pg_dump: hint: You might not be able to restore the dump without using --disable-triggers or temporarily dropping the constraints.
@@ -1117,9 +1118,12 @@ INSERT INTO public.service_team_assignments (id, church_id, service_instance_id,
 INSERT INTO public.song_sections (id, church_id, song_id, section_type, section_number, label, lyrics, chords, display_order, notes, created_at, updated_at, seasonal_tags, availability) VALUES ('79da336c-d4a8-4b3a-9c75-b5d7c04e22bb', 'a8c2c7ab-836a-4ef1-a373-562e20babb76', 'c6b7a090-223a-4734-82e6-8e7695b43d27', 'verse', 3, 'Christmas Verse', 'The baby in the manger, now King upon the throne
 What was promised has come to pass
 Emmanuel has made His home', NULL, 10, 'Use during Christmas season only', '2025-12-19 06:44:21.655043+00', '2025-12-19 06:44:21.655043+00', '{christmas}', 'seasonal');
-INSERT INTO public.song_sections (id, church_id, song_id, section_type, section_number, label, lyrics, chords, display_order, notes, created_at, updated_at, seasonal_tags, availability) VALUES ('d7e8fc05-b96f-4d34-b2d1-4a2d279f27af', 'a8c2c7ab-836a-4ef1-a373-562e20babb76', '4febda63-b38c-4942-bd4a-110b76f1b157', 'verse', 3, 'Christmas Verse', 'You call me out upon the waters
-Where shepherds heard the angels sing
-The great unknown where feet may fail
+INSERT INTO public.song_sections (id, church_id, song_id, section_type, section_number, label, lyrics, chords, display_order, notes, created_at, updated_at, seasonal_tags, availability) VALUES ('d7e8fc05-b96f-4d34-b2d1-4a2d279f27af', 'a8c2c7ab-836a-4ef1-a373-562e20babb76', '4febda63-b38c-4942-bd4a-110b76f1b157', 'verse', 3, 'Christmas Verse', 'You call me out upon the waters
+
+Where shepherds heard the angels sing
+
+The great unknown where feet may fail
+
 And there I find You in the manger King', NULL, 100, 'Christmas-themed verse about being called by the Christ child', '2025-12-19 06:45:15.442041+00', '2025-12-19 06:45:15.442041+00', '{christmas}', 'seasonal');
 
 

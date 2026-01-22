@@ -1,3 +1,4 @@
+-- /db/archive/seed-data-fixed.sql
 -- =====================================================
 -- WorshipOS Comprehensive Seed Data (CORRECTED)
 -- Fixed: All UUIDs now use proper PostgreSQL syntax

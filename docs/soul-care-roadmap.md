@@ -1,3 +1,4 @@
+// /docs/soul-care-roadmap.md
 # WORSHIPOS SOUL CARE & SHEPHERDING FEATURES
 # Moving from Logistics to People Stewardship
 # =====================================================

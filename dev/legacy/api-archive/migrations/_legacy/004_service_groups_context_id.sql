@@ -1,3 +1,4 @@
+-- /dev/legacy/api-archive/migrations/_legacy/004_service_groups_context_id.sql
 alter table service_groups
   add column if not exists context_id uuid;
 

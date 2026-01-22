@@ -1,3 +1,4 @@
+// /ui/src/hooks.server.ts
 // src/hooks.server.ts
 import { PUBLIC_SUPABASE_ANON_KEY, PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { createServerClient } from '@supabase/ssr';

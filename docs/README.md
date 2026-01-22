@@ -1,3 +1,4 @@
+// /docs/README.md
 # WorshipOS Documentation
 
 This folder contains the philosophical, theological, architectural, and product foundations of WorshipOS.

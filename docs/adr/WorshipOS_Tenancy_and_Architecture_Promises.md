@@ -1,3 +1,4 @@
+// /docs/adr/WorshipOS_Tenancy_and_Architecture_Promises.md
 # WorshipOS — Tenancy & Architecture Promises
 
 This document captures the **explicit promises** we made about data isolation, security boundaries, and system behavior. These are not implementation notes; they are **invariants**. If an implementation ever violates these, the implementation is wrong.

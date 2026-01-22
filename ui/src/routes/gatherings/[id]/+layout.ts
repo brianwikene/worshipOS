@@ -1,3 +1,4 @@
+// /ui/src/routes/gatherings/[id]/+layout.ts
 import { apiJson } from '$lib/api';
 
 interface Assignment {
@@ -41,14 +42,30 @@ interface AvailableSong {
   bpm: number | null;
 }
 
+interface OrderRow {
+  id: string;
+  sort_order: number;
+  item_type: string;
+  title: string | null;
+  duration_seconds: number | null;
+  notes: string | null;
+  role_id: string | null;
+  role_name: string | null;
+  person_id: string | null;
+  person_name: string | null;
+  related_item_id: string | null;
+}
+
+
 export const load = async ({ params, fetch }) => {
   const serviceId = params.id;
 
-  const [service, assignments, songs, availableSongs] = await Promise.all([
+  const [service, assignments, songs, availableSongs, orderItems] = await Promise.all([
     apiJson<ServiceDetail>(fetch, `/api/gatherings/${serviceId}`),
     apiJson<Assignment[]>(fetch, `/api/gatherings/${serviceId}/roster`),
     apiJson<Song[]>(fetch, `/api/gatherings/${serviceId}/songs`),
-    apiJson<AvailableSong[]>(fetch, '/api/songs')
+    apiJson<AvailableSong[]>(fetch, '/api/songs'),
+    apiJson<OrderRow[]>(fetch, `/api/gatherings/${serviceId}/order`)
   ]);
 
   return {
@@ -56,6 +73,7 @@ export const load = async ({ params, fetch }) => {
     assignments,
     songs,
     availableSongs,
+    orderItems,
     serviceId
   };
 };

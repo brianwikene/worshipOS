@@ -1,3 +1,4 @@
+// /docs/product/Kingdom Expectation and Locked Services.md
 # Kingdom Expectation & Locked Services
 
 This document explains how WorshipOS handles Spirit-led moments that diverge from the original service plan—and why this behavior is intentional, pastoral, and theologically grounded.

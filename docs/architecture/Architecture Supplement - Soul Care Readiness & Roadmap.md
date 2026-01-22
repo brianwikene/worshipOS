@@ -1,3 +1,4 @@
+// /docs/architecture/Architecture Supplement - Soul Care Readiness & Roadmap.md
 # Soul Care Architecture Readiness & Development Roadmap
 
 This document supplements the core architecture by defining the prerequisites and boundaries required before implementing the Soul Care module.

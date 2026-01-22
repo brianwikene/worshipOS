@@ -1,3 +1,4 @@
+// /ui/src/routes/api/gatherings/[id]/+server.ts
 // This route uses legacy service_* database tables while the API surface and domain language use "gatherings".
 
 // src/routes/api/gatherings/[id]/+server.ts

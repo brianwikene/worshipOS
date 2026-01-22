@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/tend/+page.svelte -->
 <!-- /src/routes/tend/+page.svelte -->
 <!-- See /docs/TEND-CARE-ARCHITECTURE.md for boundary rules -->
 <!--

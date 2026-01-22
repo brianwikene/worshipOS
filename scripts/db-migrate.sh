@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# /scripts/db-migrate.sh
 set -euo pipefail
 
 DB_URL="${DATABASE_URL:-postgres://worship:worship@127.0.0.1:5432/worshipos}"

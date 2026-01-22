@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/SongModal.svelte -->
 
 <script lang="ts">
   import Button from '$lib/components/ui/Button.svelte';

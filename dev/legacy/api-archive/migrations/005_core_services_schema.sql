@@ -1,3 +1,4 @@
+-- /dev/legacy/api-archive/migrations/005_core_services_schema.sql
 -- 005_tenancy_and_services_core.sql
 -- Tenancy: church_id is the hard isolation boundary
 -- Campus: scope filter within a church

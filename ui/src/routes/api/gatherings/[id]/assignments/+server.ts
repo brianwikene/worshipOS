@@ -1,3 +1,4 @@
+// /ui/src/routes/api/gatherings/[id]/assignments/+server.ts
 // src/routes/api/gatherings/[id]/assignments/+server.ts
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { error, json } from '@sveltejs/kit';

@@ -1,3 +1,4 @@
+// /docs/architecture/Architecture - Formation Visibility.md
 # Formation Visibility and Permissions
 
 This document describes how formation data is modeled and exposed within WorshipOS.

@@ -1,3 +1,4 @@
+-- /dev/legacy/api-archive/migrations/006_rename_orgs_to_churches.sql
 -- 006_rename_orgs_to_churches.sql
 
 -- 1) orgs -> churches

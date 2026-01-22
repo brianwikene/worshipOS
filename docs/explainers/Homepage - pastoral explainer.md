@@ -1,3 +1,4 @@
+// /docs/explainers/Homepage - pastoral explainer.md
 **Software That Behaves the Way We Try to Lead**
 
 WorshipOS is shaped by pastoral values. It helps churches plan well, respond faithfully, and care for people before burnout or fracture takes root.

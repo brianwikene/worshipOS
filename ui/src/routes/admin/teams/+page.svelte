@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/admin/teams/+page.svelte -->
 <script lang="ts">
   import { apiFetch, apiJson } from '$lib/api';
   import { onMount } from 'svelte';

@@ -1,3 +1,4 @@
+// /ui/src/lib/server/songs/parser.ts
 import type {
 	ParsedChordPlacement,
 	ParsedLyricLine,
@@ -56,88 +57,167 @@ const CHORDPRO_END_DIRECTIVES = new Set([
 ]);
 
 export function detectSourceFormat(rawText: string): SongSourceFormat {
-	return /\[[A-G](?:#|b)?[^\]]*\]/.test(rawText) || /\{[cC]:[^}]+\}/.test(rawText) ? 'chordpro' : 'plain_text';
+  // 1) Strong signal: chord markers
+  const hasChordMarkers =
+    /\[[A-G](?:#|b)?[^\]]*\]/.test(rawText) || /\{[cC]:[^}]+\}/.test(rawText);
+  if (hasChordMarkers) return 'chordpro';
+
+  // 2) ChordPro directives (structural or metadata)
+  // Examples: {title:...}, {t:...}, {subtitle:...}, {comment:...}, {soc}/{eoc}, {sov}/{eov}, etc.
+  const hasChordProDirectives =
+    /\{(title|t|subtitle|st|comment|c)\s*:[^}]*\}/i.test(rawText) ||
+    /\{(soc|eoc|sov|eov|sob|eob|sot|eot|soi|eoi)\}/i.test(rawText) ||
+    /\{(start_of_|end_of_)[a-z_]+\}/i.test(rawText);
+
+  if (hasChordProDirectives) return 'chordpro';
+
+  // 3) ChordPro-style comment headings: "# Verse", "# Chorus", etc.
+  const hasChordProCommentHeadings =
+    /(^|\n)\s*#+\s*(verse|chorus|bridge|tag|intro|outro|pre[-\s]?chorus|section)\b/i.test(rawText);
+
+  if (hasChordProCommentHeadings) return 'chordpro';
+
+  return 'plain_text';
 }
 
-export function parseSongText(
-	rawText: string | null | undefined,
-	options: ParseSongOptions = {}
-): ParsedSong {
-	const normalized = (rawText ?? '').replace(/\r\n/g, '\n');
+export function parseSongText(input: string, options: ParseSongOptions = {}): ParsedSong {
+	const normalized = normalizeInput(input);
 	const trimmed = normalized.trim();
-	const format = options.formatHint ?? detectSourceFormat(normalized);
 
 	const warnings: string[] = [];
-	const sections: ParsedSection[] = [];
-	let currentSection = createSection('Section 1', 'section');
-	sections.push(currentSection);
+	const format = options.formatHint ?? detectSourceFormat(normalized);
+		// Empty input: store a minimal placeholder + warning
+	if (trimmed.length === 0) {
+		warnings.push('No lyrics provided; saved an empty placeholder.');
+
+		return {
+			format,
+			sections: [
+				{
+					label: 'Section 1',
+					type: 'section',
+					lines: [{ lyrics: '', chords: [] }]
+				}
+			],
+			warnings,
+			generated_at: new Date().toISOString()
+		};
+	}
+
+	const sections: ParsedSection[] = [createSection('Section 1', 'section')];
+	let currentSection = sections[0];
 
 	let headingCount = 0;
 	let chordTokenCount = 0;
 
-	const lines = normalized.split('\n');
-	for (const rawLine of lines) {
-		const trimmedLine = rawLine.trim();
-		if (format === 'chordpro') {
-			const lower = trimmedLine.toLowerCase();
-			if (CHORDPRO_END_DIRECTIVES.has(lower)) {
-				continue;
-			}
-			if (CHORDPRO_SECTION_DIRECTIVES[lower]) {
-				currentSection = beginSection(sections, currentSection, CHORDPRO_SECTION_DIRECTIVES[lower]);
+	// Counts only “real” content lines (lyrics and/or chords), not headings/directives/comments.
+	let contentLineCount = 0;
+
+	for (const rawLine of normalized.split('\n')) {
+		const line = rawLine.trimEnd();
+
+		// Plain text mode
+		if (format === 'plain_text') {
+			const heading = extractHeading(line);
+			if (heading) {
 				headingCount += 1;
+				currentSection = beginSection(sections, currentSection, heading);
 				continue;
 			}
-			if (lower.startsWith('{') && lower.endsWith('}')) {
-				// Non-structural directive - skip but don't warn
-				continue;
-			}
-		}
 
-		const heading = extractHeading(rawLine);
-		if (heading) {
-			currentSection = beginSection(sections, currentSection, heading);
-			headingCount += 1;
+			// preserve blank lines (don’t count as content)
+			if (line.trim().length === 0) {
+				currentSection.lines.push({ lyrics: '', chords: [] });
+				continue;
+			}
+
+			contentLineCount += 1;
+			currentSection.lines.push({ lyrics: line, chords: [] });
 			continue;
 		}
 
-		if (format === 'chordpro' && trimmedLine.startsWith('#')) {
-			const headingFromComment = extractHeading(trimmedLine.replace(/^#+/, '').trim());
-			if (headingFromComment) {
-				currentSection = beginSection(sections, currentSection, headingFromComment);
-				headingCount += 1;
-				continue;
-			}
-			// Otherwise treat as comment and skip
-			continue;
-		}
-
-		if (!trimmedLine && currentSection.lines.length === 0) {
-			// Skip leading blank lines in a section
-			continue;
-		}
-
-		const parsedLine =
-			format === 'chordpro' ? parseChordProLine(rawLine) : ({ lyrics: rawLine, chords: [] } satisfies ParsedLyricLine);
-
-		if (format === 'chordpro') {
-			chordTokenCount += parsedLine.chords.length;
-		}
-
-		if (!parsedLine.lyrics && parsedLine.chords.length === 0 && !trimmedLine) {
-			// preserve intentional spacing between sections
-			if (currentSection.lines.length > 0) {
-				currentSection.lines.push(parsedLine);
-			}
-		} else {
-			currentSection.lines.push(parsedLine);
-		}
+		// ChordPro mode
+// Handle ChordPro directives
+const directive = line.trim().toLowerCase();
+if (directive.startsWith('{') && directive.endsWith('}')) {
+	// Section-start directives become section boundaries
+	const start = CHORDPRO_SECTION_DIRECTIVES[directive];
+	if (start) {
+		headingCount += 1;
+		currentSection = beginSection(sections, currentSection, start);
+		continue;
 	}
 
+	// End directives are ignored (don’t become content)
+	if (CHORDPRO_END_DIRECTIVES.has(directive)) {
+		continue;
+	}
+
+	// Other directives (title/subtitle/comment/metadata) are ignored as content
+	continue;
+}
+
+
+		// Treat ChordPro comment headings (# Verse) as section boundaries
+		if (/^\s*#/.test(line)) {
+			const comment = line.replace(/^\s*#\s*/, '').trim();
+			const heading = extractHeading(comment);
+			if (heading) {
+				headingCount += 1;
+				currentSection = beginSection(sections, currentSection, heading);
+			}
+			continue;
+		}
+
+		const heading = extractHeading(line);
+		if (heading) {
+			headingCount += 1;
+			currentSection = beginSection(sections, currentSection, heading);
+			continue;
+		}
+
+		// preserve blank lines (don’t count as content)
+		if (line.trim().length === 0) {
+			currentSection.lines.push({ lyrics: '', chords: [] });
+			continue;
+		}
+
+		const parsed = parseChordProLine(line);
+		chordTokenCount += parsed.chords.length;
+
+		// Count only meaningful content
+		if (parsed.chords.length > 0 || parsed.lyrics.trim().length > 0) {
+			contentLineCount += 1;
+		}
+
+		currentSection.lines.push(parsed);
+	}
+
+	// Filter out totally empty sections
 	const meaningfulSections = sections.filter((section) => section.lines.length > 0);
+
+	// ✅ NEW: ChordPro input that contained ONLY directives/comments (no parseable content)
+	if (format === 'chordpro' && trimmed.length > 0 && contentLineCount === 0) {
+		warnings.push('No content lines were parsed; only ChordPro directives/comments were found.');
+		warnings.push('No lyrics provided; saved an empty placeholder.');
+
+		return {
+			format,
+			sections: [
+				{
+					label: 'Section 1',
+					type: 'section',
+					lines: [{ lyrics: '', chords: [] }]
+				}
+			],
+			warnings,
+			generated_at: new Date().toISOString()
+		};
+	}
+
 	if (meaningfulSections.length === 0) {
 		if (trimmed.length === 0) {
-			warnings.push('No lyrics were provided; saved an empty placeholder.');
+			warnings.push('No lyrics provided; saved an empty placeholder.');
 			meaningfulSections.push({
 				label: 'Section 1',
 				type: 'section',
@@ -148,7 +228,7 @@ export function parseSongText(
 			meaningfulSections.push({
 				label: 'Section 1',
 				type: 'section',
-				lines: normalized.split('\n').map((line) => ({ lyrics: line, chords: [] }))
+				lines: normalized.split('\n').map((l) => ({ lyrics: l, chords: [] }))
 			});
 		}
 	} else if (headingCount === 0) {
@@ -156,7 +236,7 @@ export function parseSongText(
 	}
 
 	if (format === 'chordpro' && trimmed && chordTokenCount === 0) {
-		warnings.push('ChordPro format detected but no chord markers like [C] or {c:C} were found.');
+		warnings.push('Detected ChordPro but no chord markers like [C] or {c:C} were found.');
 	}
 
 	return {
@@ -239,4 +319,8 @@ function beginSection(
 	const next = createSection(heading.label, heading.type);
 	sections.push(next);
 	return next;
+}
+function normalizeInput(input: string): string {
+	// normalize line endings + strip BOM if present
+	return input.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
 }

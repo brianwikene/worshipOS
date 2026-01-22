@@ -1,3 +1,4 @@
+// /ui/src/lib/stores/peoplePrefs.ts
 // src/lib/stores/peoplePrefs.ts
 import { persisted } from './persisted';
 

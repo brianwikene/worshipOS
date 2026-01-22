@@ -1,3 +1,4 @@
+-- /db/archive/seed-data-v3.sql
 -- =====================================================
 -- WorshipOS Comprehensive Seed Data (V3 - CORRECTED)
 -- Let PostgreSQL generate UUIDs automatically

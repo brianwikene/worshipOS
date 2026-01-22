@@ -1,3 +1,4 @@
+// /docs/philosophy/Soul Care & the Digital Deacon.md
 # Soul Care & the Digital Deacon Philosophy
 
 This document defines the philosophy behind WorshipOS’s Soul Care module.

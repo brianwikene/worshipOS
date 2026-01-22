@@ -1,3 +1,4 @@
+// /docs/architecture/Architecture - Future Auth System.md
 # Architecture: Future Authorization System
 
 > **Status**: Design Document (Not Yet Implemented)

@@ -1,3 +1,4 @@
+// /ui/src/lib/stores/persisted.ts
 // src/lib/stores/persisted.ts
 export function persisted<T>(key: string, initial: T) {
 	let start = initial;

@@ -1,3 +1,4 @@
+// /docs/philosophy/Founders Note - Why we Say No.md
 # Why We Say No
 
 WorshipOS is shaped as much by what we refuse to build as by what we choose to build.

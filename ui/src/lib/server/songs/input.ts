@@ -1,3 +1,4 @@
+// /ui/src/lib/server/songs/input.ts
 import type { SongSourceFormat } from '$lib/songs/types';
 
 export interface SanitizedSongInput {

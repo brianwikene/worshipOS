@@ -1,3 +1,4 @@
+<!-- /dev/tenants/+page.svelte -->
 <script lang="ts">
   import { goto } from '$app/navigation';
 

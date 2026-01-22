@@ -1,3 +1,4 @@
+// /docs/philosophy/Quiet Positioning - Coordination and Care.md
 # Quiet Positioning: Coordination and Care
 
 This document supplements WorshipOS positioning by clarifying what differentiates the platform—without disparaging other tools.

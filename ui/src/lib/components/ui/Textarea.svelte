@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/ui/Textarea.svelte -->
 <script lang="ts">
 	import type { HTMLTextAreaAttributes } from 'svelte/elements';
 

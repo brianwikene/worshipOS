@@ -1,3 +1,4 @@
+// /docs/data-hygiene-philosophy.md
 # WorshipOS Data Hygiene & Review Philosophy
 
 ## Why Manual Review Matters

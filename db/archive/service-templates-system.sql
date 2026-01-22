@@ -1,3 +1,4 @@
+-- /db/archive/service-templates-system.sql
 -- =====================================================
 -- SERVICE TEMPLATES SYSTEM
 -- Pattern (Template) vs Event (Service Instance)

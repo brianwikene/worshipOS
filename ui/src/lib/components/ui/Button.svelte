@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/ui/Button.svelte -->
 <script lang="ts">
 	import type { HTMLButtonAttributes } from 'svelte/elements';
 

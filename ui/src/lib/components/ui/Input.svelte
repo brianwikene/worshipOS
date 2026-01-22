@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/ui/Input.svelte -->
 <script lang="ts">
 	import type { HTMLInputAttributes } from 'svelte/elements';
 

@@ -1,3 +1,4 @@
+// /dev/legacy/api-archive/middleware/tenant.ts
 import tenants from '../../dev/tenants.json' assert { type: 'json' };
 
 const allowed = new Set(tenants.tenants.map(t => t.id));

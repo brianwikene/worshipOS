@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/start/+page.svelte -->
 <!-- /src/routes/start/+page.svelte -->
 
 <script lang="ts">

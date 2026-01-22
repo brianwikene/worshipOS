@@ -1,3 +1,4 @@
+// /docs/ai-prompts/accessibility-ui-generation.md
 # AI Prompts — Accessibility-First UI Generation (WorshipOS)
 
 These prompts are used when generating UI code with Copilot, Claude, or similar AI tools.

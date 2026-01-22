@@ -1,3 +1,4 @@
+// /docs/ai-prompts/accessibility-definition-of-done.md
 # Accessibility — Definition of Done (MVP Baseline)
 
 This DoD enforces WorshipOS’s **Accessible-by-Construction Baseline**.

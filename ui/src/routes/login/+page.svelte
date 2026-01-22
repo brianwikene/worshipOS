@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/login/+page.svelte -->
 <!-- /src/routes/login/+page.svelte -->
 
 <script lang="ts">

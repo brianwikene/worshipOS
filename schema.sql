@@ -1,3 +1,4 @@
+-- /schema.sql
 --
 -- PostgreSQL database dump
 --

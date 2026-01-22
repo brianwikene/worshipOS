@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/connections/+layout.svelte -->
 <script>
   import ConnectionsHeader from '$lib/components/connections/ConnectionsHeader.svelte';
 </script>

@@ -1,3 +1,4 @@
+// /docs/CARE.md
 # CARE — Case Container
 
 > **Core principle:** CARE responds. It never notices on its own.

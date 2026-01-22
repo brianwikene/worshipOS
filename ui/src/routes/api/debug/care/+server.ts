@@ -1,3 +1,4 @@
+// /ui/src/routes/api/debug/care/+server.ts
 // ui/src/routes/api/tenant/active-church/+server.ts
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';

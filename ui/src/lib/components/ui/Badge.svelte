@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/ui/Badge.svelte -->
 <script lang="ts">
 	type BadgeVariant = 'default' | 'muted' | 'accent' | 'warning' | 'success' | 'danger';
 	export let variant: BadgeVariant = 'default';

@@ -1,3 +1,4 @@
+// /docs/song-repository-design.md
 # SONG REPOSITORY & CHORD CHART SYSTEM
 # Planning Center / WorshipTeams.com style functionality
 # =====================================================

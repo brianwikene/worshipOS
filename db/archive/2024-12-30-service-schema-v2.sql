@@ -1,3 +1,4 @@
+-- /db/archive/2024-12-30-service-schema-v2.sql
 -- ============================================================================
 -- WORSHIPOS SERVICE SCHEMA V2
 -- Migration: 2024-12-30

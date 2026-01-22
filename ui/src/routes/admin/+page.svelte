@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/admin/+page.svelte -->
 <script lang="ts">
   const adminSections = [
     {

@@ -1,3 +1,4 @@
+// /ui/src/routes/api/gatherings/[id]/songs/[songId]/+server.ts
 // src/routes/api/gatherings/[id]/songs/[songId]/+server.ts
 
 import { error, json } from '@sveltejs/kit';

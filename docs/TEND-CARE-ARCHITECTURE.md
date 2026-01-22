@@ -1,3 +1,4 @@
+// /docs/TEND-CARE-ARCHITECTURE.md
 # WorshipOS — TEND/CARE Architecture
 
 ## The One Rule

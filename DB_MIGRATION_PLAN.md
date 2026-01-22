@@ -1,3 +1,4 @@
+// /DB_MIGRATION_PLAN.md
 # Database Migration Plan — service_* → gathering_*
 
 This document outlines a **future, intentional plan** to migrate legacy

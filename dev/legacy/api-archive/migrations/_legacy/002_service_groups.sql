@@ -1,3 +1,4 @@
+-- /dev/legacy/api-archive/migrations/_legacy/002_service_groups.sql
 create table if not exists service_groups (
   id uuid primary key default gen_random_uuid(),
   org_id text not null,

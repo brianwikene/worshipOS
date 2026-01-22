@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/connections/teams/+page.svelte -->
 <!-- /src/routes/connections/teams/+page.svelte -->
 
 <script>

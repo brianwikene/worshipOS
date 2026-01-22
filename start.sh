@@ -1,4 +1,5 @@
 #!/bin/bash
+# /start.sh
 
 echo "🚀 Starting WorshipOS..."
 

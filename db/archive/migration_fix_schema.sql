@@ -1,3 +1,4 @@
+-- /db/archive/migration_fix_schema.sql
 -- =====================================================
 -- WorshipOS Schema Migration
 -- Fixes schema mismatches and adds missing tables

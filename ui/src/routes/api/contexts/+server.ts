@@ -1,3 +1,4 @@
+// /ui/src/routes/api/contexts/+server.ts
 // src/routes/api/contexts/+server.ts
 
 import { error, json } from '@sveltejs/kit';

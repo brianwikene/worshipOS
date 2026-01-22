@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/care/+page.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
 

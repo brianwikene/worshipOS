@@ -1,3 +1,4 @@
+// /docs/worshipos-proposed-schema-v1.md
 # WorshipOS Database Schema v1.0
 ## A Pastoral Care System That Happens to Have Scheduling
 

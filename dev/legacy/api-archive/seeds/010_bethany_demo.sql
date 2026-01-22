@@ -1,3 +1,4 @@
+-- /dev/legacy/api-archive/seeds/010_bethany_demo.sql
 -- Bethany Community Church demo seed
 -- Safe-ish: inserts only if the church name doesn't already exist.
 

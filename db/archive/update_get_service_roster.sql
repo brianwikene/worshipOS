@@ -1,3 +1,4 @@
+-- /db/archive/update_get_service_roster.sql
 CREATE OR REPLACE FUNCTION public.get_service_roster(p_service_instance_id uuid)
 RETURNS TABLE(
     ministry_area text,

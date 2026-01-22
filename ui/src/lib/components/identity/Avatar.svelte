@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/identity/Avatar.svelte -->
 <script lang="ts">
   type AvatarSize = 'xs' | 'sm' | 'md' | 'lg';
 

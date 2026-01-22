@@ -1,3 +1,4 @@
+// /GEMINI_old.md
 # GEMINI.md — WorshipOS Context for AI
 
 > **This document is derived from `AGENTS.md`. Refer to `AGENTS.md` for the full instruction set.**

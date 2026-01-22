@@ -1,3 +1,4 @@
+<!-- /ui/src/routes/connections/people/[id]/+page.svelte -->
 <!-- /src/routes/connections/people/[id]/+page.svelte -->
 
 <script lang="ts">

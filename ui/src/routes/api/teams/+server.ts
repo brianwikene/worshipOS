@@ -1,3 +1,4 @@
+// /ui/src/routes/api/teams/+server.ts
 // src/routes/api/teams/+server.ts
 
 import { error, json } from '@sveltejs/kit';

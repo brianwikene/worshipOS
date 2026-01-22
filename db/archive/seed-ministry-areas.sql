@@ -1,3 +1,4 @@
+-- /db/archive/seed-ministry-areas.sql
 -- ============================================================================
 -- MINISTRY AREAS SEED DATA
 -- 2024-12-30

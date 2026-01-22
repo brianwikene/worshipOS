@@ -1,3 +1,4 @@
+// /docs/architecture/Architecture - WorshipOS.md
 # WorshipOS Architecture
 
 This document exists so future Brian doesn’t have to reconstruct the system from memory.

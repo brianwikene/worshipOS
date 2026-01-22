@@ -1,3 +1,4 @@
+// /docs/constitution/WorshipOS_Constitution.md
 # WorshipOS Constitution
 ## Foundational Principles for Formation, Care, and Truth
 

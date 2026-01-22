@@ -1,3 +1,4 @@
+// /docs/Pastor FAQ.md
 # WorshipOS — Pastor FAQ
 
 ### Is this another Church Management System (ChMS)?

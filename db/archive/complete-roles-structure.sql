@@ -1,3 +1,4 @@
+-- /db/archive/complete-roles-structure.sql
 -- =====================================================
 -- COMPLETE ROLES STRUCTURE FOR MOUNTAIN VINEYARD
 -- All ministry areas and positions

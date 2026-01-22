@@ -1,3 +1,4 @@
+-- /supabase/migrations/20260111094500_init_baseline.sql
 --
 -- PostgreSQL database dump
 --

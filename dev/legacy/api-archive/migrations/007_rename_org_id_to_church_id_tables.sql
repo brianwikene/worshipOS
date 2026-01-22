@@ -1,3 +1,4 @@
+-- /dev/legacy/api-archive/migrations/007_rename_org_id_to_church_id_tables.sql
 -- Renames org_id -> church_id for all *BASE TABLES* in public schema that still have org_id.
 -- Safe to run once (and will skip if nothing matches).
 

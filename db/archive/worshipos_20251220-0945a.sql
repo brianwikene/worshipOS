@@ -1,3 +1,4 @@
+-- /db/archive/worshipos_20251220-0945a.sql
 create database worshipos
     with owner worship;
 

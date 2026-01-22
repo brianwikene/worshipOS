@@ -1,3 +1,4 @@
+-- /migrations/004_song_text_and_arrangements.sql
 -- Migration: Song lyrics storage & arrangements
 -- Adds raw lyric storage, parsed JSON, and song_arrangements table
 

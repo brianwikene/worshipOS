@@ -1,3 +1,4 @@
+-- /db/archive/complete_schema_updated.sql
 -- =====================================================
 -- WorshipOS Complete Updated Schema
 -- Generated: December 2025

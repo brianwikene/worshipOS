@@ -1,3 +1,4 @@
+// /AGENTS.md
 # AGENTS.md — WorshipOS AI Agent Instructions
 
 > **This is the canonical instruction set for all AI coding assistants working on WorshipOS.**

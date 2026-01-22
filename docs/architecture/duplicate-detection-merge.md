@@ -1,3 +1,4 @@
+// /docs/architecture/duplicate-detection-merge.md
 # Duplicate Detection & Merge System
 
 ## Design Principles

@@ -1,3 +1,4 @@
+-- /db/archive/crud-schema-fixed.sql
 -- =====================================================
 -- SCHEMA ADDITIONS FOR CRUD OPERATIONS (FIXED)
 -- Adds missing columns then creates views/functions

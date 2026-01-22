@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/common/UnderDevelopment.svelte -->
 <script lang="ts">
   // Optional: Pass a specific feature name (e.g. "Teams")
   export let featureName = "This feature";

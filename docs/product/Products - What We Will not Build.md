@@ -1,3 +1,4 @@
+// /docs/product/Products - What We Will not Build.md
 # What We Will Not Build
 
 This document outlines explicit non-goals for WorshipOS. These boundaries exist to protect trust, theology, and long-term product integrity.

@@ -1,3 +1,4 @@
+// /docs/explainers/Explainer - Pastoral.md
 # WorshipOS: Software That Behaves the Way We Try to Lead
 
 Most church software is built to coordinate tasks.

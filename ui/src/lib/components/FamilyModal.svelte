@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/FamilyModal.svelte -->
 <script lang="ts">
   type Family = {
     id?: string;

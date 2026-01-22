@@ -1,3 +1,4 @@
+-- /dev/legacy/api-archive/migrations/_legacy/003_contexts.sql
 -- If you already ran this in 001, it’s safe to repeat
 create extension if not exists pgcrypto;
 

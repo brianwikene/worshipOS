@@ -1,3 +1,4 @@
+<!-- /ui/src/lib/components/connections/ConnectionsHeader.svelte -->
 <script lang="ts">
   import { page } from '$app/stores';
 

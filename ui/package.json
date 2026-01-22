@@ -16,21 +16,24 @@
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.0",
-		"@sveltejs/kit": "^2.49.2",
+		"@sveltejs/kit": "^2.50.0",
 		"@sveltejs/vite-plugin-svelte": "^6.2.1",
 		"@types/pg": "^8.16.0",
+		"@vitest/coverage-v8": "^4.0.17",
+		"@vitest/ui": "^4.0.17",
 		"autoprefixer": "^10.4.23",
 		"postcss": "^8.5.6",
 		"prettier": "^3.7.4",
 		"prettier-plugin-svelte": "^3.4.0",
-		"svelte": "^5.45.6",
+		"svelte": "^5.48.0",
 		"svelte-check": "^4.3.4",
 		"tailwindcss": "^3.4.19",
 		"typescript": "^5.9.3",
 		"vite": "^7.2.6",
-		"vitest": "^2.1.4"
+		"vitest": "^4.0.17"
 	},
 	"dependencies": {
+		"@lucide/svelte": "^0.562.0",
 		"@supabase/ssr": "^0.8.0",
 		"@supabase/supabase-js": "^2.90.1",
 		"pg": "^8.16.3"
