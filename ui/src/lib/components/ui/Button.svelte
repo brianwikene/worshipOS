@@ -14,7 +14,8 @@
 	const variantClasses: Record<ButtonVariant, string> = {
 		primary: 'border-transparent bg-ui-accent text-white shadow-card hover:shadow-card-hover',
 		secondary: 'border-ui-border bg-ui-surface text-ui-text hover:bg-ui-surface-muted',
-		ghost: 'border-transparent bg-transparent text-ui-text-muted hover:bg-ui-surface-muted hover:text-ui-text'
+		ghost:
+			'border-transparent bg-transparent text-ui-text-muted hover:bg-ui-surface-muted hover:text-ui-text'
 	};
 
 	const sizeClasses: Record<ButtonSize, string> = {
@@ -24,11 +25,11 @@
 </script>
 
 <button
-	type={type}
+	{type}
 	class={`inline-flex items-center justify-center gap-2 rounded-card border font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent focus-visible:ring-offset-2 focus-visible:ring-offset-ui-surface disabled:cursor-not-allowed disabled:opacity-60 ${variantClasses[variant]} ${sizeClasses[size]} ${fullWidth ? 'w-full' : ''}`}
 	{disabled}
-	on:click
-	on:keydown
+	onclick
+	onkeydown
 	{...$$restProps}
 >
 	<slot />

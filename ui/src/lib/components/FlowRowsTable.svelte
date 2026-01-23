@@ -1,25 +1,10 @@
-<!-- /ui/src/routes/gatherings/[id]/order/+page.svelte -->
-
+<!-- /ui/src/lib/components/FlowRowsTable.svelte -->
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { apiFetch, apiJson } from '$lib/api';
 	import { onMount } from 'svelte';
 
-	type PageData = {
-		service: any;
-		songs: Song[];
-		availableSongs: AvailableSong[];
-		assignments?: Assignment[] | null;
-		people?: any[]; // optional, if you ever provide it
-	};
-
-	let { data } = $props<{ data: PageData }>();
-
-	const service = $derived(data.service);
-	const songs = $derived(data.songs);
-	const availableSongs = $derived(data.availableSongs);
-	const assignments = $derived((data.assignments as Assignment[] | null | undefined) ?? []);
-	interface Song {
+	type Song = {
 		id: string;
 		song_id: string;
 		title: string;
@@ -28,17 +13,17 @@
 		bpm: number | null;
 		display_order: number;
 		notes: string | null;
-	}
+	};
 
-	interface AvailableSong {
+	type AvailableSong = {
 		id: string;
 		title: string;
 		artist: string | null;
 		key: string | null;
 		bpm: number | null;
-	}
+	};
 
-	interface Assignment {
+	type Assignment = {
 		id: string | null;
 		role_id: string;
 		role_name: string;
@@ -49,17 +34,16 @@
 		is_lead: boolean;
 		is_required: boolean;
 		notes: string | null;
-	}
-	interface PersonOption {
+	};
+
+	type PersonOption = {
 		id: string;
 		name: string;
-	}
-
-	let peopleOptions = $state<PersonOption[]>([]);
+	};
 
 	type OrderItemType = 'header' | 'item' | 'note' | 'song';
 
-	interface OrderRow {
+	type OrderRow = {
 		id: string;
 		sort_order: number;
 		item_type: OrderItemType | string;
@@ -73,7 +57,25 @@
 		// optional convenience fields if your API provides them
 		role_name?: string | null;
 		person_name?: string | null;
-	}
+	};
+
+	type PageData = {
+		service: { id: string } | null;
+		songs: Song[];
+		availableSongs: AvailableSong[];
+		assignments?: Assignment[];
+		people?: any[];
+	};
+
+	const { data } = $props<{ data: PageData }>();
+
+	const service = $derived(data?.service ?? null);
+	const songs = $derived((data?.songs ?? []) as Song[]);
+	const availableSongs = $derived((data?.availableSongs ?? []) as AvailableSong[]);
+	const assignments = $derived(((data?.assignments ?? []) as Assignment[]) ?? []);
+
+	// People options
+	let peopleOptions = $state<PersonOption[]>([]);
 
 	// ===== Run Sheet state =====
 	let orderItems = $state<OrderRow[]>([]);
@@ -114,7 +116,6 @@
 	let deletingRowId = $state<string | null>(null);
 
 	// ===== Setlist (existing) =====
-	// Add song modal state
 	let showAddSongModal = $state(false);
 	let searchQuery = $state('');
 	let selectedSongId = $state('');
@@ -146,11 +147,6 @@
 			.map(([id, name]) => ({ id, name }))
 			.sort((a, b) => a.name.localeCompare(b.name));
 	}
-	function isPrePostTitle(title: string | null | undefined) {
-		if (!title) return false;
-		const t = title.toLowerCase();
-		return ['pre', 'post', 'pre-service', 'post-service'].some((k) => t.includes(k));
-	}
 
 	function toPersonOptions(rows: any[]): PersonOption[] {
 		const safe = Array.isArray(rows) ? rows : [];
@@ -173,7 +169,7 @@
 
 	async function loadPeopleOptions() {
 		// Prefer server-provided people if you ever add it to +layout.ts
-		const fromData = data.people;
+		const fromData = (data as any)?.people;
 		if (Array.isArray(fromData) && fromData.length) {
 			peopleOptions = toPersonOptions(fromData);
 			return;
@@ -254,7 +250,7 @@
 			loadingOrder = true;
 			orderError = null;
 			const res = await apiFetch(`/api/gatherings/${service.id}/order`, { method: 'GET' });
-			orderItems = await res.json();
+			orderItems = (await res.json()) as OrderRow[];
 		} catch (e) {
 			orderError = e instanceof Error ? e.message : 'Failed to load run sheet';
 		} finally {
@@ -331,11 +327,9 @@
 	}
 
 	async function swapSortOrders(a: OrderRow, b: OrderRow) {
-		// Swap top-level sort_orders; notes remain attached by related_item_id and will still render under parent
 		const aSort = a.sort_order;
 		const bSort = b.sort_order;
 
-		// Two-step to avoid unique collisions (no unique constraint currently, but safe anyway)
 		const temp = Math.max(aSort, bSort) + 1000;
 		await patchOrderRow(a.id, { sort_order: temp });
 		await patchOrderRow(b.id, { sort_order: aSort });
@@ -420,7 +414,6 @@
 		if (!text) return alert('Note text is required');
 		if (!noteParentId) return alert('Missing note parent');
 
-		// Insert immediately after the parent (server should handle shifting sort_order)
 		const existing = notesForParent(orderItems, noteParentId);
 		const last = existing.length ? existing[existing.length - 1] : null;
 
@@ -475,7 +468,6 @@
 			return;
 		}
 
-		// item
 		const t = editTitle.trim();
 		if (!t) return alert('Item title is required');
 
@@ -500,7 +492,7 @@
 
 	// ===== Setlist existing logic =====
 	const filteredSongs = $derived.by(() => {
-		return availableSongs.filter((song: AvailableSong) => {
+		return availableSongs.filter((song) => {
 			if (!searchQuery) return true;
 			const query = searchQuery.toLowerCase();
 			return (
@@ -510,9 +502,7 @@
 		});
 	});
 
-	const selectedSong = $derived.by(() =>
-		availableSongs.find((s: AvailableSong) => s.id === selectedSongId)
-	);
+	const selectedSong = $derived.by(() => availableSongs.find((s) => s.id === selectedSongId));
 
 	function openAddSongModal() {
 		showAddSongModal = true;
@@ -543,9 +533,7 @@
 
 		try {
 			addingSong = true;
-
-			const nextOrder =
-				songs.length > 0 ? Math.max(...songs.map((s: Song) => s.display_order)) + 1 : 1;
+			const nextOrder = songs.length > 0 ? Math.max(...songs.map((s) => s.display_order)) + 1 : 1;
 
 			await apiFetch(`/api/gatherings/${service.id}/songs`, {
 				method: 'POST',
@@ -657,7 +645,6 @@
 			</div>
 		</div>
 	{:else}
-		<!-- Replacement for the whole runsheet list block -->
 		<div class="rs-surface">
 			{#each getTopLevelRows(orderItems) as row (row.id)}
 				{#if row.item_type === 'header'}
@@ -701,7 +688,14 @@
 						{/if}
 					</div>
 				{:else}
-					<div class="rs-row item" class:prepost={isPrePostTitle(row.title)}>
+					<div
+						class="rs-row item {row.title &&
+						['pre', 'post', 'pre-service', 'post-service'].some((k) =>
+							row.title?.toLowerCase().includes(k)
+						)
+							? 'prepost'
+							: ''}"
+					>
 						<div class="rs-row-top">
 							<div class="rs-title">{row.title || '(untitled item)'}</div>
 
@@ -747,7 +741,8 @@
 							<select
 								id={'person-' + row.id}
 								value={row.person_id ?? ''}
-								onchange={(e) => quickAssignPerson(row, (e.target as HTMLSelectElement).value)}
+								onchange={(e: Event) =>
+									quickAssignPerson(row, (e.currentTarget as HTMLSelectElement).value)}
 							>
 								<option value="">Unassigned</option>
 								{#each peopleOptions as p}
@@ -890,30 +885,13 @@
 		class="modal-overlay"
 		role="button"
 		tabindex="0"
-		aria-label="Close Add Section dialog"
 		onclick={closeAddSectionModal}
-		onkeydown={(e) => {
-			if (e.key === 'Escape') closeAddSectionModal();
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				closeAddSectionModal();
-			}
-		}}
+		onkeydown={(e: KeyboardEvent) => e.key === 'Escape' && closeAddSectionModal()}
 	>
-		<div
-			class="modal"
-			role="dialog"
-			tabindex="-1"
-			aria-modal="true"
-			aria-labelledby="add-section-title"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.key === 'Escape' && closeAddSectionModal()}
-		>
+		<div class="modal" role="dialog" aria-modal="true" onclick={(e) => e.stopPropagation()}>
 			<div class="modal-header">
-				<h2 id="add-section-title">Add Section</h2>
-				<button class="close-btn" type="button" onclick={closeAddSectionModal} aria-label="Close">
-					×
-				</button>
+				<h2>Add Section</h2>
+				<button class="close-btn" onclick={closeAddSectionModal}>×</button>
 			</div>
 
 			<div class="modal-body">
@@ -923,7 +901,7 @@
 						id="section-title"
 						type="text"
 						bind:value={sectionTitle}
-						placeholder="e.g., Worship Service"
+						placeholder="e.g., Worship"
 					/>
 				</div>
 
@@ -939,8 +917,8 @@
 			</div>
 
 			<div class="modal-actions">
-				<button class="secondary-btn" type="button" onclick={closeAddSectionModal}>Cancel</button>
-				<button class="primary-btn" type="button" onclick={addSection} disabled={creatingRow}>
+				<button class="secondary-btn" onclick={closeAddSectionModal}>Cancel</button>
+				<button class="primary-btn" onclick={addSection} disabled={creatingRow}>
 					{creatingRow ? 'Adding…' : 'Add Section'}
 				</button>
 			</div>
@@ -954,30 +932,13 @@
 		class="modal-overlay"
 		role="button"
 		tabindex="0"
-		aria-label="Close Add Item dialog"
 		onclick={closeAddItemModal}
-		onkeydown={(e) => {
-			if (e.key === 'Escape') closeAddItemModal();
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				closeAddItemModal();
-			}
-		}}
+		onkeydown={(e: KeyboardEvent) => e.key === 'Escape' && closeAddItemModal()}
 	>
-		<div
-			class="modal"
-			role="dialog"
-			tabindex="-1"
-			aria-modal="true"
-			aria-labelledby="add-item-title"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.key === 'Escape' && closeAddItemModal()}
-		>
+		<div class="modal" role="dialog" aria-modal="true" onclick={(e) => e.stopPropagation()}>
 			<div class="modal-header">
-				<h2 id="add-item-title">Add Item</h2>
-				<button class="close-btn" type="button" onclick={closeAddItemModal} aria-label="Close"
-					>×</button
-				>
+				<h2>Add Item</h2>
+				<button class="close-btn" onclick={closeAddItemModal}>×</button>
 			</div>
 
 			<div class="modal-body">
@@ -1028,8 +989,8 @@
 			</div>
 
 			<div class="modal-actions">
-				<button class="secondary-btn" type="button" onclick={closeAddItemModal}>Cancel</button>
-				<button class="primary-btn" type="button" onclick={addItem} disabled={creatingRow}>
+				<button class="secondary-btn" onclick={closeAddItemModal}>Cancel</button>
+				<button class="primary-btn" onclick={addItem} disabled={creatingRow}>
 					{creatingRow ? 'Adding…' : 'Add Item'}
 				</button>
 			</div>
@@ -1043,30 +1004,13 @@
 		class="modal-overlay"
 		role="button"
 		tabindex="0"
-		aria-label="Close Add Note dialog"
 		onclick={closeAddNoteModal}
-		onkeydown={(e) => {
-			if (e.key === 'Escape') closeAddNoteModal();
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				closeAddNoteModal();
-			}
-		}}
+		onkeydown={(e: KeyboardEvent) => e.key === 'Escape' && closeAddNoteModal()}
 	>
-		<div
-			class="modal"
-			role="dialog"
-			tabindex="-1"
-			aria-modal="true"
-			aria-labelledby="add-note-title"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.key === 'Escape' && closeAddNoteModal()}
-		>
+		<div class="modal" role="dialog" aria-modal="true" onclick={(e) => e.stopPropagation()}>
 			<div class="modal-header">
-				<h2 id="add-note-title">Add Note</h2>
-				<button class="close-btn" type="button" onclick={closeAddNoteModal} aria-label="Close"
-					>×</button
-				>
+				<h2>Add Note</h2>
+				<button class="close-btn" onclick={closeAddNoteModal}>×</button>
 			</div>
 
 			<div class="modal-body">
@@ -1082,8 +1026,8 @@
 			</div>
 
 			<div class="modal-actions">
-				<button class="secondary-btn" type="button" onclick={closeAddNoteModal}>Cancel</button>
-				<button class="primary-btn" type="button" onclick={addNote} disabled={creatingRow}>
+				<button class="secondary-btn" onclick={closeAddNoteModal}>Cancel</button>
+				<button class="primary-btn" onclick={addNote} disabled={creatingRow}>
 					{creatingRow ? 'Adding…' : 'Add Note'}
 				</button>
 			</div>
@@ -1097,30 +1041,13 @@
 		class="modal-overlay"
 		role="button"
 		tabindex="0"
-		aria-label="Close Edit Row dialog"
 		onclick={closeEditRowModal}
-		onkeydown={(e) => {
-			if (e.key === 'Escape') closeEditRowModal();
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				closeEditRowModal();
-			}
-		}}
+		onkeydown={(e: KeyboardEvent) => e.key === 'Escape' && closeEditRowModal()}
 	>
-		<div
-			class="modal"
-			role="dialog"
-			tabindex="-1"
-			aria-modal="true"
-			aria-labelledby="edit-row-title"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.key === 'Escape' && closeEditRowModal()}
-		>
+		<div class="modal" role="dialog" aria-modal="true" onclick={(e) => e.stopPropagation()}>
 			<div class="modal-header">
-				<h2 id="edit-row-title">Edit {rowLabel(editingRow)}</h2>
-				<button class="close-btn" type="button" onclick={closeEditRowModal} aria-label="Close"
-					>×</button
-				>
+				<h2>Edit {rowLabel(editingRow)}</h2>
+				<button class="close-btn" onclick={closeEditRowModal}>×</button>
 			</div>
 
 			<div class="modal-body">
@@ -1173,8 +1100,8 @@
 			</div>
 
 			<div class="modal-actions">
-				<button class="secondary-btn" type="button" onclick={closeEditRowModal}>Cancel</button>
-				<button class="primary-btn" type="button" onclick={saveEditRow} disabled={updatingRow}>
+				<button class="secondary-btn" onclick={closeEditRowModal}>Cancel</button>
+				<button class="primary-btn" onclick={saveEditRow} disabled={updatingRow}>
 					{updatingRow ? 'Saving…' : 'Save'}
 				</button>
 			</div>
@@ -1183,61 +1110,39 @@
 {/if}
 
 <!-- ===== Existing modals for Setlist ===== -->
-<!-- Add Song Modal -->
 {#if showAddSongModal}
 	<div
 		class="modal-overlay"
 		role="button"
 		tabindex="0"
-		aria-label="Close Add Song dialog"
 		onclick={closeAddSongModal}
-		onkeydown={(e) => {
-			if (e.key === 'Escape') closeAddSongModal();
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				closeAddSongModal();
-			}
-		}}
+		onkeydown={(e: KeyboardEvent) => e.key === 'Escape' && closeAddSongModal()}
 	>
 		<div
 			class="modal add-song-modal"
 			role="dialog"
-			tabindex="-1"
 			aria-modal="true"
-			aria-labelledby="add-song-title"
 			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.key === 'Escape' && closeAddSongModal()}
 		>
 			<div class="modal-header">
-				<h2 id="add-song-title">Add Song to Gathering</h2>
-				<button class="close-btn" type="button" onclick={closeAddSongModal} aria-label="Close">
-					×
-				</button>
+				<h2>Add Song to Service</h2>
+				<button class="close-btn" onclick={closeAddSongModal}>×</button>
 			</div>
 
 			<div class="modal-body">
 				<div class="search-box">
-					<label class="sr-only" for="add-song-search">Search songs</label>
-					<input
-						id="add-song-search"
-						type="text"
-						placeholder="Search songs..."
-						bind:value={searchQuery}
-					/>
+					<input type="text" placeholder="Search songs..." bind:value={searchQuery} />
 				</div>
 
-				<div class="song-select-list" role="listbox" aria-label="Song results">
+				<div class="song-select-list">
 					{#if filteredSongs.length === 0}
-						<div class="empty-message" role="status" aria-live="polite">
-							{searchQuery ? 'No songs found' : 'No songs available'}
-						</div>
+						<div class="empty-message">{searchQuery ? 'No songs found' : 'No songs available'}</div>
 					{:else}
 						{#each filteredSongs as song}
 							<button
 								type="button"
 								class="song-select-item"
 								class:selected={selectedSongId === song.id}
-								aria-pressed={selectedSongId === song.id}
 								onclick={() => selectSong(song)}
 							>
 								<div class="song-select-info">
@@ -1255,7 +1160,7 @@
 									</div>
 								</div>
 								{#if selectedSongId === song.id}
-									<span class="checkmark" aria-hidden="true">✓</span>
+									<span class="checkmark">✓</span>
 								{/if}
 							</button>
 						{/each}
@@ -1263,13 +1168,13 @@
 				</div>
 
 				{#if selectedSong}
-					<div class="song-details-form" aria-labelledby="add-song-details-title">
-						<h3 id="add-song-details-title">Song Details</h3>
+					<div class="song-details-form">
+						<h3>Song Details</h3>
 
 						<div class="form-group">
-							<label for="add-song-key">Key (optional override)</label>
+							<label for="key">Key (optional override)</label>
 							<input
-								id="add-song-key"
+								id="key"
 								type="text"
 								bind:value={songKey}
 								placeholder={selectedSong.key || 'e.g., G'}
@@ -1277,9 +1182,9 @@
 						</div>
 
 						<div class="form-group">
-							<label for="add-song-notes">Notes (optional)</label>
+							<label for="notes">Notes (optional)</label>
 							<textarea
-								id="add-song-notes"
+								id="notes"
 								bind:value={songNotes}
 								placeholder="e.g., Skip verse 2, extended intro"
 								rows="2"
@@ -1290,10 +1195,9 @@
 			</div>
 
 			<div class="modal-actions">
-				<button class="secondary-btn" type="button" onclick={closeAddSongModal}>Cancel</button>
+				<button class="secondary-btn" onclick={closeAddSongModal}>Cancel</button>
 				<button
 					class="primary-btn"
-					type="button"
 					onclick={addSongToService}
 					disabled={!selectedSongId || addingSong}
 				>
@@ -1304,36 +1208,23 @@
 	</div>
 {/if}
 
-<!-- Edit Song Modal -->
 {#if showEditSongModal && editingSong}
 	<div
 		class="modal-overlay"
 		role="button"
 		tabindex="0"
-		aria-label="Close Edit Song dialog"
 		onclick={closeEditSongModal}
-		onkeydown={(e) => {
-			if (e.key === 'Escape') closeEditSongModal();
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				closeEditSongModal();
-			}
-		}}
+		onkeydown={(e: KeyboardEvent) => e.key === 'Escape' && closeEditSongModal()}
 	>
 		<div
 			class="modal edit-song-modal"
 			role="dialog"
-			tabindex="-1"
 			aria-modal="true"
-			aria-labelledby="edit-song-title"
 			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.key === 'Escape' && closeEditSongModal()}
 		>
 			<div class="modal-header">
-				<h2 id="edit-song-title">Edit Song</h2>
-				<button class="close-btn" type="button" onclick={closeEditSongModal} aria-label="Close">
-					×
-				</button>
+				<h2>Edit Song</h2>
+				<button class="close-btn" onclick={closeEditSongModal}>×</button>
 			</div>
 
 			<div class="modal-body">
@@ -1345,19 +1236,14 @@
 				</div>
 
 				<div class="form-group">
-					<label for="edit-song-key">Key</label>
-					<input
-						id="edit-song-key"
-						type="text"
-						bind:value={editSongKey}
-						placeholder="e.g., G, Am, Bb"
-					/>
+					<label for="edit-key">Key</label>
+					<input id="edit-key" type="text" bind:value={editSongKey} placeholder="e.g., G, Am, Bb" />
 				</div>
 
 				<div class="form-group">
-					<label for="edit-song-notes">Notes</label>
+					<label for="edit-notes">Notes</label>
 					<textarea
-						id="edit-song-notes"
+						id="edit-notes"
 						bind:value={editSongNotes}
 						placeholder="e.g., Skip verse 2, extended intro"
 						rows="3"
@@ -1366,13 +1252,8 @@
 			</div>
 
 			<div class="modal-actions">
-				<button class="secondary-btn" type="button" onclick={closeEditSongModal}>Cancel</button>
-				<button
-					class="primary-btn"
-					type="button"
-					onclick={updateSongInService}
-					disabled={savingEdit}
-				>
+				<button class="secondary-btn" onclick={closeEditSongModal}>Cancel</button>
+				<button class="primary-btn" onclick={updateSongInService} disabled={savingEdit}>
 					{savingEdit ? 'Saving...' : 'Save Changes'}
 				</button>
 			</div>
@@ -1380,36 +1261,23 @@
 	</div>
 {/if}
 
-<!-- View Chart Modal -->
 {#if showChartModal && chartSong}
 	<div
 		class="modal-overlay"
 		role="button"
 		tabindex="0"
-		aria-label="Close chart dialog"
 		onclick={closeChartModal}
-		onkeydown={(e) => {
-			if (e.key === 'Escape') closeChartModal();
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				closeChartModal();
-			}
-		}}
+		onkeydown={(e: KeyboardEvent) => e.key === 'Escape' && closeChartModal()}
 	>
 		<div
 			class="modal chart-modal"
 			role="dialog"
-			tabindex="-1"
 			aria-modal="true"
-			aria-labelledby="chart-modal-title"
 			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.key === 'Escape' && closeChartModal()}
 		>
 			<div class="modal-header">
-				<h2 id="chart-modal-title">{chartSong.title}</h2>
-				<button class="close-btn" type="button" onclick={closeChartModal} aria-label="Close"
-					>×</button
-				>
+				<h2>{chartSong.title}</h2>
+				<button class="close-btn" onclick={closeChartModal}>×</button>
 			</div>
 
 			<div class="modal-body">
@@ -1417,7 +1285,6 @@
 					{#if chartSong.artist}
 						<p class="chart-artist">by {chartSong.artist}</p>
 					{/if}
-
 					<div class="chart-meta">
 						{#if chartSong.key}
 							<span class="chart-detail"><strong>Key:</strong> {chartSong.key}</span>
@@ -1426,662 +1293,25 @@
 							<span class="chart-detail"><strong>BPM:</strong> {chartSong.bpm}</span>
 						{/if}
 					</div>
-
 					{#if chartSong.notes}
-						<div class="chart-notes">
-							<strong>Notes:</strong>
-							{chartSong.notes}
-						</div>
+						<div class="chart-notes"><strong>Notes:</strong> {chartSong.notes}</div>
 					{/if}
 				</div>
 
-				<div class="chart-placeholder" role="status" aria-live="polite">
-					<div class="placeholder-icon" aria-hidden="true">🎼</div>
+				<div class="chart-placeholder">
+					<div class="placeholder-icon">🎼</div>
 					<p>Chart/lyrics viewer coming soon</p>
 					<p class="placeholder-hint">Song charts will be displayed here</p>
 				</div>
 			</div>
 
 			<div class="modal-actions">
-				<button class="secondary-btn" type="button" onclick={closeChartModal}>Close</button>
+				<button class="secondary-btn" onclick={closeChartModal}>Close</button>
 			</div>
 		</div>
 	</div>
 {/if}
 
 <style>
-	.section {
-		background: white;
-		border: 1px solid #e0e0e0;
-		border-radius: 12px;
-		padding: 1.5rem;
-		margin-bottom: 1rem;
-	}
-
-	.section-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1.25rem;
-		padding-bottom: 1rem;
-		border-bottom: 2px solid #f0f0f0;
-		gap: 1rem;
-	}
-
-	.header-actions {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-	}
-
-	h2 {
-		font-size: 1.25rem;
-		font-weight: 600;
-		margin: 0;
-		color: #1a1a1a;
-	}
-
-	.icon-btn {
-		background: none;
-		border: 1px solid #e0e0e0;
-		border-radius: 6px;
-		padding: 0.375rem 0.75rem;
-		font-size: 1rem;
-		cursor: pointer;
-		transition: all 0.2s;
-	}
-
-	.icon-btn:hover {
-		background: #f5f5f5;
-		border-color: #1976d2;
-	}
-
-	.icon-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.icon-btn.delete:hover {
-		background: #ffebee;
-		border-color: #c62828;
-		color: #c62828;
-	}
-
-	.primary-btn {
-		padding: 0.75rem 1.1rem;
-		background: #1976d2;
-		color: white;
-		border: none;
-		border-radius: 8px;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.2s;
-		white-space: nowrap;
-	}
-
-	.primary-btn:hover:not(:disabled) {
-		background: #1565c0;
-	}
-
-	.primary-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.secondary-btn {
-		padding: 0.75rem 1.1rem;
-		background: white;
-		color: #666;
-		border: 1px solid #e0e0e0;
-		border-radius: 8px;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.2s;
-		white-space: nowrap;
-	}
-
-	.secondary-btn:hover {
-		background: #f5f5f5;
-	}
-
-	.empty-state {
-		text-align: center;
-		padding: 2.5rem 1rem;
-		color: #999;
-	}
-
-	.empty-actions {
-		display: flex;
-		gap: 0.75rem;
-		justify-content: center;
-		margin-top: 1rem;
-		flex-wrap: wrap;
-	}
-
-	.error-state {
-		padding: 1rem;
-		border: 1px solid #ffe0e0;
-		background: #fff5f5;
-		border-radius: 10px;
-		color: #8a1f1f;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	/* ===== Run Sheet ===== */
-
-	.rs-row {
-		display: flex;
-		gap: 0.75rem;
-		align-items: flex-start;
-		border: 1px solid #e0e0e0;
-		border-radius: 10px;
-		padding: 0.9rem;
-		background: #fff;
-	}
-
-	.rs-header {
-		background: #f7f7f8;
-		border-color: #e6e6e8;
-	}
-
-	/* Section/Header rows (like "Enfolding") */
-	.rs-row.rs-header {
-		background: #f1f3f5; /* darker than items */
-		border: 1px solid #e3e7ee;
-		border-radius: 12px;
-		padding: 14px 14px;
-		margin: 10px 0 8px;
-	}
-
-	/* Big header title */
-	.rs-row.rs-header .rs-title {
-		font-size: 1.05rem; /* bigger */
-		font-weight: 700;
-		color: #1f2937;
-		letter-spacing: 0.2px;
-	}
-
-	.rs-title {
-		font-weight: 650;
-		color: #1a1a1a;
-	}
-
-	.rs-duration {
-		font-variant-numeric: tabular-nums;
-		color: #666;
-		font-size: 0.9rem;
-		white-space: nowrap;
-	}
-
-	.rs-meta {
-		margin-top: 0.6rem;
-		display: flex;
-		gap: 1rem;
-		align-items: flex-start;
-		flex-wrap: wrap;
-	}
-
-	.rs-label {
-		font-size: 0.85rem;
-		color: #666;
-	}
-
-	/* Note rows rendered under a parent item */
-	.rs-note {
-		margin-top: 8px; /* tighter than 0.6rem */
-		margin-left: 0.25rem;
-
-		background: transparent; /* stops “table cell” vibe */
-		border: none; /* stops “table cell” vibe */
-		padding: 0; /* let note items handle spacing */
-
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	/* Note list row (one bullet note row) */
-	.rs-note-item {
-		display: flex;
-		align-items: center; /* <- tighter vertical alignment */
-		justify-content: space-between;
-		gap: 10px;
-
-		padding: 4px 0; /* <- tighter than 6px */
-		margin: 0; /* <- kill any inherited margins */
-		line-height: 1.25; /* <- prevents tall rows */
-	}
-
-	/* Separator between bullet notes */
-	.rs-note-item + .rs-note-item {
-		border-top: 1px dashed rgba(0, 0, 0, 0.12);
-		padding-top: 6px; /* <- reduced from 8px */
-		margin-top: 2px; /* <- subtle breathing room */
-	}
-
-	/* Ensure long note text wraps correctly and doesn't force width */
-	.rs-note-item > div:first-child {
-		flex: 1 1 auto;
-		min-width: 0;
-		overflow-wrap: anywhere;
-	}
-
-	/* Remove extra bottom gap specifically for the last note line */
-	.rs-note-item:last-child {
-		padding-bottom: 2px;
-	}
-
-	/* Add-note link spacing (single source of truth) */
-	.rs-note-add {
-		margin-top: 6px;
-	}
-
-	.rs-note-add .link-btn {
-		padding: 4px 0;
-	}
-
-	.rs-actions {
-		display: flex;
-		gap: 0.35rem;
-	}
-
-	.rs-note-body {
-		flex: 1;
-		white-space: pre-wrap;
-		color: #444;
-		font-size: 0.9rem;
-		line-height: 1.3;
-		margin: 0;
-	}
-
-	.link-btn {
-		background: none;
-		border: none;
-		color: #1976d2;
-		cursor: pointer;
-		padding: 0.25rem 0;
-		font-weight: 500;
-	}
-
-	.link-btn:hover {
-		text-decoration: underline;
-	}
-
-	.hint {
-		margin-top: 0.75rem;
-		color: #666;
-		font-size: 0.9rem;
-		background: #f7f9ff;
-		border: 1px solid #e4ecff;
-		border-radius: 10px;
-		padding: 0.75rem;
-	}
-
-	/* ===== Setlist (existing styles) ===== */
-	.songs-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.song-item {
-		display: flex;
-		align-items: flex-start;
-		gap: 1rem;
-		padding: 1rem;
-		background: #f8f9fa;
-		border: 1px solid #e0e0e0;
-		border-radius: 8px;
-		transition: all 0.2s;
-	}
-
-	.song-item:hover {
-		background: #e3f2fd;
-		border-color: #1976d2;
-	}
-
-	.song-number {
-		width: 2rem;
-		height: 2rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: #1976d2;
-		color: white;
-		border-radius: 50%;
-		font-weight: 600;
-		font-size: 0.875rem;
-		flex-shrink: 0;
-	}
-
-	.song-info {
-		flex: 1;
-	}
-
-	.song-title {
-		font-weight: 600;
-		font-size: 1rem;
-		color: #1a1a1a;
-		margin-bottom: 0.25rem;
-	}
-
-	.song-artist {
-		font-size: 0.875rem;
-		color: #666;
-		margin-bottom: 0.375rem;
-	}
-
-	.song-details {
-		display: flex;
-		gap: 1rem;
-		font-size: 0.8125rem;
-		color: #666;
-	}
-
-	.detail {
-		font-weight: 500;
-	}
-
-	.song-notes {
-		margin-top: 0.5rem;
-		padding: 0.5rem;
-		background: white;
-		border-radius: 4px;
-		font-size: 0.8125rem;
-		color: #666;
-		font-style: italic;
-		white-space: pre-wrap;
-	}
-
-	.song-actions {
-		display: flex;
-		gap: 0.375rem;
-	}
-
-	/* ===== Modal styles (existing) ===== */
-	.modal-overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: rgba(0, 0, 0, 0.5);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 1000;
-		padding: 1rem;
-	}
-
-	.modal {
-		background: white;
-		border-radius: 12px;
-		width: 100%;
-		max-width: 640px;
-		max-height: 90vh;
-		overflow: hidden;
-		display: flex;
-		flex-direction: column;
-	}
-
-	.add-song-modal {
-		max-width: 700px;
-	}
-
-	.modal-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 1.5rem;
-		border-bottom: 1px solid #e0e0e0;
-	}
-
-	.modal-header h2 {
-		font-size: 1.5rem;
-		font-weight: 600;
-		margin: 0;
-	}
-
-	.close-btn {
-		background: none;
-		border: none;
-		font-size: 2rem;
-		cursor: pointer;
-		color: #666;
-		padding: 0;
-		width: 2rem;
-		height: 2rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border-radius: 4px;
-	}
-
-	.close-btn:hover {
-		background: #f5f5f5;
-	}
-
-	.modal-body {
-		padding: 1.5rem;
-		overflow-y: auto;
-		flex: 1;
-	}
-
-	.search-box {
-		margin-bottom: 1rem;
-	}
-
-	.search-box input {
-		width: 100%;
-		padding: 0.75rem;
-		border: 1px solid #e0e0e0;
-		border-radius: 8px;
-		font-size: 1rem;
-	}
-
-	.search-box input:focus {
-		outline: none;
-		border-color: #1976d2;
-	}
-
-	.song-select-list {
-		max-height: 300px;
-		overflow-y: auto;
-		border: 1px solid #e0e0e0;
-		border-radius: 8px;
-		margin-bottom: 1.5rem;
-	}
-
-	.empty-message {
-		padding: 2rem;
-		text-align: center;
-		color: #999;
-	}
-
-	.song-select-item {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		width: 100%;
-		padding: 1rem;
-		border: none;
-		border-bottom: 1px solid #f0f0f0;
-		cursor: pointer;
-		transition: all 0.2s;
-		background: white;
-		text-align: left;
-	}
-
-	.song-select-item:last-child {
-		border-bottom: none;
-	}
-
-	.song-select-item:hover {
-		background: #f8f9fa;
-	}
-
-	.song-select-item.selected {
-		background: #e3f2fd;
-		border-left: 3px solid #1976d2;
-	}
-
-	.song-select-info {
-		flex: 1;
-	}
-
-	.song-select-title {
-		font-weight: 600;
-		color: #1a1a1a;
-		margin-bottom: 0.25rem;
-	}
-
-	.song-select-artist {
-		font-size: 0.875rem;
-		color: #666;
-		margin-bottom: 0.25rem;
-	}
-
-	.song-select-meta {
-		font-size: 0.8125rem;
-		color: #999;
-		display: flex;
-		gap: 1rem;
-	}
-
-	.checkmark {
-		font-size: 1.5rem;
-		color: #1976d2;
-		font-weight: bold;
-	}
-
-	.song-details-form {
-		border-top: 2px solid #f0f0f0;
-		padding-top: 1.5rem;
-	}
-
-	.song-details-form h3 {
-		font-size: 1rem;
-		font-weight: 600;
-		margin-bottom: 1rem;
-		color: #1a1a1a;
-	}
-
-	.form-group {
-		margin-bottom: 1rem;
-	}
-
-	.form-group label {
-		display: block;
-		margin-bottom: 0.5rem;
-		font-weight: 500;
-		color: #1a1a1a;
-		font-size: 0.9375rem;
-	}
-
-	.form-group input,
-	.form-group textarea,
-	.form-group select {
-		width: 100%;
-		padding: 0.75rem;
-		border: 1px solid #e0e0e0;
-		border-radius: 8px;
-		font-size: 1rem;
-		font-family: inherit;
-		background: #fff;
-	}
-
-	.form-group input:focus,
-	.form-group textarea:focus,
-	.form-group select:focus {
-		outline: none;
-		border-color: #1976d2;
-	}
-
-	textarea {
-		resize: vertical;
-	}
-
-	.modal-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.75rem;
-		padding: 1rem 1.5rem;
-		border-top: 1px solid #e0e0e0;
-		background: #fafafa;
-	}
-	/* --- Runsheet: stop horizontal weirdness --- */
-
-	.rs-row-top {
-		display: grid;
-		grid-template-columns: 1fr auto; /* left content, right meta+actions */
-		align-items: center;
-		gap: 12px;
-	}
-
-	.rs-title {
-		min-width: 0; /* allow wrapping */
-		overflow-wrap: anywhere; /* break long strings */
-	}
-
-	.rs-meta {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		flex-wrap: wrap; /* allow wrap instead of pushing sideways */
-		justify-content: flex-end;
-	}
-
-	.rs-duration {
-		white-space: nowrap;
-		flex: 0 0 auto;
-	}
-
-	.rs-actions {
-		display: flex;
-		gap: 0px;
-		flex: 0 0 auto;
-	}
-
-	.rs-person-row {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		margin-top: 10px;
-		flex-wrap: wrap;
-	}
-
-	.rs-person-row select {
-		min-width: 220px;
-		max-width: 100%;
-	}
-
-	/* Notes / sub-items should STACK vertically (not a horizontal grid) */
-	.rs-note {
-		display: block; /* <- critical */
-		margin-top: 10px;
-		padding: 10px 12px;
-		border-left: 3px solid rgba(0, 0, 0, 0.12);
-		background: rgba(0, 0, 0, 0.03);
-		border-radius: 10px;
-		font-style: italic;
-	}
-
-	/* Keep the "+ Add note" from drifting into weird right gutters */
-	.rs-note-add {
-		margin-top: 10px;
-	}
-
-	.rs-note-add .link-btn {
-		padding: 6px 0;
-	}
-
-	/* Optional: make the item “cards” feel less like a table */
-	.rs-surface {
-		display: flex;
-		flex-direction: column;
-		gap: 12px; /* space between rows, not “cell gaps” */
-	}
+	/* keep your existing styles */
 </style>

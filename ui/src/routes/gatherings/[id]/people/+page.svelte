@@ -255,7 +255,7 @@
 					<li class="attention-item">
 						<span class="dot"></span>
 						<span class="role">{a.role_name}</span>
-						<button class="small-btn" type="button" on:click={() => openAssignModal(a)}
+						<button class="small-btn" type="button" onclick={() => openAssignModal(a)}
 							>Assign</button
 						>
 					</li>
@@ -318,14 +318,14 @@
 										<button
 											class="icon-btn"
 											title="Change person"
-											on:click={() => openAssignModal(assignment)}
+											onclick={() => openAssignModal(assignment)}
 										>
 											↻
 										</button>
 										<button
 											class="icon-btn delete"
 											title="Remove"
-											on:click={() => removeAssignment(assignment)}
+											onclick={() => removeAssignment(assignment)}
 										>
 											×
 										</button>
@@ -333,7 +333,7 @@
 										<button
 											class="icon-btn primary"
 											title="Assign person"
-											on:click={() => openAssignModal(assignment)}
+											onclick={() => openAssignModal(assignment)}
 										>
 											+
 										</button>
@@ -354,19 +354,19 @@
 		class="modal-overlay"
 		role="button"
 		tabindex="0"
-		on:click={closeAssignModal}
-		on:keydown={(e) => e.key === 'Escape' && closeAssignModal()}
+		onclick={closeAssignModal}
+		onkeydown={(e) => e.key === 'Escape' && closeAssignModal()}
 	>
 		<div
 			class="modal assign-modal"
 			role="dialog"
 			aria-modal="true"
-			on:click|stopPropagation
-			on:keydown={(e) => e.key === 'Escape' && closeAssignModal()}
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.key === 'Escape' && closeAssignModal()}
 		>
 			<div class="modal-header">
 				<h2>Assign {assigningToAssignment.role_name}</h2>
-				<button class="close-btn" on:click={closeAssignModal}>×</button>
+				<button class="close-btn" onclick={closeAssignModal}>×</button>
 			</div>
 
 			<div class="modal-body">
@@ -383,7 +383,7 @@
 									type="button"
 									class="person-select-item"
 									class:selected={selectedPersonId === person.id}
-									on:click={() => (selectedPersonId = person.id)}
+									onclick={() => (selectedPersonId = person.id)}
 								>
 									<div class="person-select-info">
 										<div class="person-select-name">{person.first_name} {person.last_name}</div>
@@ -416,7 +416,7 @@
 									type="button"
 									class="person-select-item"
 									class:selected={selectedPersonId === person.id}
-									on:click={() => (selectedPersonId = person.id)}
+									onclick={() => (selectedPersonId = person.id)}
 								>
 									<div class="person-select-info">
 										<div class="person-select-name">{person.first_name} {person.last_name}</div>
@@ -438,10 +438,10 @@
 			</div>
 
 			<div class="modal-actions">
-				<button class="secondary-btn" on:click={closeAssignModal}> Cancel </button>
+				<button class="secondary-btn" onclick={closeAssignModal}> Cancel </button>
 				<button
 					class="primary-btn"
-					on:click={assignPerson}
+					onclick={assignPerson}
 					disabled={!selectedPersonId || assigningPerson}
 				>
 					{assigningPerson ? 'Assigning...' : 'Assign'}

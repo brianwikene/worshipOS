@@ -8,114 +8,114 @@ Getting Svelte diagnostics...
 /Users/bwikene/worshipOS/ui/vite.config.ts:21:2
 Error: No overload matches this call.
   The last overload gave the following error.
-    Object literal may only specify known properties, and 'test' does not exist in type 'UserConfigExport'. 
+    Object literal may only specify known properties, and 'test' does not exist in type 'UserConfigExport'.
 	},
 	test: {
 		environment: 'node',
 
 /Users/bwikene/worshipOS/ui/src/lib/server/db.ts:21:27
-Error: Type 'T' does not satisfy the constraint 'QueryResultRow'. 
+Error: Type 'T' does not satisfy the constraint 'QueryResultRow'.
 	params?: unknown[]
 ): Promise<pg.QueryResult<T>> {
 	return pool.query<T>(text, params);
 
 /Users/bwikene/worshipOS/ui/src/lib/server/db.ts:22:20
-Error: Type 'T' does not satisfy the constraint 'QueryResultRow'. 
+Error: Type 'T' does not satisfy the constraint 'QueryResultRow'.
 ): Promise<pg.QueryResult<T>> {
 	return pool.query<T>(text, params);
 }
 
 /Users/bwikene/worshipOS/ui/src/lib/server/db.ts:29:34
-Error: Type 'T' does not satisfy the constraint 'QueryResultRow'. 
+Error: Type 'T' does not satisfy the constraint 'QueryResultRow'.
 ): Promise<T | null> {
 	const result = await pool.query<T>(text, params);
 	return result.rows[0] ?? null;
 
 /Users/bwikene/worshipOS/ui/src/lib/server/db.ts:37:34
-Error: Type 'T' does not satisfy the constraint 'QueryResultRow'. 
+Error: Type 'T' does not satisfy the constraint 'QueryResultRow'.
 ): Promise<T[]> {
 	const result = await pool.query<T>(text, params);
 	return result.rows;
 
 /Users/bwikene/worshipOS/ui/src/routes/api/admin/duplicates/[id]/merge/+server.ts:224:23
-Error: Expected 0-1 arguments, but got 2. 
+Error: Expected 0-1 arguments, but got 2.
         .eq('church_id', churchId)
         .select('id', { count: 'exact' });
 
 /Users/bwikene/worshipOS/ui/src/routes/api/families/[id]/+server.ts:98:28
-Error: Unterminated string literal. 
+Error: Unterminated string literal.
       members: flatMembers
   }, { headers: { 'x-served
 
 /Users/bwikene/worshipOS/ui/src/routes/api/families/[id]/+server.ts:98:28
-Error: Expression expected. 
+Error: Expression expected.
       members: flatMembers
   }, { headers: { 'x-served
 
 /Users/bwikene/worshipOS/ui/src/routes/api/families/[id]/+server.ts:99:1
-Error: ':' expected. 
+Error: ':' expected.
   }, { headers: { 'x-served
 
 /Users/bwikene/worshipOS/ui/src/routes/api/families/[id]/+server.ts:99:1
-Error: '}' expected. 
+Error: '}' expected.
   }, { headers: { 'x-served
 
 /Users/bwikene/worshipOS/ui/src/routes/api/families/[id]/+server.ts:23:19
-Error: Property 'eq' does not exist on type 'PostgrestBuilder<any, { id: any; name: any; notes: any; is_active: any; primary_address_id: any; created_at: any; updated_at: any; addresses: any[]; }, false>'. 
+Error: Property 'eq' does not exist on type 'PostgrestBuilder<any, { id: any; name: any; notes: any; is_active: any; primary_address_id: any; created_at: any; updated_at: any; addresses: any[]; }, false>'.
   if (locals.churchId) {
     query = query.eq('church_id', locals.churchId);
   }
 
 /Users/bwikene/worshipOS/ui/src/routes/api/gatherings/[id]/roster/+server.ts:18:37
-Error: Property 'context_id' does not exist on type '{ context_id: any; }[]'. 
+Error: Property 'context_id' does not exist on type '{ context_id: any; }[]'.
 
   if (!instance || !instance.group?.context_id) {
       // If no instance or context, just return empty list or error.
 
 /Users/bwikene/worshipOS/ui/src/routes/api/gatherings/[id]/roster/+server.ts:26:36
-Error: Property 'context_id' does not exist on type '{ context_id: any; }[]'. 
+Error: Property 'context_id' does not exist on type '{ context_id: any; }[]'.
 
   const contextId = instance.group.context_id;
 
 /Users/bwikene/worshipOS/ui/src/routes/api/people/[id]/+server.ts:19:19
-Error: Property 'eq' does not exist on type 'PostgrestBuilder<any, any, false>'. 
+Error: Property 'eq' does not exist on type 'PostgrestBuilder<any, any, false>'.
   if (locals.churchId) {
     query = query.eq('church_id', locals.churchId);
   }
 
 /Users/bwikene/worshipOS/ui/src/routes/api/people/[id]/+server.ts:94:19
-Error: Property 'eq' does not exist on type 'PostgrestBuilder<any, any, false>'. 
+Error: Property 'eq' does not exist on type 'PostgrestBuilder<any, any, false>'.
   if (locals.churchId) {
     query = query.eq('church_id', locals.churchId);
   }
 
 /Users/bwikene/worshipOS/ui/src/routes/api/people/[id]/+server.ts:124:19
-Error: Property 'eq' does not exist on type 'PostgrestBuilder<any, any, false>'. 
+Error: Property 'eq' does not exist on type 'PostgrestBuilder<any, any, false>'.
   if (locals.churchId) {
     query = query.eq('church_id', locals.churchId);
   }
 
 /Users/bwikene/worshipOS/ui/src/routes/api/songs/+server.ts:104:22
-Error: Expected 3 arguments, but got 2. 
+Error: Expected 3 arguments, but got 2.
 
 		const song = await fetchSongById(churchId, inserted.rows[0]?.id);
 		if (!song) {
 
 /Users/bwikene/worshipOS/ui/src/routes/api/songs/[id]/+server.ts:13:22
-Error: Expected 3 arguments, but got 2. 
+Error: Expected 3 arguments, but got 2.
 	try {
 		const song = await fetchSongById(churchId, params.id);
 		if (!song) throw error(404, 'Song not found');
 
 /Users/bwikene/worshipOS/ui/src/routes/api/songs/[id]/+server.ts:70:22
-Error: Expected 3 arguments, but got 2. 
+Error: Expected 3 arguments, but got 2.
 
 		const song = await fetchSongById(churchId, params.id);
 		if (!song) throw error(500, 'Song updated but could not be loaded');
 
 /Users/bwikene/worshipOS/ui/src/routes/care/+page.server.ts:15:6
 Error: Type 'string | null' is not assignable to type 'string | undefined'.
-  Type 'null' is not assignable to type 'string | undefined'. 
+  Type 'null' is not assignable to type 'string | undefined'.
 	// Prefer cookie-based locals.churchId; fallback to first membership (dev-friendly).
 	let churchId: string | undefined = locals.churchId;
 	let role: string | null = null;
@@ -147,10 +147,10 @@ Error: '"svelte/elements"' has no exported member named 'HTMLTextAreaAttributes'
 	import type { HTMLTextAreaAttributes } from 'svelte/elements';
 
 /Users/bwikene/worshipOS/ui/src/lib/components/layout/TopNavigation.svelte:147:9
-Warn: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+Warn: Using `onclick` to listen to the click event is deprecated. Use the event attribute `onclick` instead
 https://svelte.dev/e/event_directive_deprecated (svelte)
         aria-expanded={mobileOpen}
-        on:click={toggleMobileMenu}
+        onclick={toggleMobileMenu}
       >
 
 /Users/bwikene/worshipOS/ui/src/lib/components/layout/TopNavigation.svelte:193:11
@@ -161,24 +161,24 @@ https://svelte.dev/e/event_directive_deprecated (svelte)
           class="
 
 /Users/bwikene/worshipOS/ui/src/lib/components/layout/TopNavigation.svelte:243:17
-Warn: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+Warn: Using `onclick` to listen to the click event is deprecated. Use the event attribute `onclick` instead
 https://svelte.dev/e/event_directive_deprecated (svelte)
                 aria-current={isActive(item.href) ? 'page' : undefined}
-                on:click={closeMobileMenu}
+                onclick={closeMobileMenu}
               >
 
 /Users/bwikene/worshipOS/ui/src/lib/components/layout/TopNavigation.svelte:254:15
-Warn: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+Warn: Using `onclick` to listen to the click event is deprecated. Use the event attribute `onclick` instead
 https://svelte.dev/e/event_directive_deprecated (svelte)
               class="block px-3 py-2 rounded-md text-sm font-medium text-[var(--ui-color-text-muted)] hover:bg-[var(--ui-color-hover)] hover:text-[var(--ui-color-text-strong)]"
-              on:click={closeMobileMenu}
+              onclick={closeMobileMenu}
             >
 
 /Users/bwikene/worshipOS/ui/src/lib/components/layout/TopNavigation.svelte:264:15
-Warn: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+Warn: Using `onclick` to listen to the click event is deprecated. Use the event attribute `onclick` instead
 https://svelte.dev/e/event_directive_deprecated (svelte)
               class="block px-3 py-2 rounded-md text-sm font-medium text-[var(--ui-color-text-muted)] hover:bg-[var(--ui-color-hover)] hover:text-[var(--ui-color-text-strong)]"
-              on:click={closeMobileMenu}
+              onclick={closeMobileMenu}
             >
 
 /Users/bwikene/worshipOS/ui/src/lib/components/layout/TopNavigation.svelte:277:17
@@ -235,11 +235,11 @@ Error: Property 'label' does not exist on type '() => { label: string; href: any
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 {#if showReviewModal && selectedLink}
-<div class="modal-overlay" on:click={closeReview} on:keydown={(e) => e.key === 'Escape' && closeReview()}>
-  <div class="modal review-modal" on:click|stopPropagation on:keydown={() => {}}>
+<div class="modal-overlay" onclick={closeReview} onkeydown={(e) => e.key === 'Escape' && closeReview()}>
+  <div class="modal review-modal" onclick={(e) => e.stopPropagation()} onkeydown={() => {}}>
     <div class="modal-header">
       <h2>Review Potential Duplicate</h2>
-      <button class="close-btn" on:click={closeReview}>×</button>
+      <button class="close-btn" onclick={closeReview}>×</button>
     </div>
 
     <div class="modal-body">
@@ -398,20 +398,20 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 
     <div class="modal-actions">
       {#if !showMergeModal}
-        <button class="btn-not-match" on:click={markNotMatch} disabled={saving}>
+        <button class="btn-not-match" onclick={markNotMatch} disabled={saving}>
           Not a Match
         </button>
-        <button class="btn-confirm" on:click={confirmDuplicate} disabled={saving}>
+        <button class="btn-confirm" onclick={confirmDuplicate} disabled={saving}>
           Confirm Duplicate
         </button>
-        <button class="btn-merge" on:click={startMerge} disabled={saving}>
+        <button class="btn-merge" onclick={startMerge} disabled={saving}>
           Merge Records →
         </button>
       {:else}
-        <button class="btn-secondary" on:click={() => showMergeModal = false}>
+        <button class="btn-secondary" onclick={() => showMergeModal = false}>
           ← Back
         </button>
-        <button class="btn-merge" on:click={performMerge} disabled={merging || !survivorId}>
+        <button class="btn-merge" onclick={performMerge} disabled={merging || !survivorId}>
           {merging ? 'Merging...' : 'Confirm Merge'}
         </button>
       {/if}
@@ -423,11 +423,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 /Users/bwikene/worshipOS/ui/src/routes/admin/duplicates/+page.svelte:338:3
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
-<div class="modal-overlay" on:click={closeReview} on:keydown={(e) => e.key === 'Escape' && closeReview()}>
-  <div class="modal review-modal" on:click|stopPropagation on:keydown={() => {}}>
+<div class="modal-overlay" onclick={closeReview} onkeydown={(e) => e.key === 'Escape' && closeReview()}>
+  <div class="modal review-modal" onclick={(e) => e.stopPropagation()} onkeydown={() => {}}>
     <div class="modal-header">
       <h2>Review Potential Duplicate</h2>
-      <button class="close-btn" on:click={closeReview}>×</button>
+      <button class="close-btn" onclick={closeReview}>×</button>
     </div>
 
     <div class="modal-body">
@@ -586,20 +586,20 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 
     <div class="modal-actions">
       {#if !showMergeModal}
-        <button class="btn-not-match" on:click={markNotMatch} disabled={saving}>
+        <button class="btn-not-match" onclick={markNotMatch} disabled={saving}>
           Not a Match
         </button>
-        <button class="btn-confirm" on:click={confirmDuplicate} disabled={saving}>
+        <button class="btn-confirm" onclick={confirmDuplicate} disabled={saving}>
           Confirm Duplicate
         </button>
-        <button class="btn-merge" on:click={startMerge} disabled={saving}>
+        <button class="btn-merge" onclick={startMerge} disabled={saving}>
           Merge Records →
         </button>
       {:else}
-        <button class="btn-secondary" on:click={() => showMergeModal = false}>
+        <button class="btn-secondary" onclick={() => showMergeModal = false}>
           ← Back
         </button>
-        <button class="btn-merge" on:click={performMerge} disabled={merging || !survivorId}>
+        <button class="btn-merge" onclick={performMerge} disabled={merging || !survivorId}>
           {merging ? 'Merging...' : 'Confirm Merge'}
         </button>
       {/if}
@@ -611,11 +611,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 {#if showUndoModal && selectedMerge}
-<div class="modal-overlay" on:click={closeUndo} on:keydown={(e) => e.key === 'Escape' && closeUndo()}>
-  <div class="modal" on:click|stopPropagation on:keydown={() => {}}>
+<div class="modal-overlay" onclick={closeUndo} onkeydown={(e) => e.key === 'Escape' && closeUndo()}>
+  <div class="modal" onclick={(e) => e.stopPropagation()} onkeydown={() => {}}>
     <div class="modal-header">
       <h2>Undo Merge</h2>
-      <button class="close-btn" on:click={closeUndo}>×</button>
+      <button class="close-btn" onclick={closeUndo}>×</button>
     </div>
 
     <div class="modal-body">
@@ -645,8 +645,8 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     </div>
 
     <div class="modal-actions">
-      <button class="btn-cancel" on:click={closeUndo}>Cancel</button>
-      <button class="btn-undo-confirm" on:click={performUndo} disabled={undoing}>
+      <button class="btn-cancel" onclick={closeUndo}>Cancel</button>
+      <button class="btn-undo-confirm" onclick={performUndo} disabled={undoing}>
         {undoing ? 'Undoing...' : 'Confirm Undo'}
       </button>
     </div>
@@ -657,11 +657,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 /Users/bwikene/worshipOS/ui/src/routes/admin/merges/+page.svelte:206:3
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
-<div class="modal-overlay" on:click={closeUndo} on:keydown={(e) => e.key === 'Escape' && closeUndo()}>
-  <div class="modal" on:click|stopPropagation on:keydown={() => {}}>
+<div class="modal-overlay" onclick={closeUndo} onkeydown={(e) => e.key === 'Escape' && closeUndo()}>
+  <div class="modal" onclick={(e) => e.stopPropagation()} onkeydown={() => {}}>
     <div class="modal-header">
       <h2>Undo Merge</h2>
-      <button class="close-btn" on:click={closeUndo}>×</button>
+      <button class="close-btn" onclick={closeUndo}>×</button>
     </div>
 
     <div class="modal-body">
@@ -691,8 +691,8 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     </div>
 
     <div class="modal-actions">
-      <button class="btn-cancel" on:click={closeUndo}>Cancel</button>
-      <button class="btn-undo-confirm" on:click={performUndo} disabled={undoing}>
+      <button class="btn-cancel" onclick={closeUndo}>Cancel</button>
+      <button class="btn-undo-confirm" onclick={performUndo} disabled={undoing}>
         {undoing ? 'Undoing...' : 'Confirm Undo'}
       </button>
     </div>
@@ -703,11 +703,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 {#if showModal}
-<div class="sys-modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
+<div class="sys-modal-overlay" onclick={closeModal} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
+  <div class="sys-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
     <div class="sys-modal-header">
       <h2>{editingRole ? 'Edit Role' : 'Add New Role'}</h2>
-      <button class="sys-modal-close" on:click={closeModal}>×</button>
+      <button class="sys-modal-close" onclick={closeModal}>×</button>
     </div>
 
     <div class="sys-modal-body">
@@ -755,7 +755,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
               type="button"
               class="body-part-btn"
               class:selected={formBodyParts.includes(bp.id)}
-              on:click={() => toggleBodyPart(bp.id)}
+              onclick={() => toggleBodyPart(bp.id)}
             >
               <span class="bp-icon">{bp.icon}</span>
               <span class="bp-label">{bp.label}</span>
@@ -781,10 +781,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     </div>
 
     <div class="sys-modal-actions">
-      <button class="sys-btn sys-btn--secondary" on:click={closeModal}>Cancel</button>
+      <button class="sys-btn sys-btn--secondary" onclick={closeModal}>Cancel</button>
       <button
         class="sys-btn sys-btn--primary"
-        on:click={saveRole}
+        onclick={saveRole}
         disabled={saving || !formName.trim()}
       >
         {saving ? 'Saving...' : (editingRole ? 'Save Changes' : 'Create Role')}
@@ -797,11 +797,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 /Users/bwikene/worshipOS/ui/src/routes/admin/roles/+page.svelte:307:3
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
-<div class="sys-modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
+<div class="sys-modal-overlay" onclick={closeModal} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
+  <div class="sys-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
     <div class="sys-modal-header">
       <h2>{editingRole ? 'Edit Role' : 'Add New Role'}</h2>
-      <button class="sys-modal-close" on:click={closeModal}>×</button>
+      <button class="sys-modal-close" onclick={closeModal}>×</button>
     </div>
 
     <div class="sys-modal-body">
@@ -849,7 +849,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
               type="button"
               class="body-part-btn"
               class:selected={formBodyParts.includes(bp.id)}
-              on:click={() => toggleBodyPart(bp.id)}
+              onclick={() => toggleBodyPart(bp.id)}
             >
               <span class="bp-icon">{bp.icon}</span>
               <span class="bp-label">{bp.label}</span>
@@ -875,10 +875,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     </div>
 
     <div class="sys-modal-actions">
-      <button class="sys-btn sys-btn--secondary" on:click={closeModal}>Cancel</button>
+      <button class="sys-btn sys-btn--secondary" onclick={closeModal}>Cancel</button>
       <button
         class="sys-btn sys-btn--primary"
-        on:click={saveRole}
+        onclick={saveRole}
         disabled={saving || !formName.trim()}
       >
         {saving ? 'Saving...' : (editingRole ? 'Save Changes' : 'Create Role')}
@@ -911,11 +911,11 @@ Warn: Also define the standard property 'appearance' for compatibility (css)
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 {#if showModal}
-<div class="sys-modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-  <div class="sys-modal sys-modal--wide" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
+<div class="sys-modal-overlay" onclick={closeModal} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
+  <div class="sys-modal sys-modal--wide" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
     <div class="sys-modal-header">
       <h2>{editingType ? 'Edit Service Type' : 'Add Service Type'}</h2>
-      <button class="sys-modal-close" on:click={closeModal}>×</button>
+      <button class="sys-modal-close" onclick={closeModal}>×</button>
     </div>
 
     <div class="sys-modal-body">
@@ -979,7 +979,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
                     />
                   </div>
                 </div>
-                <button class="btn-remove-req" on:click={() => removeRoleRequirement(req.role_id)}>×</button>
+                <button class="btn-remove-req" onclick={() => removeRoleRequirement(req.role_id)}>×</button>
               </div>
             {/each}
           </div>
@@ -1010,10 +1010,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     </div>
 
     <div class="sys-modal-actions">
-      <button class="sys-btn sys-btn--secondary" on:click={closeModal}>Cancel</button>
+      <button class="sys-btn sys-btn--secondary" onclick={closeModal}>Cancel</button>
       <button
         class="sys-btn sys-btn--primary"
-        on:click={saveServiceType}
+        onclick={saveServiceType}
         disabled={saving || !formName.trim()}
       >
         {saving ? 'Saving...' : (editingType ? 'Save Changes' : 'Create Service Type')}
@@ -1026,11 +1026,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 /Users/bwikene/worshipOS/ui/src/routes/admin/service-types/+page.svelte:270:3
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
-<div class="sys-modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-  <div class="sys-modal sys-modal--wide" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
+<div class="sys-modal-overlay" onclick={closeModal} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
+  <div class="sys-modal sys-modal--wide" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
     <div class="sys-modal-header">
       <h2>{editingType ? 'Edit Service Type' : 'Add Service Type'}</h2>
-      <button class="sys-modal-close" on:click={closeModal}>×</button>
+      <button class="sys-modal-close" onclick={closeModal}>×</button>
     </div>
 
     <div class="sys-modal-body">
@@ -1094,7 +1094,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
                     />
                   </div>
                 </div>
-                <button class="btn-remove-req" on:click={() => removeRoleRequirement(req.role_id)}>×</button>
+                <button class="btn-remove-req" onclick={() => removeRoleRequirement(req.role_id)}>×</button>
               </div>
             {/each}
           </div>
@@ -1125,10 +1125,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     </div>
 
     <div class="sys-modal-actions">
-      <button class="sys-btn sys-btn--secondary" on:click={closeModal}>Cancel</button>
+      <button class="sys-btn sys-btn--secondary" onclick={closeModal}>Cancel</button>
       <button
         class="sys-btn sys-btn--primary"
-        on:click={saveServiceType}
+        onclick={saveServiceType}
         disabled={saving || !formName.trim()}
       >
         {saving ? 'Saving...' : (editingType ? 'Save Changes' : 'Create Service Type')}
@@ -1162,8 +1162,8 @@ https://svelte.dev/e/a11y_label_has_associated_control (svelte)
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 {#if showModal}
-<div class="sys-modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
+<div class="sys-modal-overlay" onclick={closeModal} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
+  <div class="sys-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
 
     <div class="modal-header">
       <div class="flex items-center gap-4">
@@ -1178,7 +1178,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
           <p class="text-sm text-gray-500">Define the identity for this group.</p>
         </div>
       </div>
-      <button class="text-gray-400 hover:text-gray-600 text-2xl" on:click={closeModal}>×</button>
+      <button class="text-gray-400 hover:text-gray-600 text-2xl" onclick={closeModal}>×</button>
     </div>
 
     <div class="sys-modal-body p-6">
@@ -1213,7 +1213,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
               <button
                 type="button"
                 class="w-10 h-10 flex items-center justify-center rounded-lg border transition-all {formIcon === icon ? 'border-brand-primary bg-brand-primary-light text-brand-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}"
-                on:click={() => formIcon = icon}
+                onclick={() => formIcon = icon}
               >
                 {icon}
               </button>
@@ -1229,7 +1229,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
                 type="button"
                 class="w-10 h-10 rounded-full flex items-center justify-center transition-transform {formColor === color ? 'ring-2 ring-offset-2 ring-gray-300 scale-110' : 'hover:scale-105'}"
                 style="background: {color}"
-                on:click={() => formColor = color}
+                onclick={() => formColor = color}
               >
                 {#if formColor === color}
                   <span class="text-white text-xs drop-shadow-md">✓</span>
@@ -1244,14 +1244,14 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     <div class="sys-modal-actions border-t border-gray-100 p-4 bg-gray-50 rounded-b-xl flex justify-end gap-3">
       <button
         class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors"
-        on:click={closeModal}
+        onclick={closeModal}
       >
         Cancel
       </button>
       <button
         class="px-4 py-2 rounded-lg text-sm font-medium text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         style="background-color: var(--brand-primary);"
-        on:click={saveTeam}
+        onclick={saveTeam}
         disabled={saving || !formName.trim()}
       >
         {saving ? 'Saving...' : (editingTeam ? 'Save Changes' : 'Create Team')}
@@ -1264,8 +1264,8 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 /Users/bwikene/worshipOS/ui/src/routes/admin/teams/+page.svelte:258:3
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
-<div class="sys-modal-overlay" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()}>
-  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeModal()}>
+<div class="sys-modal-overlay" onclick={closeModal} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
+  <div class="sys-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeModal()}>
 
     <div class="modal-header">
       <div class="flex items-center gap-4">
@@ -1280,7 +1280,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
           <p class="text-sm text-gray-500">Define the identity for this group.</p>
         </div>
       </div>
-      <button class="text-gray-400 hover:text-gray-600 text-2xl" on:click={closeModal}>×</button>
+      <button class="text-gray-400 hover:text-gray-600 text-2xl" onclick={closeModal}>×</button>
     </div>
 
     <div class="sys-modal-body p-6">
@@ -1315,7 +1315,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
               <button
                 type="button"
                 class="w-10 h-10 flex items-center justify-center rounded-lg border transition-all {formIcon === icon ? 'border-brand-primary bg-brand-primary-light text-brand-primary' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}"
-                on:click={() => formIcon = icon}
+                onclick={() => formIcon = icon}
               >
                 {icon}
               </button>
@@ -1331,7 +1331,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
                 type="button"
                 class="w-10 h-10 rounded-full flex items-center justify-center transition-transform {formColor === color ? 'ring-2 ring-offset-2 ring-gray-300 scale-110' : 'hover:scale-105'}"
                 style="background: {color}"
-                on:click={() => formColor = color}
+                onclick={() => formColor = color}
               >
                 {#if formColor === color}
                   <span class="text-white text-xs drop-shadow-md">✓</span>
@@ -1346,14 +1346,14 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     <div class="sys-modal-actions border-t border-gray-100 p-4 bg-gray-50 rounded-b-xl flex justify-end gap-3">
       <button
         class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors"
-        on:click={closeModal}
+        onclick={closeModal}
       >
         Cancel
       </button>
       <button
         class="px-4 py-2 rounded-lg text-sm font-medium text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         style="background-color: var(--brand-primary);"
-        on:click={saveTeam}
+        onclick={saveTeam}
         disabled={saving || !formName.trim()}
       >
         {saving ? 'Saving...' : (editingTeam ? 'Save Changes' : 'Create Team')}
@@ -1598,11 +1598,11 @@ Error: Property 'status' does not exist on type 'GenericStringError'. (ts)
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 {#if showAddressModal}
-<div class="sys-modal-overlay" on:click={closeAddressModal} on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
-  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+<div class="sys-modal-overlay" onclick={closeAddressModal} onkeydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+  <div class="sys-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeAddressModal()}>
     <div class="sys-modal-header">
       <h2>{editingAddress ? 'Edit Address' : 'Add Address'}</h2>
-      <button class="sys-modal-close" on:click={closeAddressModal}>×</button>
+      <button class="sys-modal-close" onclick={closeAddressModal}>×</button>
     </div>
 
     <div class="sys-modal-body">
@@ -1684,10 +1684,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     </div>
 
     <div class="sys-modal-actions">
-      <button class="sys-btn sys-btn--secondary" on:click={closeAddressModal}>Cancel</button>
+      <button class="sys-btn sys-btn--secondary" onclick={closeAddressModal}>Cancel</button>
       <button
         class="sys-btn sys-btn--primary"
-        on:click={saveAddress}
+        onclick={saveAddress}
         disabled={savingAddress}
       >
         {savingAddress ? 'Saving...' : 'Save Address'}
@@ -1700,11 +1700,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 /Users/bwikene/worshipOS/ui/src/routes/connections/families/[id]/+page.svelte:549:3
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
-<div class="sys-modal-overlay" on:click={closeAddressModal} on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
-  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+<div class="sys-modal-overlay" onclick={closeAddressModal} onkeydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+  <div class="sys-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeAddressModal()}>
     <div class="sys-modal-header">
       <h2>{editingAddress ? 'Edit Address' : 'Add Address'}</h2>
-      <button class="sys-modal-close" on:click={closeAddressModal}>×</button>
+      <button class="sys-modal-close" onclick={closeAddressModal}>×</button>
     </div>
 
     <div class="sys-modal-body">
@@ -1786,10 +1786,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     </div>
 
     <div class="sys-modal-actions">
-      <button class="sys-btn sys-btn--secondary" on:click={closeAddressModal}>Cancel</button>
+      <button class="sys-btn sys-btn--secondary" onclick={closeAddressModal}>Cancel</button>
       <button
         class="sys-btn sys-btn--primary"
-        on:click={saveAddress}
+        onclick={saveAddress}
         disabled={savingAddress}
       >
         {savingAddress ? 'Saving...' : 'Save Address'}
@@ -2019,11 +2019,11 @@ https://svelte.dev/e/css_unused_selector (svelte)
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 {#if showAddRoleModal}
-<div class="sys-modal-overlay" on:click={() => showAddRoleModal = false} on:keydown={(e) => e.key === 'Escape' && (showAddRoleModal = false)}>
-  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && (showAddRoleModal = false)}>
+<div class="sys-modal-overlay" onclick={() => showAddRoleModal = false} onkeydown={(e) => e.key === 'Escape' && (showAddRoleModal = false)}>
+  <div class="sys-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && (showAddRoleModal = false)}>
     <div class="sys-modal-header">
       <h2>Add Ministry Role</h2>
-      <button class="sys-modal-close" on:click={() => showAddRoleModal = false}>×</button>
+      <button class="sys-modal-close" onclick={() => showAddRoleModal = false}>×</button>
     </div>
 
     <div class="sys-modal-body">
@@ -2054,7 +2054,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
                 type="button"
                 class="proficiency-btn"
                 class:selected={selectedProficiency === level}
-                on:click={() => selectedProficiency = level}
+                onclick={() => selectedProficiency = level}
               >
                 <span class="level-number">{level}</span>
                 <span class="level-label">{getProficiencyLabel(level)}</span>
@@ -2066,10 +2066,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     </div>
 
     <div class="sys-modal-actions">
-      <button class="sys-btn sys-btn--secondary" on:click={() => showAddRoleModal = false}>Cancel</button>
+      <button class="sys-btn sys-btn--secondary" onclick={() => showAddRoleModal = false}>Cancel</button>
       <button
         class="sys-btn sys-btn--primary"
-        on:click={addRoleCapability}
+        onclick={addRoleCapability}
         disabled={!selectedRoleId || addingRole}
       >
         {addingRole ? 'Adding...' : 'Add Role'}
@@ -2082,11 +2082,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 /Users/bwikene/worshipOS/ui/src/routes/connections/people/[id]/+page.svelte:551:3
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
-<div class="sys-modal-overlay" on:click={() => showAddRoleModal = false} on:keydown={(e) => e.key === 'Escape' && (showAddRoleModal = false)}>
-  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && (showAddRoleModal = false)}>
+<div class="sys-modal-overlay" onclick={() => showAddRoleModal = false} onkeydown={(e) => e.key === 'Escape' && (showAddRoleModal = false)}>
+  <div class="sys-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && (showAddRoleModal = false)}>
     <div class="sys-modal-header">
       <h2>Add Ministry Role</h2>
-      <button class="sys-modal-close" on:click={() => showAddRoleModal = false}>×</button>
+      <button class="sys-modal-close" onclick={() => showAddRoleModal = false}>×</button>
     </div>
 
     <div class="sys-modal-body">
@@ -2117,7 +2117,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
                 type="button"
                 class="proficiency-btn"
                 class:selected={selectedProficiency === level}
-                on:click={() => selectedProficiency = level}
+                onclick={() => selectedProficiency = level}
               >
                 <span class="level-number">{level}</span>
                 <span class="level-label">{getProficiencyLabel(level)}</span>
@@ -2129,10 +2129,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     </div>
 
     <div class="sys-modal-actions">
-      <button class="sys-btn sys-btn--secondary" on:click={() => showAddRoleModal = false}>Cancel</button>
+      <button class="sys-btn sys-btn--secondary" onclick={() => showAddRoleModal = false}>Cancel</button>
       <button
         class="sys-btn sys-btn--primary"
-        on:click={addRoleCapability}
+        onclick={addRoleCapability}
         disabled={!selectedRoleId || addingRole}
       >
         {addingRole ? 'Adding...' : 'Add Role'}
@@ -2152,11 +2152,11 @@ https://svelte.dev/e/a11y_label_has_associated_control (svelte)
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 {#if showAddressModal}
-<div class="sys-modal-overlay" on:click={closeAddressModal} on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
-  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+<div class="sys-modal-overlay" onclick={closeAddressModal} onkeydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+  <div class="sys-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeAddressModal()}>
     <div class="sys-modal-header">
       <h2>{editingAddress ? 'Edit Address' : 'Add Address'}</h2>
-      <button class="sys-modal-close" on:click={closeAddressModal}>×</button>
+      <button class="sys-modal-close" onclick={closeAddressModal}>×</button>
     </div>
 
     <div class="sys-modal-body">
@@ -2231,10 +2231,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     </div>
 
     <div class="sys-modal-actions">
-      <button class="sys-btn sys-btn--secondary" on:click={closeAddressModal}>Cancel</button>
+      <button class="sys-btn sys-btn--secondary" onclick={closeAddressModal}>Cancel</button>
       <button
         class="sys-btn sys-btn--primary"
-        on:click={saveAddress}
+        onclick={saveAddress}
         disabled={savingAddress}
       >
         {savingAddress ? 'Saving...' : (editingAddress ? 'Save Changes' : 'Add Address')}
@@ -2247,11 +2247,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 /Users/bwikene/worshipOS/ui/src/routes/connections/people/[id]/+page.svelte:613:3
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
-<div class="sys-modal-overlay" on:click={closeAddressModal} on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
-  <div class="sys-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+<div class="sys-modal-overlay" onclick={closeAddressModal} onkeydown={(e) => e.key === 'Escape' && closeAddressModal()}>
+  <div class="sys-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeAddressModal()}>
     <div class="sys-modal-header">
       <h2>{editingAddress ? 'Edit Address' : 'Add Address'}</h2>
-      <button class="sys-modal-close" on:click={closeAddressModal}>×</button>
+      <button class="sys-modal-close" onclick={closeAddressModal}>×</button>
     </div>
 
     <div class="sys-modal-body">
@@ -2326,10 +2326,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
     </div>
 
     <div class="sys-modal-actions">
-      <button class="sys-btn sys-btn--secondary" on:click={closeAddressModal}>Cancel</button>
+      <button class="sys-btn sys-btn--secondary" onclick={closeAddressModal}>Cancel</button>
       <button
         class="sys-btn sys-btn--primary"
-        on:click={saveAddress}
+        onclick={saveAddress}
         disabled={savingAddress}
       >
         {savingAddress ? 'Saving...' : (editingAddress ? 'Save Changes' : 'Add Address')}
@@ -2341,11 +2341,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 /Users/bwikene/worshipOS/ui/src/routes/gatherings/[id]/+page.svelte:570:5
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
-<div class="modal-overlay" role="button" tabindex="0" on:click={closeAddSongModal} on:keydown={(e) => e.key === 'Escape' && closeAddSongModal()}>
-    <div class="modal add-song-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAddSongModal()}>
+<div class="modal-overlay" role="button" tabindex="0" onclick={closeAddSongModal} onkeydown={(e) => e.key === 'Escape' && closeAddSongModal()}>
+    <div class="modal add-song-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeAddSongModal()}>
       <div class="modal-header">
         <h2>Add Song to Service</h2>
-        <button class="close-btn" on:click={closeAddSongModal}>×</button>
+        <button class="close-btn" onclick={closeAddSongModal}>×</button>
       </div>
 
       <div class="modal-body">
@@ -2362,7 +2362,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
             </div>
           {:else}
             {#each filteredSongs as song}
-              <div class="song-select-item" class:selected={selectedSongId === song.id} on:click={() => selectSong(song)}>
+              <div class="song-select-item" class:selected={selectedSongId === song.id} onclick={() => selectSong(song)}>
                 <div class="song-select-info">
                   <div class="song-select-title">{song.title}</div>
                   {#if song.artist}
@@ -2404,10 +2404,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
       </div>
 
       <div class="modal-actions">
-        <button class="secondary-btn" on:click={closeAddSongModal}>
+        <button class="secondary-btn" onclick={closeAddSongModal}>
           Cancel
         </button>
-        <button class="primary-btn" on:click={addSongToService} disabled={!selectedSongId || addingSong}>
+        <button class="primary-btn" onclick={addSongToService} disabled={!selectedSongId || addingSong}>
           {addingSong ? 'Adding...' : 'Add Song'}
         </button>
       </div>
@@ -2418,7 +2418,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 Warn: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
 https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
             {#each filteredSongs as song}
-              <div class="song-select-item" class:selected={selectedSongId === song.id} on:click={() => selectSong(song)}>
+              <div class="song-select-item" class:selected={selectedSongId === song.id} onclick={() => selectSong(song)}>
                 <div class="song-select-info">
                   <div class="song-select-title">{song.title}</div>
                   {#if song.artist}
@@ -2443,7 +2443,7 @@ https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
 Warn: `<div>` with a click handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
             {#each filteredSongs as song}
-              <div class="song-select-item" class:selected={selectedSongId === song.id} on:click={() => selectSong(song)}>
+              <div class="song-select-item" class:selected={selectedSongId === song.id} onclick={() => selectSong(song)}>
                 <div class="song-select-info">
                   <div class="song-select-title">{song.title}</div>
                   {#if song.artist}
@@ -2467,11 +2467,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 /Users/bwikene/worshipOS/ui/src/routes/gatherings/[id]/+page.svelte:646:5
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
-<div class="modal-overlay" role="button" tabindex="0" on:click={closeEditSongModal} on:keydown={(e) => e.key === 'Escape' && closeEditSongModal()}>
-    <div class="modal edit-song-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeEditSongModal()}>
+<div class="modal-overlay" role="button" tabindex="0" onclick={closeEditSongModal} onkeydown={(e) => e.key === 'Escape' && closeEditSongModal()}>
+    <div class="modal edit-song-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeEditSongModal()}>
       <div class="modal-header">
         <h2>Edit Song</h2>
-        <button class="close-btn" on:click={closeEditSongModal}>×</button>
+        <button class="close-btn" onclick={closeEditSongModal}>×</button>
       </div>
 
       <div class="modal-body">
@@ -2494,10 +2494,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
       </div>
 
       <div class="modal-actions">
-        <button class="secondary-btn" on:click={closeEditSongModal}>
+        <button class="secondary-btn" onclick={closeEditSongModal}>
           Cancel
         </button>
-        <button class="primary-btn" on:click={updateSongInService} disabled={savingEdit}>
+        <button class="primary-btn" onclick={updateSongInService} disabled={savingEdit}>
           {savingEdit ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
@@ -2507,11 +2507,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 /Users/bwikene/worshipOS/ui/src/routes/gatherings/[id]/+page.svelte:686:5
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
-<div class="modal-overlay" role="button" tabindex="0" on:click={closeChartModal} on:keydown={(e) => e.key === 'Escape' && closeChartModal()}>
-    <div class="modal chart-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeChartModal()}>
+<div class="modal-overlay" role="button" tabindex="0" onclick={closeChartModal} onkeydown={(e) => e.key === 'Escape' && closeChartModal()}>
+    <div class="modal chart-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeChartModal()}>
       <div class="modal-header">
         <h2>📄 {chartSong.title}</h2>
-        <button class="close-btn" on:click={closeChartModal}>×</button>
+        <button class="close-btn" onclick={closeChartModal}>×</button>
       </div>
 
       <div class="modal-body">
@@ -2542,7 +2542,7 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
       </div>
 
       <div class="modal-actions">
-        <button class="secondary-btn" on:click={closeChartModal}>
+        <button class="secondary-btn" onclick={closeChartModal}>
           Close
         </button>
       </div>
@@ -2552,11 +2552,11 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 /Users/bwikene/worshipOS/ui/src/routes/gatherings/[id]/+page.svelte:731:5
 Warn: `<div>` with a click or keydown handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
-<div class="modal-overlay" role="button" tabindex="0" on:click={closeAssignModal} on:keydown={(e) => e.key === 'Escape' && closeAssignModal()}>
-    <div class="modal assign-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeAssignModal()}>
+<div class="modal-overlay" role="button" tabindex="0" onclick={closeAssignModal} onkeydown={(e) => e.key === 'Escape' && closeAssignModal()}>
+    <div class="modal assign-modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && closeAssignModal()}>
       <div class="modal-header">
         <h2>Assign {assigningToAssignment.role_name}</h2>
-        <button class="close-btn" on:click={closeAssignModal}>×</button>
+        <button class="close-btn" onclick={closeAssignModal}>×</button>
       </div>
 
       <div class="modal-body">
@@ -2572,10 +2572,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
                 <div
                   class="person-select-item"
                   class:selected={selectedPersonId === person.id}
-                  on:click={() => selectedPersonId = person.id}
+                  onclick={() => selectedPersonId = person.id}
                   role="button"
                   tabindex="0"
-                  on:keydown={(e) => e.key === 'Enter' && (selectedPersonId = person.id)}
+                  onkeydown={(e) => e.key === 'Enter' && (selectedPersonId = person.id)}
                 >
                   <div class="person-select-info">
                     <div class="person-select-name">{person.first_name} {person.last_name}</div>
@@ -2607,10 +2607,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
                 <div
                   class="person-select-item"
                   class:selected={selectedPersonId === person.id}
-                  on:click={() => selectedPersonId = person.id}
+                  onclick={() => selectedPersonId = person.id}
                   role="button"
                   tabindex="0"
-                  on:keydown={(e) => e.key === 'Enter' && (selectedPersonId = person.id)}
+                  onkeydown={(e) => e.key === 'Enter' && (selectedPersonId = person.id)}
                 >
                   <div class="person-select-info">
                     <div class="person-select-name">{person.first_name} {person.last_name}</div>
@@ -2632,10 +2632,10 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
       </div>
 
       <div class="modal-actions">
-        <button class="secondary-btn" on:click={closeAssignModal}>
+        <button class="secondary-btn" onclick={closeAssignModal}>
           Cancel
         </button>
-        <button class="primary-btn" on:click={assignPerson} disabled={!selectedPersonId || assigningPerson}>
+        <button class="primary-btn" onclick={assignPerson} disabled={!selectedPersonId || assigningPerson}>
           {assigningPerson ? 'Assigning...' : 'Assign'}
         </button>
       </div>
@@ -2646,16 +2646,16 @@ https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
 Warn: Buttons and links should either contain text or have an `aria-label`, `aria-labelledby` or `title` attribute
 https://svelte.dev/e/a11y_consider_explicit_label (svelte)
     <div class="sys-toggle" role="group">
-      <button class="sys-toggle-btn" class:active={viewMode === 'cards'} on:click={() => viewMode = 'cards'}>
+      <button class="sys-toggle-btn" class:active={viewMode === 'cards'} onclick={() => viewMode = 'cards'}>
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z" /></svg>
       </button>
-      <button class="sys-toggle-btn" class:active={viewMode === 'table'} on:click={() => viewMode = 'table'}>
+      <button class="sys-toggle-btn" class:active={viewMode === 'table'} onclick={() => viewMode = 'table'}>
 
 /Users/bwikene/worshipOS/ui/src/routes/songs/+page.svelte:147:7
 Warn: Buttons and links should either contain text or have an `aria-label`, `aria-labelledby` or `title` attribute
 https://svelte.dev/e/a11y_consider_explicit_label (svelte)
       </button>
-      <button class="sys-toggle-btn" class:active={viewMode === 'table'} on:click={() => viewMode = 'table'}>
+      <button class="sys-toggle-btn" class:active={viewMode === 'table'} onclick={() => viewMode = 'table'}>
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" /></svg>
       </button>
     </div>
@@ -2665,27 +2665,27 @@ Warn: A form label must be associated with a control
 https://svelte.dev/e/a11y_label_has_associated_control (svelte)
                 <div class="tag-group">
                   <label>Headers</label>
-                  <button class="tag-btn" on:click={() => insertTag('{c: Verse 1}\n')}>Verse 1</button>
+                  <button class="tag-btn" onclick={() => insertTag('{c: Verse 1}\n')}>Verse 1</button>
 
 /Users/bwikene/worshipOS/ui/src/routes/songs/[id]/+page.svelte:299:19
 Warn: A form label must be associated with a control
 https://svelte.dev/e/a11y_label_has_associated_control (svelte)
                 <div class="tag-group">
                   <label>Metadata</label>
-                  <button class="tag-btn" on:click={() => insertTag('{key: G}\n')}>Key: G</button>
+                  <button class="tag-btn" onclick={() => insertTag('{key: G}\n')}>Key: G</button>
 
 /Users/bwikene/worshipOS/ui/src/routes/songs/[id]/+page.svelte:305:19
 Warn: A form label must be associated with a control
 https://svelte.dev/e/a11y_label_has_associated_control (svelte)
                 <div class="tag-group">
                   <label>Chords</label>
-                  <button class="tag-btn" on:click={() => insertTag('[G]')}>[G]</button>
+                  <button class="tag-btn" onclick={() => insertTag('[G]')}>[G]</button>
 
 /Users/bwikene/worshipOS/ui/src/routes/songs/[id]/+page.svelte:387:17
 Warn: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
 https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
               {:else}
-                <div class="paper-sheet size-md empty-chart" on:click={startEditing}>
+                <div class="paper-sheet size-md empty-chart" onclick={startEditing}>
                   <p>No chart content. Click to add lyrics & chords.</p>
                 </div>
               {/if}
@@ -2694,7 +2694,7 @@ https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
 Warn: `<div>` with a click handler must have an ARIA role
 https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
               {:else}
-                <div class="paper-sheet size-md empty-chart" on:click={startEditing}>
+                <div class="paper-sheet size-md empty-chart" onclick={startEditing}>
                   <p>No chart content. Click to add lyrics & chords.</p>
                 </div>
               {/if}
