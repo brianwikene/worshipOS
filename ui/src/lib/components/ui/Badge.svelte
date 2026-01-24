@@ -1,7 +1,9 @@
 <!-- /ui/src/lib/components/ui/Badge.svelte -->
 <script lang="ts">
 	type BadgeVariant = 'default' | 'muted' | 'accent' | 'warning' | 'success' | 'danger';
-	export let variant: BadgeVariant = 'default';
+
+	const props = $props<{ variant?: BadgeVariant; children?: () => unknown }>();
+	const variant: BadgeVariant = props.variant ?? 'default';
 
 	const variantClasses: Record<BadgeVariant, string> = {
 		default: 'border-ui-border bg-ui-surface text-ui-text',
@@ -13,6 +15,8 @@
 	};
 </script>
 
-<span class={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-sm font-semibold ${variantClasses[variant]}`}>
-	<slot />
+<span
+	class={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-sm font-semibold ${variantClasses[variant]}`}
+>
+	{@render props.children?.()}
 </span>

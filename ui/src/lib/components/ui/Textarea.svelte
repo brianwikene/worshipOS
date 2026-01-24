@@ -1,12 +1,12 @@
 <!-- /ui/src/lib/components/ui/Textarea.svelte -->
 <script lang="ts">
-	import type { HTMLTextAreaAttributes } from 'svelte/elements';
+	import type { HTMLTextareaAttributes } from 'svelte/elements';
 
-	export let value: HTMLTextAreaAttributes['value'] = '';
-	export let placeholder: string | undefined = undefined;
-	export let name: string | undefined = undefined;
-	export let id: string | undefined = undefined;
-	export let rows: number | undefined = 4;
+	export let value: HTMLTextareaAttributes['value'] = '';
+	export let placeholder: string | undefined;
+	export let name: string | undefined;
+	export let id: string | undefined;
+	export let rows = 4;
 	export let disabled = false;
 	export let required = false;
 </script>
