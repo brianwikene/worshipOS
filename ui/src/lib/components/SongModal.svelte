@@ -1,15 +1,12 @@
 <!-- /ui/src/lib/components/SongModal.svelte -->
-
 <script lang="ts">
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import Textarea from '$lib/components/ui/Textarea.svelte';
 	import type { SongSourceFormat } from '$lib/songs/types';
-	import { createEventDispatcher } from 'svelte';
 
-	export let open = false;
-	export let song: {
+	type SongModel = {
 		id?: string;
 		title?: string;
 		artist?: string | null;
@@ -20,72 +17,96 @@
 		raw_text?: string | null;
 		source_format?: SongSourceFormat;
 		parser_warnings?: string[];
-	} | null = null;
+	};
 
-	const dispatch = createEventDispatcher<{
-		close: void;
-		save: {
-			title: string;
-			artist: string | null;
-			key: string | null;
-			bpm: number | null;
-			ccli_number: string | null;
-			notes: string | null;
-			raw_text: string | null;
-			source_format: SongSourceFormat;
-		};
+	type SavePayload = {
+		title: string;
+		artist: string | null;
+		key: string | null;
+		bpm: number | null;
+		ccli_number: string | null;
+		notes: string | null;
+		raw_text: string | null;
+		source_format: SongSourceFormat;
+	};
+
+	// ✅ Svelte 5 props (no export let)
+	let {
+		open = $bindable(false),
+		song = null,
+		onClose = () => {},
+		onSave = async (_payload: SavePayload) => {}
+	} = $props<{
+		open?: boolean;
+		song?: SongModel | null;
+		onClose?: () => void;
+		onSave?: (payload: SavePayload) => void | Promise<void>;
 	}>();
 
-	let title = '';
-	let artist = '';
-	let key = '';
-	let bpm: number | null = null;
-	let ccliNumber = '';
-	let notes = '';
-	let rawText = '';
-	let sourceFormat: SongSourceFormat = 'chordpro';
-	let saving = false;
-	let error = '';
-	let parserWarnings: string[] = [];
-	let importMessage = '';
-	let importMessageTimer: ReturnType<typeof setTimeout> | null = null;
-	let fileInput: HTMLInputElement | null = null;
+	// ✅ Local state
+	let title = $state('');
+	let artist = $state('');
+	let key = $state('');
+	let bpm = $state<number | null>(null);
+	let ccliNumber = $state('');
+	let notes = $state('');
+	let rawText = $state('');
+	let sourceFormat = $state<SongSourceFormat>('chordpro');
+	let saving = $state(false);
+	let error = $state('');
+	let parserWarnings = $state<string[]>([]);
 
-	// Reset form when modal opens
-	$: if (open) {
-		title = song?.title ?? '';
-		artist = song?.artist ?? '';
-		key = song?.key ?? '';
-		bpm = song?.bpm ?? null;
-		ccliNumber = song?.ccli_number ?? '';
-		notes = song?.notes ?? '';
-		rawText = song?.raw_text ?? '';
-		sourceFormat = song?.source_format ?? 'chordpro';
-		parserWarnings = song?.parser_warnings ?? [];
-		error = '';
-		saving = false;
-	}
+	let importMessage = $state('');
+	let importMessageTimer = $state<ReturnType<typeof setTimeout> | null>(null);
 
-	$: isEdit = !!song?.id;
-	$: modalTitle = isEdit ? 'Edit Song' : 'Add New Song';
-	$: canSave = title.trim() && !saving;
+	// DOM refs (bind:this updates them → make them $state to avoid non_reactive warnings)
+	let fileInput = $state<HTMLInputElement | null>(null);
+	let titleInput = $state<HTMLInputElement | null>(null);
+	let dialogEl = $state<HTMLDivElement | null>(null);
+
+	let isDragActive = $state(false);
+
+	const isEdit = $derived(Boolean(song?.id));
+	const modalTitle = $derived(isEdit ? 'Edit Song' : 'Add New Song');
+	const canSave = $derived(title.trim().length > 0 && !saving);
+
+	// Reset form only when modal transitions from closed → open
+	let wasOpen = $state(false);
+	$effect(() => {
+		if (open && !wasOpen) {
+			title = song?.title ?? '';
+			artist = song?.artist ?? '';
+			key = song?.key ?? '';
+			bpm = song?.bpm ?? null;
+			ccliNumber = song?.ccli_number ?? '';
+			notes = song?.notes ?? '';
+			rawText = song?.raw_text ?? '';
+			sourceFormat = song?.source_format ?? 'chordpro';
+			parserWarnings = song?.parser_warnings ?? [];
+			error = '';
+			saving = false;
+			isDragActive = false;
+
+			// Focus first field after DOM updates (avoid autofocus)
+			queueMicrotask(() => titleInput?.focus());
+			// Optional: also focus dialog container for screen readers
+			// queueMicrotask(() => dialogEl?.focus());
+		}
+		wasOpen = open;
+	});
 
 	function handleClose() {
-		if (!saving) {
-			dispatch('close');
-		}
+		if (saving) return;
+		open = false; // supports bind:open
+		onClose();
 	}
 
 	function handleBackdropClick(e: MouseEvent) {
-		if (e.target === e.currentTarget) {
-			handleClose();
-		}
+		if (e.target === e.currentTarget) handleClose();
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
-			handleClose();
-		}
+	function handleWindowKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape') handleClose();
 	}
 
 	function showImportMessage(msg: string) {
@@ -112,29 +133,25 @@
 
 	function onFileInputChange(event: Event) {
 		const target = event.target as HTMLInputElement;
-		handleFileSelection(target.files?.[0]);
+		void handleFileSelection(target.files?.[0]);
 		target.value = '';
 	}
 
 	function onDrop(event: DragEvent) {
 		event.preventDefault();
-		handleFileSelection(event.dataTransfer?.files?.[0]);
+		void handleFileSelection(event.dataTransfer?.files?.[0]);
 		isDragActive = false;
 	}
 
 	function onDragOver(event: DragEvent) {
-		event.preventDefault();
-		if (!isDragActive) {
-			isDragActive = true;
-		}
+		event.preventDefault(); // required for drop to fire
+		if (!isDragActive) isDragActive = true;
 	}
 
 	function onDragLeave(event: DragEvent) {
 		event.preventDefault();
 		isDragActive = false;
 	}
-
-	let isDragActive = false;
 
 	function openFilePicker() {
 		fileInput?.click();
@@ -153,73 +170,119 @@
 		error = '';
 		saving = true;
 
-		dispatch('save', {
-			title: title.trim(),
-			artist: artist.trim() || null,
-			key: key.trim() || null,
-			bpm: bpm,
-			ccli_number: ccliNumber.trim() || null,
-			notes: notes.trim() || null,
-			raw_text: rawText ? rawText : null,
-			source_format: sourceFormat
-		});
+		try {
+			await onSave({
+				title: title.trim(),
+				artist: artist.trim() || null,
+				key: key.trim() || null,
+				bpm,
+				ccli_number: ccliNumber.trim() || null,
+				notes: notes.trim() || null,
+				raw_text: rawText ? rawText : null,
+				source_format: sourceFormat
+			});
+			// Optional: close on success
+			// handleClose();
+		} catch (err) {
+			error = err instanceof Error ? err.message : String(err);
+			saving = false;
+		}
 	}
 
+	function onFormSubmit(e: SubmitEvent) {
+		e.preventDefault();
+		void handleSubmit();
+	}
+
+	// Optional external control via bind:this
 	export function setError(msg: string) {
 		error = msg;
 		saving = false;
 	}
-
 	export function setSaving(val: boolean) {
 		saving = val;
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleWindowKeydown} />
 
 {#if open}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="modal-backdrop" onclick={handleBackdropClick} onkeydown={handleKeydown}>
-		<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+	<div
+		class="modal-backdrop"
+		role="button"
+		tabindex="0"
+		aria-label="Close song modal"
+		onclick={handleBackdropClick}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') handleClose();
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				handleClose();
+			}
+		}}
+	>
+		<div
+			class="modal"
+			role="dialog"
+			tabindex="-1"
+			aria-modal="true"
+			aria-labelledby="song-modal-title"
+			bind:this={dialogEl}
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.key === 'Escape' && handleClose()}
+		>
 			<header class="modal-header">
-				<h2 id="modal-title">{modalTitle}</h2>
-				<button class="close-btn" onclick={handleClose} aria-label="Close" disabled={saving}>
+				<h2 id="song-modal-title">{modalTitle}</h2>
+				<button
+					class="close-btn"
+					type="button"
+					onclick={handleClose}
+					aria-label="Close"
+					disabled={saving}
+				>
 					✕
 				</button>
 			</header>
 
-			<form class="modal-form" onsubmit|preventDefault={handleSubmit}>
+			<form class="modal-form" onsubmit={onFormSubmit}>
 				<div class="modal-body">
 					{#if error}
-						<div class="error-message">{error}</div>
+						<div class="error-message" role="alert">{error}</div>
 					{/if}
 
 					<div class="form-group">
-						<label for="title">Title <span class="required">*</span></label>
-						<Input
-							id="title"
+						<label for="song-title">Title <span class="required">*</span></label>
+						<input
+							id="song-title"
+							class="w-full rounded-card border border-ui-border bg-ui-surface px-4 py-3 text-base text-ui-text placeholder:text-ui-text-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent focus-visible:ring-offset-2 focus-visible:ring-offset-ui-surface disabled:cursor-not-allowed disabled:bg-ui-surface-muted disabled:text-ui-text-muted"
+							bind:this={titleInput}
 							bind:value={title}
 							placeholder="Way Maker"
 							disabled={saving}
-							autofocus
 						/>
 					</div>
 
 					<div class="form-group">
-						<label for="artist">Artist</label>
-						<Input id="artist" bind:value={artist} placeholder="Sinach" disabled={saving} />
+						<label for="song-artist">Artist</label>
+						<Input id="song-artist" bind:value={artist} placeholder="Sinach" disabled={saving} />
 					</div>
 
 					<div class="form-row">
 						<div class="form-group">
-							<label for="key">Key</label>
-							<Input id="key" bind:value={key} placeholder="G" maxlength={5} disabled={saving} />
+							<label for="song-key">Key</label>
+							<Input
+								id="song-key"
+								bind:value={key}
+								placeholder="G"
+								maxlength={5}
+								disabled={saving}
+							/>
 						</div>
 
 						<div class="form-group">
-							<label for="bpm">BPM</label>
+							<label for="song-bpm">BPM</label>
 							<Input
-								id="bpm"
+								id="song-bpm"
 								type="number"
 								bind:value={bpm}
 								placeholder="72"
@@ -231,14 +294,14 @@
 					</div>
 
 					<div class="form-group">
-						<label for="ccli">CCLI Number</label>
-						<Input id="ccli" bind:value={ccliNumber} placeholder="7115744" disabled={saving} />
+						<label for="song-ccli">CCLI Number</label>
+						<Input id="song-ccli" bind:value={ccliNumber} placeholder="7115744" disabled={saving} />
 						<span class="hint">For CCLI license reporting</span>
 					</div>
 
 					<div class="form-group">
-						<label for="format">Lyrics Format</label>
-						<Select id="format" bind:value={sourceFormat} disabled={saving}>
+						<label for="song-format">Lyrics Format</label>
+						<Select id="song-format" bind:value={sourceFormat} disabled={saving}>
 							<option value="chordpro">ChordPro (use [C] or &#123;c:C&#125; chords)</option>
 							<option value="plain_text">Plain text (lyrics only)</option>
 						</Select>
@@ -251,9 +314,9 @@
 					<div
 						class="drop-zone"
 						class:drop-zone--active={isDragActive}
-						on:dragover={onDragOver}
-						on:dragleave={onDragLeave}
-						on:drop={onDrop}
+						ondragover={onDragOver}
+						ondragleave={onDragLeave}
+						ondrop={onDrop}
 						onclick={openFilePicker}
 						onkeydown={handleDropZoneKeydown}
 						role="button"
@@ -274,13 +337,13 @@
 					</div>
 
 					{#if importMessage}
-						<div class="import-message">{importMessage}</div>
+						<div class="import-message" role="status" aria-live="polite">{importMessage}</div>
 					{/if}
 
 					<div class="form-group">
-						<label for="raw-text">Lyrics &amp; Chords</label>
+						<label for="song-raw-text">Lyrics &amp; Chords</label>
 						<Textarea
-							id="raw-text"
+							id="song-raw-text"
 							bind:value={rawText}
 							placeholder="[C]You are here, moving in our midst"
 							rows={8}
@@ -304,9 +367,9 @@
 					{/if}
 
 					<div class="form-group">
-						<label for="notes">Notes</label>
+						<label for="song-notes">Notes</label>
 						<Textarea
-							id="notes"
+							id="song-notes"
 							bind:value={notes}
 							placeholder="Song structure, arrangement notes, etc."
 							rows={3}
@@ -320,11 +383,7 @@
 						Cancel
 					</Button>
 					<Button type="submit" disabled={!canSave}>
-						{#if saving}
-							Saving...
-						{:else}
-							{isEdit ? 'Update Song' : 'Add Song'}
-						{/if}
+						{saving ? 'Saving…' : isEdit ? 'Update Song' : 'Add Song'}
 					</Button>
 				</footer>
 			</form>
@@ -333,6 +392,7 @@
 {/if}
 
 <style>
+	/* (your existing styles unchanged) */
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;

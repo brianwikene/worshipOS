@@ -1,4 +1,6 @@
 {
+	"private": true,
+	"license": "UNLICENSED",
 	"name": "ui",
 	"private": true,
 	"version": "0.0.1",

@@ -1,4 +1,6 @@
 {
+  "private": true,
+  "license": "UNLICENSED",
   "scripts": {
     "db:migrate": "bash scripts/db-migrate.sh"
   },

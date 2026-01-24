@@ -275,19 +275,23 @@
 
 <!-- Add/Edit Service Type Modal -->
 {#if showModal}
-	<div
-		class="sys-modal-overlay"
-		onclick={closeModal}
-		onkeydown={(e) => e.key === 'Escape' && closeModal()}
-	>
+	<div class="sys-modal-overlay">
+		<button type="button" class="sys-modal-backdrop" aria-label="Close modal" onclick={closeModal}
+		></button>
 		<div
 			class="sys-modal sys-modal--wide"
+			role="dialog"
+			tabindex="-1"
+			aria-modal="true"
+			aria-labelledby="service-type-modal-title"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.key === 'Escape' && closeModal()}
 		>
 			<div class="sys-modal-header">
-				<h2>{editingType ? 'Edit Service Type' : 'Add Service Type'}</h2>
-				<button class="sys-modal-close" onclick={closeModal}>×</button>
+				<h2 id="service-type-modal-title">
+					{editingType ? 'Edit Service Type' : 'Add Service Type'}
+				</h2>
+				<button class="sys-modal-close" onclick={closeModal} aria-label="Close modal">×</button>
 			</div>
 
 			<div class="sys-modal-body">
@@ -334,13 +338,14 @@
 									</div>
 									<div class="req-counts">
 										<div class="count-input">
-											<label>Min</label>
+											<label for={`min-needed-${req.role_id}`}>Min</label>
 											<input
+												id={`min-needed-${req.role_id}`}
 												type="number"
 												min="1"
 												max="20"
 												value={req.min_needed}
-												on:input={(e) =>
+												oninput={(e) =>
 													updateRequirement(
 														req.role_id,
 														'min_needed',
@@ -349,14 +354,15 @@
 											/>
 										</div>
 										<div class="count-input">
-											<label>Max</label>
+											<label for={`max-needed-${req.role_id}`}>Max</label>
 											<input
+												id={`max-needed-${req.role_id}`}
 												type="number"
 												min="1"
 												max="20"
 												value={req.max_needed ?? ''}
 												placeholder="—"
-												on:input={(e) =>
+												oninput={(e) =>
 													updateRequirement(
 														req.role_id,
 														'max_needed',
@@ -365,9 +371,14 @@
 											/>
 										</div>
 									</div>
-									<button class="btn-remove-req" onclick={() => removeRoleRequirement(req.role_id)}
-										>×</button
+									<button
+										type="button"
+										class="btn-remove-req"
+										aria-label={`Remove ${getRoleName(req.role_id)} requirement`}
+										onclick={() => removeRoleRequirement(req.role_id)}
 									>
+										×
+									</button>
 								</div>
 							{/each}
 						</div>
@@ -375,8 +386,9 @@
 
 					{#if availableRoles.length > 0}
 						<div class="add-role-section">
-							<label>Add Position</label>
+							<label for="add-position">Add Position</label>
 							<select
+								id="add-position"
 								class="sys-select"
 								onchange={(e) => {
 									addRoleRequirement(e.currentTarget.value);
@@ -704,6 +716,14 @@
 	.no-roles-warning a {
 		color: #d97706;
 		text-decoration: underline;
+	}
+
+	.sys-modal-backdrop {
+		position: absolute;
+		inset: 0;
+		background: transparent;
+		border: none;
+		padding: 0;
 	}
 
 	@media (max-width: 640px) {
