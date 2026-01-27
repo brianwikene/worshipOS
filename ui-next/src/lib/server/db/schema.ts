@@ -1,3 +1,6 @@
+// CANONICAL SCHEMA:
+// ui-next/src/lib/server/db/schema.ts is the source of truth.
+// legacy ui/ is frozen and must not define a parallel schema.
 import { relations } from 'drizzle-orm';
 import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
