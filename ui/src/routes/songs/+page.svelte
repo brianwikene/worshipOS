@@ -1,5 +1,4 @@
 <!-- /ui/src/routes/songs/+page.svelte -->
-<!-- /src/routes/songs/+page.svelte -->
 
 <script lang="ts">
 	import { apiFetch, apiJson } from '$lib/api';
@@ -73,7 +72,7 @@
 		modalOpen = true;
 	}
 
-	async function handleSave(e: CustomEvent<any>) {
+	async function handleSave(payload: any) {
 		try {
 			modalComponent.setSaving(true);
 
@@ -81,13 +80,13 @@
 				// Update
 				await apiFetch(`/api/songs/${editingSong.id}`, {
 					method: 'PUT',
-					body: JSON.stringify(e.detail)
+					body: JSON.stringify(payload)
 				});
 			} else {
 				// Create
 				await apiFetch('/api/songs', {
 					method: 'POST',
-					body: JSON.stringify(e.detail)
+					body: JSON.stringify(payload)
 				});
 			}
 
@@ -264,8 +263,10 @@
 		bind:this={modalComponent}
 		bind:open={modalOpen}
 		song={editingSong}
-		on:close={() => (modalOpen = false)}
-		on:save={handleSave}
+		onClose={() => (modalOpen = false)}
+		onSave={async (payload) => {
+			await handleSave(new CustomEvent('save', { detail: payload }));
+		}}
 	/>
 </div>
 

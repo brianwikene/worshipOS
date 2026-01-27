@@ -459,7 +459,11 @@ body {
 	font-weight: 600;
 	font-size: 0.9375rem;
 	cursor: pointer;
+
+	-webkit-user-select: none; /* Safari / iOS Safari */
 	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+
 	border: 1px solid transparent;
 	transition:
 		transform 0.05s ease,

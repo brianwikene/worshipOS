@@ -47,7 +47,7 @@
 	let title = $state('');
 	let artist = $state('');
 	let key = $state('');
-	let bpm = $state<number | null>(null);
+	let bpmText = $state(''); // store as string for input binding
 	let ccliNumber = $state('');
 	let notes = $state('');
 	let rawText = $state('');
@@ -68,7 +68,7 @@
 
 	const isEdit = $derived(Boolean(song?.id));
 	const modalTitle = $derived(isEdit ? 'Edit Song' : 'Add New Song');
-	const canSave = $derived(title.trim().length > 0 && !saving);
+	const canSave = $derived(String(title ?? '').trim().length > 0 && !saving);
 
 	// Reset form only when modal transitions from closed → open
 	let wasOpen = $state(false);
@@ -77,7 +77,7 @@
 			title = song?.title ?? '';
 			artist = song?.artist ?? '';
 			key = song?.key ?? '';
-			bpm = song?.bpm ?? null;
+			bpmText = song?.bpm != null ? String(song.bpm) : '';
 			ccliNumber = song?.ccli_number ?? '';
 			notes = song?.notes ?? '';
 			rawText = song?.raw_text ?? '';
@@ -172,15 +172,16 @@
 
 		try {
 			await onSave({
-				title: title.trim(),
-				artist: artist.trim() || null,
-				key: key.trim() || null,
-				bpm,
-				ccli_number: ccliNumber.trim() || null,
-				notes: notes.trim() || null,
-				raw_text: rawText ? rawText : null,
+				title: String(title ?? '').trim(),
+				artist: String(artist ?? '').trim() || null,
+				key: String(key ?? '').trim() || null,
+				bpm: bpmText.trim() ? Number(bpmText) : null,
+				ccli_number: String(ccliNumber ?? '').trim() || null,
+				notes: String(notes ?? '').trim() || null,
+				raw_text: rawText ? String(rawText) : null,
 				source_format: sourceFormat
 			});
+
 			// Optional: close on success
 			// handleClose();
 		} catch (err) {
@@ -207,20 +208,7 @@
 <svelte:window onkeydown={handleWindowKeydown} />
 
 {#if open}
-	<div
-		class="modal-backdrop"
-		role="button"
-		tabindex="0"
-		aria-label="Close song modal"
-		onclick={handleBackdropClick}
-		onkeydown={(e) => {
-			if (e.key === 'Escape') handleClose();
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				handleClose();
-			}
-		}}
-	>
+	<div class="modal-backdrop" role="presentation" aria-hidden="true" onclick={handleBackdropClick}>
 		<div
 			class="modal"
 			role="dialog"
@@ -284,7 +272,7 @@
 							<Input
 								id="song-bpm"
 								type="number"
-								bind:value={bpm}
+								bind:value={bpmText}
 								placeholder="72"
 								min={40}
 								max={240}

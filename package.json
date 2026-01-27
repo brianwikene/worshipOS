@@ -2,9 +2,18 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "db:migrate": "bash scripts/db-migrate.sh"
+    "db:generate": "dotenv -e .env drizzle-kit generate",
+    "db:migrate": "dotenv -e .env drizzle-kit migrate",
+    "db:studio": "dotenv -e .env drizzle-kit studio"
   },
   "dependencies": {
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "drizzle-orm": "^0.45.1",
+    "postgres": "^3.4.8"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "dotenv-cli": "^11.0.0",
+    "drizzle-kit": "^0.31.8"
   }
 }
