@@ -1,13 +1,15 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { playwright } from '@vitest/browser-playwright';
-import Icons from 'unplugin-icons/vite';
+import Icons from 'unplugin-icons/vite'; // [!code ++] // [!code focus]
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	plugins: [
-		// tailwindcss() is GONE. PostCSS handles it now via postcss.config.js
 		sveltekit(),
-		Icons({ compiler: 'svelte' })
+		Icons({
+			// [!code ++] // [!code focus]
+			compiler: 'svelte' // [!code ++] // [!code focus]
+		}) // [!code ++] // [!code focus]
 	],
 
 	test: {

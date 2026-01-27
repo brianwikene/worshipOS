@@ -25,7 +25,8 @@
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",
 		"@eslint/js": "^9.39.1",
-		"@iconify/json": "^2.2.431",
+		"@iconify-json/material-symbols": "^1.2.53",
+		"@iconify/json": "^2.2.432",
 		"@playwright/test": "^1.57.0",
 		"@sveltejs/adapter-vercel": "^6.3.1",
 		"@sveltejs/kit": "^2.50.1",

@@ -34,7 +34,7 @@
 		<div class="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
 			<div>
 				<h1 class="text-meadow-950 text-2xl font-bold">Connections</h1>
-				<p class="text-meadow-900/60 text-sm">People we're walking with.</p>
+				<p class="text-meadow-900/60 text-sm">People, households, teams, and serving.</p>
 			</div>
 
 			<button

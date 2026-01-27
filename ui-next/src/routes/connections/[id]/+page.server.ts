@@ -6,10 +6,38 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-	/* ... (Keep your existing load function here) ... */
 	const { church } = locals;
-	if (!church) error(404, 'Church not found');
 
+	// DEBUG 1: Check the Tenant
+	console.log('--- DEBUG: CONNECTION LOAD ---');
+	console.log('1. URL Param ID:', params.id);
+
+	if (!church) {
+		console.error('❌ CRITICAL: No Church found in locals.');
+		error(404, 'Church context missing');
+	}
+	console.log('2. Active Tenant (Church) ID:', church.id);
+
+	// DEBUG 2: The "Blind" Check (Does the person exist at all?)
+	// We query purely by ID, ignoring the church filter for a second.
+	const rawPerson = await db.query.people.findFirst({
+		where: (p, { eq }) => eq(p.id, params.id)
+	});
+
+	if (!rawPerson) {
+		console.error('❌ CRITICAL: Person ID does not exist in the database.');
+		console.log('   Are you pointing to the correct DB?');
+		error(404, 'Person not found in DB');
+	} else {
+		console.log('3. Found Person in DB:', rawPerson.first_name, rawPerson.last_name);
+		console.log('   Person church_id:', rawPerson.church_id);
+		console.log('   Required church_id:', church.id);
+
+		const isMatch = rawPerson.church_id === church.id;
+		console.log(`4. MATCH RESULT: ${isMatch ? '✅ MATCH' : '❌ MISMATCH'}`);
+	}
+
+	// 3. The Real Query (Restoring the security filter)
 	const person = await db.query.people.findFirst({
 		where: (people, { and, eq }) => and(eq(people.id, params.id), eq(people.church_id, church.id)),
 		with: {
@@ -21,16 +49,15 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		}
 	});
 
-	if (!person) error(404, 'Person not found');
+	if (!person) {
+		console.error('❌ QUERY FAILED: Security filter returned null.');
+		error(404, 'Person not found (Security Filter)');
+	}
 
-	// Helper: Fetch all families for the "Connect Family" autocomplete
-	// In a real app, you might fetch this via an API endpoint to save bandwidth
-	const allFamilies = await db.query.families.findMany({
-		where: (f, { eq }) => eq(f.church_id, church.id),
-		columns: { id: true, name: true, address_city: true }
-	});
+	console.log('✅ SUCCESS: Returning person to UI');
+	console.log('------------------------------');
 
-	return { person, allFamilies };
+	return { person };
 };
 
 export const actions: Actions = {

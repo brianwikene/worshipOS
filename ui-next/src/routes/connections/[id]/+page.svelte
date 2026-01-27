@@ -3,16 +3,18 @@
 		ArrowLeft,
 		Briefcase,
 		Calendar,
-		CircleAlert,
+		CircleAlert, // <--- MAKE SURE THIS IS HERE (Not AlertCircle)
 		Clock,
-		Heart,
-		Home,
 		Mail,
 		MapPin,
 		Phone,
 		Shield,
 		Users
 	} from '@lucide/svelte';
+	// NEW IMPORT: Material Icon via unplugin-icons
+	// If this name fails, try: '~icons/material-symbols/family-restroom'
+	import FamilyHome from '~icons/material-symbols/family-home';
+
 	import type { PageData } from './$types';
 	import ConnectFamilyDrawer from './ConnectFamilyDrawer.svelte';
 	import EditProfileDrawer from './EditProfileDrawer.svelte';
@@ -20,14 +22,11 @@
 	let { data } = $props<{ data: PageData }>();
 	let person = $derived(data.person);
 
+	// Safe derivation for family members
+	let familyMembers = $derived(person.family?.members?.filter((m) => m.id !== person.id) || []);
+
 	let isEditProfileOpen = $state(false);
 	let isConnectFamilyOpen = $state(false);
-
-	let familyMembers = $derived(
-		person.family?.members.filter(
-			(m: (typeof person.family.members)[number]) => m.id !== person.id
-		) || []
-	);
 
 	function getComfortLabel(rating: number | null) {
 		if (!rating) return 'Unrated';
@@ -71,11 +70,11 @@
 						{#if person.avatar_url}
 							<img
 								src={person.avatar_url}
-								alt={person.first_name}
+								alt={person.first_name ?? 'Person'}
 								class="h-full w-full object-cover"
 							/>
 						{:else}
-							{person.first_name[0]}{person.last_name[0]}
+							{person.first_name?.[0] ?? '?'}{person.last_name?.[0] ?? ''}
 						{/if}
 					</div>
 					<h1 class="text-2xl font-bold text-slate-900">{person.first_name} {person.last_name}</h1>
@@ -108,7 +107,7 @@
 					<h3
 						class="mb-4 flex items-center gap-2 text-xs font-bold tracking-wider text-stone-400 uppercase"
 					>
-						<Home size={12} /> Household
+						<FamilyHome class="h-3 w-3" /> Household
 					</h3>
 
 					{#if person.family}
@@ -131,7 +130,7 @@
 									<div
 										class="flex h-8 w-8 items-center justify-center rounded-full bg-stone-100 text-xs font-bold text-stone-600"
 									>
-										{member.first_name[0]}
+										{member.first_name?.[0] ?? '?'}
 									</div>
 									<span class="text-sm text-stone-700">{member.first_name}</span>
 								</a>

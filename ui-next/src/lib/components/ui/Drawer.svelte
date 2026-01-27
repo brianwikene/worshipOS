@@ -1,8 +1,16 @@
+<!-- ui-next/src/lib/components/ui/Drawer.svelte -->
 <script lang="ts">
 	import { X } from '@lucide/svelte';
+	import type { Snippet } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 
-	let { open = $bindable(false), title, children } = $props();
+	type Props = {
+		open?: boolean;
+		title?: string;
+		children?: Snippet;
+	};
+
+	let { open = $bindable(false), title, children } = $props<Props>();
 
 	function close() {
 		open = false;
@@ -24,8 +32,10 @@
 		<div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
 			<h2 class="text-lg font-bold text-gray-900">{title}</h2>
 			<button
+				type="button"
 				onclick={close}
 				class="-mr-2 rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+				aria-label="Close drawer"
 			>
 				<X size={20} />
 			</button>
