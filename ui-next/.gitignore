@@ -8,6 +8,10 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+.vscode/
+**/coverage/
+supabase/snippets/
+**/*.bak
 typecheck.txt
 
 # OS
