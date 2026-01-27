@@ -5,6 +5,8 @@ import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async () => {
 	// 1. Fetch the first church in the DB
+	// TEMP: dev default tenant selection (first church)
+	// TODO: resolve tenant from subdomain/session
 	const churchData = await db.query.churches.findFirst();
 
 	// If no church exists yet (e.g. before seeding), return empty
@@ -13,6 +15,8 @@ export const load: LayoutServerLoad = async () => {
 	}
 
 	// 2. Fetch the campuses for this church
+	// TEMP: default to first campus
+	// TODO: select campus via cookie/session
 	const campusList = await db.query.campuses.findMany({
 		where: eq(campuses.church_id, churchData.id)
 	});

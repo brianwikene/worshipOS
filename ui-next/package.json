@@ -15,12 +15,11 @@
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright test",
-		"db:start": "docker compose up",
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
-		"typecheck": "svelte-kit sync 77 tsc --noEmit"
+		"typecheck": "svelte-kit sync && tsc --noEmit"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",

@@ -58,6 +58,12 @@ coverage/
 *.lcov
 
 ########################################
+# Supabase / not necessary to commit
+########################################
+supabase/.temp/cli-latest
+supabase/snippets/Untitled query *.sql
+
+########################################
 # Logs
 ########################################
 logs/
@@ -75,6 +81,7 @@ Thumbs.db
 *.user
 *.swp
 *.swo
+*.bak
 
 ########################################
 # Docker / DB / local data

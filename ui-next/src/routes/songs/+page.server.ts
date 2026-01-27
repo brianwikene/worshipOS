@@ -5,11 +5,7 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
 	const allSongs = await db.query.songs.findMany({
-		orderBy: [desc(songs.updated_at)],
-		// We also fetch arrangements to show how many variants exist
-		with: {
-			arrangements: true
-		}
+		orderBy: [desc(songs.updated_at)]
 	});
 
 	return { songs: allSongs };

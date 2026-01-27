@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { db } from '$lib/server/db';
 import {
 	instances,

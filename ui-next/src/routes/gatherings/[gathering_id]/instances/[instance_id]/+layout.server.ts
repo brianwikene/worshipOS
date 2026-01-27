@@ -1,32 +1,41 @@
+// src/routes/gatherings/[gathering_id]/instances/[instance_id]/+layout.server.ts
 import { db } from '$lib/server/db';
-import { instances } from '$lib/server/db/schema';
 import { error } from '@sveltejs/kit';
-import { and, eq, ne } from 'drizzle-orm';
+import type { LayoutServerLoad } from './$types';
 
-export const load = async ({ params }) => {
-	// 1. Fetch the specific Instance requested
-	const instanceData = await db.query.instances.findFirst({
-		where: eq(instances.id, params.instance_id),
+export const load: LayoutServerLoad = async ({ params, locals }) => {
+	const churchId = locals.church?.id;
+	if (!churchId) throw error(400, 'Active church is required');
+
+	const { gathering_id, instance_id } = params;
+
+	if (!gathering_id || !instance_id) {
+		throw error(400, 'Missing route parameters');
+	}
+
+	// Fetch the gathering (tenant-scoped)
+	const gathering = await db.query.gatherings.findFirst({
+		where: (g, { and, eq }) => and(eq(g.id, gathering_id), eq(g.church_id, churchId)),
 		with: {
-			gathering: true // Get parent details (Date, Title)
+			campus: true
 		}
 	});
 
-	if (!instanceData) error(404, 'Instance not found');
+	if (!gathering) {
+		throw error(404, 'Gathering not found');
+	}
 
-	// 2. Fetch "Siblings" (Other instances for this same gathering)
-	// This enables the "Copy to 11am" features later
-	const otherInstances = await db.query.instances.findMany({
-		where: and(
-			eq(instances.gathering_id, instanceData.gathering_id),
-			ne(instances.id, instanceData.id) // Exclude self
-		),
-		orderBy: (instances, { asc }) => [asc(instances.start_time)]
+	// Fetch the instance (tenant + gathering scoped)
+	const instance = await db.query.instances.findFirst({
+		where: (i, { and, eq }) => and(eq(i.id, instance_id), eq(i.gathering_id, gathering_id))
 	});
 
+	if (!instance) {
+		throw error(404, 'Instance not found');
+	}
+
 	return {
-		instance: instanceData,
-		gathering: instanceData.gathering,
-		siblings: otherInstances
+		gathering,
+		instance
 	};
 };

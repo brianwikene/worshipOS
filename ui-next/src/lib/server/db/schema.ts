@@ -4,6 +4,8 @@ import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle
 // ==========================================
 // 0. TENANCY ( The Isolation Layer )
 // ==========================================
+// churches represents the primary tenant boundary.
+// Campuses, people, and gatherings all belong to a church.
 export const churches = pgTable('churches', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	name: text('name').notNull(),
