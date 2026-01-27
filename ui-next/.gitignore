@@ -8,6 +8,7 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+typecheck.txt
 
 # OS
 .DS_Store
