@@ -1,7 +1,6 @@
 {
 	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
-		"types": ["unplugin-icons/types/svelte"], // [!code ++] // [!code focus]
 		"rewriteRelativeImportExtensions": true,
 		"allowJs": true,
 		"checkJs": true,
@@ -12,7 +11,7 @@
 		"sourceMap": true,
 		"strict": true,
 		"moduleResolution": "bundler",
-		"typeRoots": ["./node_modules/@types", "./src"]
+		"types": ["unplugin-icons/types/svelte"]
 	}
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
 	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files

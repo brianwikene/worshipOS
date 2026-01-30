@@ -882,7 +882,7 @@
 
 "@types/uuid@^11.0.0":
   version "11.0.0"
-  resolved "https://registry.npmjs.org/@types/uuid/-/uuid-11.0.0.tgz"
+  resolved "https://registry.yarnpkg.com/@types/uuid/-/uuid-11.0.0.tgz#f4fa34bbf2af941148ef1973c4361fc43617971c"
   integrity sha512-HVyk8nj2m+jcFRNazzqyVKiZezyhDKrGUA3jlEcg/nZ6Ms+qHwocba1Y/AaVaznJTAM9xpdFSh+ptbNrhOGvZA==
   dependencies:
     uuid "*"

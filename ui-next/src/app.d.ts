@@ -18,8 +18,8 @@ declare global {
 
 // Ensure external icon libraries work (if you use unplugin-icons)
 declare module '~icons/*' {
-	import type { SvelteComponent } from 'svelte';
-	const component: typeof SvelteComponent;
+	import type { Component } from 'svelte';
+	const component: Component;
 	export default component;
 }
 

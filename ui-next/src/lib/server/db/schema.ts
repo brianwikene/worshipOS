@@ -2,7 +2,16 @@
 // ui-next/src/lib/server/db/schema.ts is the source of truth.
 // legacy ui/ is frozen and must not define a parallel schema.
 import { relations } from 'drizzle-orm';
-import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+	boolean,
+	integer,
+	jsonb,
+	pgTable,
+	primaryKey,
+	text,
+	timestamp,
+	uuid
+} from 'drizzle-orm/pg-core';
 
 // ==========================================
 // 0. TENANCY ( The Isolation Layer )
@@ -31,11 +40,61 @@ export const songs = pgTable('songs', {
 	title: text('title').notNull(),
 	author: text('author'),
 	ccli_number: text('ccli_number'),
+	performance_notes: text('performance_notes'), // <--- NEW: "Light swing", etc.
+	content: text('content'), // Stores the Master ChordPro
 	copyright_year: text('copyright_year'),
 	original_key: text('original_key'),
 	tempo: text('tempo'),
 	time_signature: text('time_signature').default('4/4'),
 	lyrics: text('lyrics'),
+
+	created_at: timestamp('created_at').defaultNow(),
+	updated_at: timestamp('updated_at').defaultNow(),
+	deleted_at: timestamp('deleted_at')
+});
+
+// 2. NEW: AUTHORS TABLE (The "Source of Truth" for names)
+export const authors = pgTable('authors', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	church_id: uuid('church_id')
+		.notNull()
+		.references(() => churches.id),
+	name: text('name').notNull(), // "Matt Redman"
+	created_at: timestamp('created_at').defaultNow()
+});
+
+// 3. NEW: JUNCTION TABLE (Many Songs <-> Many Authors)
+export const song_authors = pgTable(
+	'song_authors',
+	{
+		song_id: uuid('song_id')
+			.notNull()
+			.references(() => songs.id, { onDelete: 'cascade' }),
+		author_id: uuid('author_id')
+			.notNull()
+			.references(() => authors.id, { onDelete: 'cascade' }),
+		sequence: integer('sequence').notNull().default(0) // <--- NEW
+	},
+	(t) => ({
+		pk: primaryKey({ columns: [t.song_id, t.author_id] })
+	})
+);
+
+// NEW: Arrangements (Versions of a song)
+export const arrangements = pgTable('arrangements', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	church_id: uuid('church_id')
+		.notNull()
+		.references(() => churches.id), // <--- TENANT ISOLATION
+
+	song_id: uuid('song_id')
+		.notNull()
+		.references(() => songs.id, { onDelete: 'cascade' }),
+
+	name: text('name').notNull(), // e.g. "Jimmy's Key", "Leeland Version"
+	key: text('key'), // The specific key for this version
+	bpm: text('bpm'),
+	content: text('content'), // The specific chart content
 
 	created_at: timestamp('created_at').defaultNow(),
 	updated_at: timestamp('updated_at').defaultNow(),
@@ -64,7 +123,8 @@ export const people = pgTable('people', {
 	occupation: text('occupation'),
 	bio: text('bio'),
 	capacity_note: text('capacity_note'),
-
+	household_role: text('household_role'), // e.g. "Primary", "Child", "Foster", "Exchange"
+	is_household_primary: boolean('is_household_primary').default(false), // Logic for "Who do we mail?"
 	family_id: uuid('family_id'),
 	user_id: uuid('user_id'),
 
@@ -313,7 +373,30 @@ export const songsRelations = relations(songs, ({ one, many }) => ({
 		fields: [songs.church_id],
 		references: [churches.id]
 	}),
-	planItems: many(plan_items)
+	planItems: many(plan_items),
+	arrangements: many(arrangements), // <--- ADDED: One song has many arrangements
+	authors: many(song_authors) // <--- Link to junction table
+}));
+
+export const authorsRelations = relations(authors, ({ many }) => ({
+	songs: many(song_authors)
+}));
+
+export const songAuthorsRelations = relations(song_authors, ({ one }) => ({
+	song: one(songs, { fields: [song_authors.song_id], references: [songs.id] }),
+	author: one(authors, { fields: [song_authors.author_id], references: [authors.id] })
+}));
+
+// NEW: Arrangements Relations
+export const arrangementsRelations = relations(arrangements, ({ one }) => ({
+	song: one(songs, {
+		fields: [arrangements.song_id],
+		references: [songs.id]
+	}),
+	church: one(churches, {
+		fields: [arrangements.church_id],
+		references: [churches.id]
+	})
 }));
 
 export const gatheringsRelations = relations(gatherings, ({ one, many }) => ({

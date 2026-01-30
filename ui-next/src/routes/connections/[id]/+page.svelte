@@ -3,21 +3,28 @@
 		ArrowLeft,
 		Briefcase,
 		Calendar,
-		CircleAlert, // <--- MAKE SURE THIS IS HERE (Not AlertCircle)
+		CircleAlert,
 		Clock,
+		Eye,
+		Heart,
+		Lock,
 		Mail,
 		MapPin,
 		Phone,
 		Shield,
+		Star,
 		Users
 	} from '@lucide/svelte';
-	// NEW IMPORT: Material Icon via unplugin-icons
-	// If this name fails, try: '~icons/material-symbols/family-restroom'
+	// Material Icon via unplugin-icons
 	import FamilyHome from '~icons/material-symbols/family-home';
 
 	import type { PageData } from './$types';
+	import AddCareNoteDrawer from './AddCareNoteDrawer.svelte';
 	import ConnectFamilyDrawer from './ConnectFamilyDrawer.svelte';
+	import EditCapabilityDrawer from './EditCapabilityDrawer.svelte';
+	import EditHouseholdDrawer from './EditHouseholdDrawer.svelte';
 	import EditProfileDrawer from './EditProfileDrawer.svelte';
+	import EditTeamsDrawer from './EditTeamsDrawer.svelte';
 
 	let { data } = $props<{ data: PageData }>();
 	let person = $derived(data.person);
@@ -25,15 +32,50 @@
 	// Safe derivation for family members
 	let familyMembers = $derived(person.family?.members?.filter((m) => m.id !== person.id) || []);
 
+	// State variables
+	let isCareRevealed = $state(false);
 	let isEditProfileOpen = $state(false);
 	let isConnectFamilyOpen = $state(false);
+	let isEditHouseholdOpen = $state(false);
+	let isEditCapabilitiesOpen = $state(false);
+	let isEditTeamsOpen = $state(false);
+	let isAddCareNoteOpen = $state(false);
 
+	// Helper for Capabilities
 	function getComfortLabel(rating: number | null) {
 		if (!rating) return 'Unrated';
 		if (rating <= 2) return 'Learning';
 		if (rating === 3) return 'Comfortable';
 		return 'Leading';
 	}
+
+	// --- TEAM GROUPING LOGIC (FIXED TYPES) ---
+
+	// 1. Define the shape so TypeScript stops complaining
+	type GroupedTeam = {
+		team: { name: string; [key: string]: any };
+		roles: string[];
+	};
+
+	// 2. Filter Active Only
+	let activeMemberships = $derived(
+		person.teamMemberships.filter((m) => m.status === 'active') || []
+	);
+
+	// 3. Group by Team (with explicit typing)
+	let groupedTeams = $derived(
+		Object.values(
+			activeMemberships.reduce<Record<string, GroupedTeam>>((acc, m) => {
+				// Create the group if it doesn't exist
+				if (!acc[m.team.id]) {
+					acc[m.team.id] = { team: m.team, roles: [] };
+				}
+				// Add role (default to 'Member' if null)
+				acc[m.team.id].roles.push(m.role || 'Member');
+				return acc;
+			}, {})
+		).sort((a, b) => a.team.name.localeCompare(b.team.name))
+	);
 </script>
 
 <div class="min-h-screen bg-stone-50 pb-20">
@@ -104,14 +146,30 @@
 				</div>
 
 				<div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-					<h3
-						class="mb-4 flex items-center gap-2 text-xs font-bold tracking-wider text-stone-400 uppercase"
-					>
-						<FamilyHome class="h-3 w-3" /> Household
-					</h3>
+					<div class="mb-4 flex items-center justify-between">
+						<div>
+							<h3
+								class="flex items-center gap-2 text-xs font-bold tracking-wider text-stone-400 uppercase"
+							>
+								<FamilyHome class="h-3 w-3" /> Household
+							</h3>
+							<p class="mt-1 text-xs text-stone-400 italic">
+								Members, address, shared contact info
+							</p>
+						</div>
+
+						{#if person.family}
+							<button
+								onclick={() => (isEditHouseholdOpen = true)}
+								class="rounded-md border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-600 shadow-sm transition-all hover:border-stone-300 hover:bg-white hover:text-slate-900"
+							>
+								Edit
+							</button>
+						{/if}
+					</div>
 
 					{#if person.family}
-						<div class="mb-4">
+						<div class="mb-5 border-b border-stone-100 pb-4">
 							<div class="text-sm font-bold text-slate-900">{person.family.name}</div>
 							{#if person.family.address_city}
 								<div class="mt-1 flex items-center gap-1 text-xs text-stone-500">
@@ -125,14 +183,31 @@
 							{#each familyMembers as member}
 								<a
 									href="/connections/{member.id}"
-									class="-mx-2 flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-stone-50"
+									class="-mx-2 flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-stone-50"
 								>
-									<div
-										class="flex h-8 w-8 items-center justify-center rounded-full bg-stone-100 text-xs font-bold text-stone-600"
-									>
-										{member.first_name?.[0] ?? '?'}
+									<div class="flex items-center gap-3">
+										<div
+											class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-100 text-xs font-bold text-stone-600"
+										>
+											{member.first_name?.[0] ?? '?'}
+										</div>
+										<div>
+											<div class="flex items-center gap-1.5">
+												<span class="text-sm text-stone-700">
+													{member.first_name}
+													<span class="font-semibold text-slate-900">{member.last_name}</span>
+												</span>
+												{#if member.is_household_primary}
+													<Star size={10} class="fill-amber-400 text-amber-400" />
+												{/if}
+											</div>
+											{#if member.household_role}
+												<div class="text-[10px] font-medium tracking-wide text-stone-400 uppercase">
+													{member.household_role}
+												</div>
+											{/if}
+										</div>
 									</div>
-									<span class="text-sm text-stone-700">{member.first_name}</span>
 								</a>
 							{/each}
 						</div>
@@ -143,7 +218,7 @@
 								onclick={() => (isConnectFamilyOpen = true)}
 								class="mt-2 text-xs font-medium text-slate-600 underline underline-offset-2 hover:text-slate-900"
 							>
-								Connect Family
+								Connect Household
 							</button>
 						</div>
 					{/if}
@@ -223,101 +298,157 @@
 					</div>
 				</div>
 
-				<div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-					<h3 class="mb-6 flex items-center gap-2 text-base font-bold text-slate-900">
-						<Users size={16} class="text-stone-400" />
-						Teams & Serving
-					</h3>
+				<div
+					class="rounded-xl border border-emerald-100 bg-emerald-50/30 p-6 shadow-sm transition-all hover:border-emerald-200"
+				>
+					<div class="mb-6 flex items-center justify-between">
+						<h3 class="flex items-center gap-2 text-base font-bold text-emerald-900">
+							<Users size={16} class="text-emerald-600" />
+							Teams & Serving
+						</h3>
+						<button
+							onclick={() => (isEditTeamsOpen = true)}
+							class="rounded-md border border-emerald-200 bg-white px-3 py-1 text-xs font-bold text-emerald-700 shadow-sm transition-all hover:border-emerald-300 hover:text-emerald-900"
+						>
+							Manage
+						</button>
+					</div>
 
-					{#if person.teamMemberships.length > 0}
-						<div class="space-y-3">
-							{#each person.teamMemberships as m}
+					{#if groupedTeams.length > 0}
+						<div class="space-y-4">
+							{#each groupedTeams as group}
 								<div
-									class="flex items-center justify-between rounded-lg border border-stone-100 bg-white p-3 transition-colors hover:border-stone-200"
+									class="rounded-lg border border-emerald-100 bg-white/80 p-3 shadow-sm backdrop-blur-sm"
 								>
-									<div class="flex items-center gap-3">
+									<div class="flex items-start gap-3">
 										<div
-											class="flex h-10 w-10 items-center justify-center rounded bg-stone-100 font-bold text-stone-600"
+											class="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-emerald-100 bg-emerald-50 font-bold text-emerald-600"
 										>
-											{m.team.name[0]}
+											{group.team.name[0]}
 										</div>
-										<div>
-											<div class="text-sm font-bold text-slate-900">{m.team.name}</div>
-											<div class="text-xs text-stone-500">{m.role || 'Team Member'}</div>
+
+										<div class="flex-1">
+											<div class="text-sm font-bold text-slate-900">{group.team.name}</div>
+											<div class="mt-2 flex flex-wrap gap-2">
+												{#each group.roles as role}
+													<span
+														class="inline-flex items-center rounded-md border border-stone-200 bg-white px-2 py-1 text-xs font-medium text-stone-600"
+													>
+														{role}
+													</span>
+												{/each}
+											</div>
 										</div>
 									</div>
-									<span
-										class={`rounded px-2 py-1 text-[10px] font-bold tracking-wider uppercase ${
-											m.status === 'active'
-												? 'bg-green-50 text-green-700'
-												: 'bg-stone-100 text-stone-500'
-										}`}
-									>
-										{m.status}
-									</span>
 								</div>
 							{/each}
 						</div>
 					{:else}
-						<p class="text-sm text-stone-500 italic">Not currently serving on any teams.</p>
+						<div class="rounded-lg border border-dashed border-emerald-200/50 p-4 text-center">
+							<p class="text-sm text-emerald-800/60 italic">
+								No active serving commitments this season.
+							</p>
+						</div>
 					{/if}
 				</div>
 
-				<div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+				<div class="rounded-xl border border-slate-200 bg-slate-50/50 p-6 shadow-sm">
 					<div class="mb-6 flex items-center justify-between">
-						<h3 class="flex items-center gap-2 text-base font-bold text-slate-900">
-							<Briefcase size={16} class="text-stone-400" />
+						<h3 class="flex items-center gap-2 text-base font-bold text-slate-700">
+							<Briefcase size={16} class="text-slate-500" />
 							Capabilities
 						</h3>
-						<button class="text-xs font-bold text-stone-400 hover:text-slate-900"> Edit </button>
+						<button
+							onclick={() => (isEditCapabilitiesOpen = true)}
+							class="rounded-md border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:text-slate-900"
+						>
+							Edit
+						</button>
 					</div>
 
 					{#if person.capabilities.length > 0}
 						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 							{#each person.capabilities as cap}
-								<div class="flex flex-col gap-2 rounded-lg border border-stone-100 bg-stone-50 p-3">
+								<div
+									class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+								>
 									<div class="flex items-start justify-between">
 										<span class="text-sm font-bold text-slate-800">{cap.capability}</span>
 										<div class="flex gap-1" title="Comfort Level: {getComfortLabel(cap.rating)}">
 											{#each Array(5) as _, i}
 												<div
 													class={`h-1.5 w-1.5 rounded-full ${
-														i < (cap.rating || 0) ? 'bg-slate-800' : 'bg-stone-200'
+														i < (cap.rating || 0) ? 'bg-slate-800' : 'bg-slate-100'
 													}`}
 												></div>
 											{/each}
 										</div>
 									</div>
 									{#if cap.notes}
-										<p class="text-xs text-stone-500 italic">"{cap.notes}"</p>
+										<p class="text-xs text-slate-500 italic">"{cap.notes}"</p>
 									{/if}
 								</div>
 							{/each}
 						</div>
 					{:else}
-						<div class="rounded-lg border-2 border-dashed border-stone-100 py-6 text-center">
-							<p class="text-sm text-stone-400">No capabilities listed.</p>
-							<button class="mt-2 text-xs font-medium text-slate-600 hover:text-slate-900">
+						<div class="rounded-lg border-2 border-dashed border-slate-200 py-6 text-center">
+							<p class="text-sm text-slate-400">Specific skills and gifts have not been noted.</p>
+							<button
+								onclick={() => (isEditCapabilitiesOpen = true)}
+								class="mt-2 text-xs font-medium text-slate-600 underline underline-offset-2 hover:text-slate-900"
+							>
 								Add Capability
 							</button>
 						</div>
 					{/if}
 				</div>
 
-				<div class="rounded-xl border border-amber-200 bg-amber-50/50 p-6">
-					<div class="mb-4 flex items-center justify-between">
-						<h3
-							class="flex items-center gap-2 text-xs font-bold tracking-wider text-amber-800 uppercase"
-						>
-							<CircleAlert size={12} /> Care Notes (Admin Only)
-						</h3>
-						<button class="text-xs font-bold text-amber-700/60 hover:text-amber-900">
-							+ Add Note
-						</button>
+				<div
+					class="rounded-xl border border-amber-200 bg-amber-50/50 p-6 transition-all duration-300"
+				>
+					<div class="mb-4">
+						<div class="flex items-center justify-between">
+							<h3
+								class="flex items-center gap-2 text-xs font-bold tracking-wider text-amber-900 uppercase"
+							>
+								<CircleAlert size={12} /> Care Notes
+							</h3>
+
+							{#if isCareRevealed}
+								<button
+									onclick={() => (isAddCareNoteOpen = true)}
+									class="text-xs font-bold text-amber-700/60 hover:text-amber-900"
+								>
+									+ Add Note
+								</button>
+							{/if}
+						</div>
+						<p class="mt-1 text-xs text-amber-700/70 italic">
+							Private pastoral notes. Access is restricted.
+						</p>
 					</div>
 
-					{#if person.careNotes.length > 0}
-						<div class="space-y-4">
+					{#if !isCareRevealed}
+						<div
+							class="flex flex-col items-center justify-center rounded-lg border border-amber-100 bg-white/60 py-8 text-center backdrop-blur-sm"
+						>
+							<div class="mb-3 rounded-full bg-amber-100 p-2 text-amber-600">
+								<Lock size={20} />
+							</div>
+							<h4 class="text-sm font-semibold text-amber-900">Content Hidden</h4>
+							<p class="mb-4 max-w-[250px] text-xs text-amber-700/70">
+								These notes are hidden to protect privacy on shared screens.
+							</p>
+							<button
+								onclick={() => (isCareRevealed = true)}
+								class="inline-flex items-center gap-2 rounded-md bg-amber-100 px-4 py-2 text-xs font-bold text-amber-800 transition-colors hover:bg-amber-200"
+							>
+								<Eye size={14} />
+								View Notes
+							</button>
+						</div>
+					{:else if person.careNotes.length > 0}
+						<div class="animate-in fade-in slide-in-from-top-2 space-y-4 duration-300">
 							{#each person.careNotes as note}
 								<div
 									class="relative rounded-lg border border-amber-100 bg-white p-4 text-sm shadow-sm transition-shadow hover:shadow-md"
@@ -335,9 +466,29 @@
 									</div>
 								</div>
 							{/each}
+
+							<button
+								onclick={() => (isCareRevealed = false)}
+								class="mt-4 w-full text-center text-xs text-amber-700/50 hover:text-amber-900"
+							>
+								Hide Notes
+							</button>
 						</div>
 					{:else}
-						<p class="text-sm text-amber-800/60 italic">No care notes recorded.</p>
+						<div
+							class="animate-in fade-in rounded-lg border border-dashed border-amber-200 py-8 text-center"
+						>
+							<p class="text-sm text-amber-900">No notes recorded yet.</p>
+							<p class="mt-1 text-xs text-amber-700/60 italic">
+								You have access, but this file is empty.
+							</p>
+							<button
+								onclick={() => (isAddCareNoteOpen = true)}
+								class="mt-3 text-xs font-bold text-amber-700 underline underline-offset-2 hover:text-amber-900"
+							>
+								Create first note
+							</button>
+						</div>
 					{/if}
 				</div>
 			</div>
@@ -347,3 +498,7 @@
 
 <EditProfileDrawer bind:open={isEditProfileOpen} {person} />
 <ConnectFamilyDrawer bind:open={isConnectFamilyOpen} allFamilies={data.allFamilies} />
+<EditHouseholdDrawer bind:open={isEditHouseholdOpen} {person} />
+<EditCapabilityDrawer bind:open={isEditCapabilitiesOpen} {person} />
+<EditTeamsDrawer bind:open={isEditTeamsOpen} {person} allTeams={data.allTeams} />
+<AddCareNoteDrawer bind:open={isAddCareNoteOpen} />
