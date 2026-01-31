@@ -31,24 +31,16 @@ export const actions: Actions = {
 		const { church } = locals;
 		const data = await request.formData();
 
-		const title = data.get('title') as string;
-		const author = data.get('author') as string; // Legacy Text Fallback
-		const key = data.get('key') as string;
-		const tempo = data.get('tempo') as string;
-		const notes = data.get('performance_notes') as string; // <--- NEW
-		const ccli = data.get('ccli') as string;
-		const content = data.get('content') as string;
-
+		// 1. Update the Song Record (Master)
 		await db
 			.update(songs)
 			.set({
-				title,
-				author,
-				original_key: key,
-				tempo: tempo,
-				performance_notes: notes, // <--- SAVE IT
-				ccli_number: ccli,
-				content,
+				title: data.get('title') as string,
+				original_key: data.get('key') as string,
+				tempo: data.get('tempo') as string,
+				ccli_number: data.get('ccli') as string,
+				performance_notes: data.get('performance_notes') as string,
+				content: data.get('content') as string,
 				updated_at: new Date()
 			})
 			.where(and(eq(songs.id, params.id), eq(songs.church_id, church.id)));
@@ -60,7 +52,6 @@ export const actions: Actions = {
 			try {
 				incomingAuthors = JSON.parse(authorsJson);
 			} catch {
-				// Invalid JSON - skip author processing
 				return { success: true };
 			}
 
@@ -71,10 +62,7 @@ export const actions: Actions = {
 				if (authorObj.id) {
 					finalAuthorIds.push(authorObj.id);
 				} else {
-					// It's a new name! Create it.
-					// Check if it already exists by name first (case insensitive safety)
-					// ... (omitted for brevity, but good practice) ...
-
+					// Create new author if ID is missing
 					const [newAuthor] = await db
 						.insert(authors)
 						.values({
@@ -87,16 +75,16 @@ export const actions: Actions = {
 				}
 			}
 
-			// B. Nuclear Option: Clear existing links for this song
+			// B. Clear existing links for this song
 			await db.delete(song_authors).where(eq(song_authors.song_id, params.id));
 
-			// C. Insert new links with SEQUENCE
+			// C. Insert new links (FIX: Removed church_id and id)
 			if (finalAuthorIds.length > 0) {
 				await db.insert(song_authors).values(
 					finalAuthorIds.map((authorId, index) => ({
 						song_id: params.id,
 						author_id: authorId,
-						sequence: index // <--- 0, 1, 2... THIS SAVES THE ORDER
+						sequence: index
 					}))
 				);
 			}
@@ -105,7 +93,6 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	// ... keep other actions (deleteSong, createArrangement, etc.) as they were
 	createArrangement: async ({ request, params, locals }) => {
 		const { church } = locals;
 		const data = await request.formData();
@@ -119,6 +106,7 @@ export const actions: Actions = {
 		});
 		return { success: true };
 	},
+
 	updateArrangement: async ({ request, locals }) => {
 		const { church } = locals;
 		const data = await request.formData();
@@ -128,6 +116,9 @@ export const actions: Actions = {
 			.update(arrangements)
 			.set({
 				name: data.get('name') as string,
+				// FIX: Saving Key and Content properly now
+				key: data.get('key') as string,
+				content: data.get('content') as string,
 				updated_at: new Date()
 			})
 			.where(and(eq(arrangements.id, id), eq(arrangements.church_id, church.id)));
