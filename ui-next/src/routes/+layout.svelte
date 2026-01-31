@@ -5,14 +5,23 @@
 	let { data, children } = $props();
 
 	// 1. Initialize once (Captures the first load)
+	// FIX: Map 'subdomain' to 'slug' to satisfy the type definition
 	// svelte-ignore state_referenced_locally
-	const tenant = initTenant(data.church, data.campus);
+	const tenant = initTenant(
+		data.church
+			? { id: data.church.id, name: data.church.name, slug: data.church.subdomain || '' }
+			: undefined,
+		data.campus ? { id: data.campus.id, name: data.campus.name } : null
+	);
 
 	// 2. Keep it in sync (Fixes the warning & navigation bugs)
 	// Whenever 'data' changes, this code runs automatically.
 	$effect(() => {
-		tenant.church = data.church;
-		tenant.campus = data.campus;
+		// FIX: Apply the same mapping in the effect
+		tenant.church = data.church
+			? { id: data.church.id, name: data.church.name, slug: data.church.subdomain || '' }
+			: undefined;
+		tenant.campus = data.campus ? { id: data.campus.id, name: data.campus.name } : null;
 	});
 
 	// State for the Debug Modal

@@ -56,7 +56,13 @@ export const actions: Actions = {
 		// 2. HANDLE AUTHORS
 		const authorsJson = data.get('authors_json') as string;
 		if (authorsJson) {
-			const incomingAuthors = JSON.parse(authorsJson) as { id?: string; name: string }[];
+			let incomingAuthors: { id?: string; name: string }[];
+			try {
+				incomingAuthors = JSON.parse(authorsJson);
+			} catch {
+				// Invalid JSON - skip author processing
+				return { success: true };
+			}
 
 			// A. Resolve IDs (Create new authors if they have no ID)
 			const finalAuthorIds: string[] = [];

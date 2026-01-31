@@ -4,6 +4,7 @@
 
 	let { open = $bindable() } = $props<{ open: boolean }>();
 	let loading = $state(false);
+	let formError = $state<string | null>(null);
 </script>
 
 {#if open}
@@ -25,7 +26,7 @@
 						<Lock size={18} />
 						<h2 class="text-lg font-bold">Add Care Note</h2>
 					</div>
-					<button onclick={() => (open = false)} class="text-amber-800/50 hover:text-amber-900">
+					<button type="button" onclick={() => (open = false)} class="text-amber-800/50 hover:text-amber-900">
 						<X size={20} />
 					</button>
 				</div>
@@ -35,14 +36,25 @@
 					action="?/addCareNote"
 					use:enhance={() => {
 						loading = true;
-						return async ({ update }) => {
+						formError = null;
+						return async ({ result, update }) => {
 							await update();
 							loading = false;
-							open = false;
+							if (result.type === 'success') {
+								open = false;
+							} else if (result.type === 'failure' && result.data?.error) {
+								formError = result.data.error as string;
+							}
 						};
 					}}
 					class="flex-1 space-y-6 p-6"
 				>
+					{#if formError}
+						<div class="rounded-md border border-red-200 bg-red-50 p-3" role="alert">
+							<p class="text-sm font-medium text-red-800">{formError}</p>
+						</div>
+					{/if}
+
 					<div>
 						<label for="category" class="mb-1 block text-xs font-bold text-amber-800 uppercase"
 							>Category</label

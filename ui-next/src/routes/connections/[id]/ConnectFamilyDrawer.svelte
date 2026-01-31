@@ -2,8 +2,14 @@
 	import { enhance } from '$app/forms';
 	import Drawer from '$lib/components/ui/Drawer.svelte';
 	import { Check, LoaderCircle, MapPin, Search, Users } from '@lucide/svelte';
+	import type { PageData } from './$types';
 
-	let { open = $bindable(false), allFamilies = [] } = $props();
+	type Family = PageData['allFamilies'][number];
+
+	let { open = $bindable(false), allFamilies = [] } = $props<{
+		open: boolean;
+		allFamilies: Family[];
+	}>();
 
 	let activeTab = $state<'existing' | 'new'>('existing');
 	let isSubmitting = $state(false);
@@ -55,8 +61,10 @@
 			class="flex h-full flex-col"
 		>
 			<div class="relative mb-4">
+				<label for="family-search" class="sr-only">Search families by name</label>
 				<Search class="absolute top-2.5 left-3 text-gray-400" size={16} />
 				<input
+					id="family-search"
 					type="text"
 					bind:value={searchQuery}
 					placeholder="Search families (e.g. 'Wikene')..."

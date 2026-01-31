@@ -1,13 +1,17 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { X } from '@lucide/svelte';
+	import type { PageData } from './$types';
+
+	type Person = PageData['person'];
 
 	let { open = $bindable(), person } = $props<{
 		open: boolean;
-		person: any;
+		person: Person;
 	}>();
 
 	let loading = $state(false);
+	let formError = $state<string | null>(null);
 </script>
 
 {#if open}
@@ -24,7 +28,7 @@
 			<div class="flex h-full flex-col">
 				<div class="flex items-center justify-between border-b border-stone-100 px-6 py-4">
 					<h2 class="text-lg font-bold text-slate-900">Household Details</h2>
-					<button onclick={() => (open = false)} class="text-stone-400 hover:text-slate-900">
+					<button type="button" onclick={() => (open = false)} class="text-stone-400 hover:text-slate-900">
 						<X size={20} />
 					</button>
 				</div>
@@ -34,14 +38,25 @@
 					action="?/updateHouseholdDetails"
 					use:enhance={() => {
 						loading = true;
-						return async ({ update }) => {
+						formError = null;
+						return async ({ result, update }) => {
 							await update();
 							loading = false;
-							open = false;
+							if (result.type === 'success') {
+								open = false;
+							} else if (result.type === 'failure' && result.data?.error) {
+								formError = result.data.error as string;
+							}
 						};
 					}}
 					class="flex-1 overflow-y-auto p-6"
 				>
+					{#if formError}
+						<div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3" role="alert">
+							<p class="text-sm font-medium text-red-800">{formError}</p>
+						</div>
+					{/if}
+
 					<div class="space-y-6">
 						<div class="rounded-lg border border-stone-100 bg-stone-50 p-4">
 							<label

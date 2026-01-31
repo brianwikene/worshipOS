@@ -21,9 +21,16 @@
 		})
 	);
 
+	// Track form error state
+	let formError = $state<string | null>(null);
+
 	$effect(() => {
 		if (form?.success) {
 			isAddPersonOpen = false;
+			isSubmitting = false;
+			formError = null;
+		} else if (form?.error) {
+			formError = form.error;
 			isSubmitting = false;
 		}
 	});
@@ -48,10 +55,12 @@
 
 		{#if people.length > 0}
 			<div class="relative mb-6">
+				<label for="person-search" class="sr-only">Search people by name</label>
 				<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
 					<Search size={18} class="text-meadow-400" />
 				</div>
 				<input
+					id="person-search"
 					type="text"
 					bind:value={searchQuery}
 					placeholder="Search by name..."
@@ -163,6 +172,7 @@
 		action="?/create"
 		use:enhance={() => {
 			isSubmitting = true;
+			formError = null;
 			return async ({ update }) => {
 				await update();
 				isSubmitting = false;
@@ -170,6 +180,12 @@
 		}}
 		class="flex h-full flex-col gap-6"
 	>
+		{#if formError}
+			<div class="rounded-md border border-red-200 bg-red-50 p-4" role="alert">
+				<p class="text-sm font-medium text-red-800">{formError}</p>
+			</div>
+		{/if}
+
 		<div class="bg-meadow-50 border-meadow-100 rounded-md border p-4">
 			<p class="text-meadow-800 text-sm">
 				You can add someone with just a name. We don't need full data to start caring for them.

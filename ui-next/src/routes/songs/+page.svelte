@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Download, FileMusic, Hash, Music, Plus, Search } from '@lucide/svelte';
+	import { Download, Hash, Music, Plus, Search } from '@lucide/svelte';
+	import type { PageData } from './$types';
 
-	// BYPASS TYPE ERROR: We use 'any' temporarily so the page loads
-	let { data } = $props<{ data: any }>();
+	let { data }: { data: PageData } = $props();
 
 	let searchTerm = $state('');
 
-	// Safe derivation
+	// Safe derivation with proper typing
 	let filteredSongs = $derived(
 		(data.songs || []).filter(
-			(s: any) =>
+			(s) =>
 				s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
 				(s.author && s.author.toLowerCase().includes(searchTerm.toLowerCase()))
 		)
@@ -26,6 +26,7 @@
 			</p>
 		</div>
 		<button
+			type="button"
 			class="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-slate-800"
 		>
 			<Plus size={18} />
@@ -35,10 +36,12 @@
 </div>
 
 <div class="relative mb-6">
+	<label for="song-search" class="sr-only">Search songs by title, lyrics, or author</label>
 	<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
 		<Search size={20} />
 	</div>
 	<input
+		id="song-search"
 		type="text"
 		bind:value={searchTerm}
 		placeholder="Search by title, lyrics, or author..."
@@ -92,14 +95,8 @@
 					class="flex items-center gap-1.5 rounded border border-slate-200 bg-white px-2 py-1 shadow-sm"
 				>
 					<span class="text-slate-400">BPM</span>
-					<span class="font-bold text-slate-900">{song.bpm || '-'}</span>
+					<span class="font-bold text-slate-900">{song.tempo || '-'}</span>
 				</div>
-				{#if song.arrangements && song.arrangements.length > 0}
-					<div class="ml-auto flex items-center gap-1 text-slate-400">
-						<FileMusic size={14} />
-						<span>{song.arrangements.length}</span>
-					</div>
-				{/if}
 			</div>
 		</a>
 	{/each}
@@ -123,6 +120,7 @@
 			</p>
 			<div class="mt-6 flex justify-center gap-4">
 				<button
+					type="button"
 					class="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
 				>
 					Create Manually

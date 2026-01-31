@@ -7,6 +7,7 @@
 		Clock,
 		Eye,
 		Heart,
+		House,
 		Lock,
 		Mail,
 		MapPin,
@@ -15,8 +16,6 @@
 		Star,
 		Users
 	} from '@lucide/svelte';
-	// Material Icon via unplugin-icons
-	import FamilyHome from '~icons/material-symbols/family-home';
 
 	import type { PageData } from './$types';
 	import AddCareNoteDrawer from './AddCareNoteDrawer.svelte';
@@ -151,7 +150,7 @@
 							<h3
 								class="flex items-center gap-2 text-xs font-bold tracking-wider text-stone-400 uppercase"
 							>
-								<FamilyHome class="h-3 w-3" /> Household
+								<House class="h-3 w-3" /> Household
 							</h3>
 							<p class="mt-1 text-xs text-stone-400 italic">
 								Members, address, shared contact info

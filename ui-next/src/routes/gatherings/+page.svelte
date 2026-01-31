@@ -26,6 +26,7 @@
 				Matrix View
 			</a>
 			<button
+				type="button"
 				onclick={() => (showModal = true)}
 				class="flex items-center gap-2 rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:bg-gray-800 hover:shadow-xl"
 			>
@@ -104,15 +105,21 @@
 {#if showModal}
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
 		<button
+			type="button"
 			class="absolute inset-0 h-full w-full cursor-default bg-gray-900/60 backdrop-blur-sm"
 			onclick={() => (showModal = false)}
 			aria-label="Close Modal"
 		></button>
 
-		<div class="relative z-10 w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl">
+		<div
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="schedule-gathering-title"
+			class="relative z-10 w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl"
+		>
 			<div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-6 py-4">
-				<h3 class="text-lg font-bold text-gray-900">Schedule Gathering</h3>
-				<button onclick={() => (showModal = false)} class="text-gray-400 hover:text-gray-600"
+				<h3 id="schedule-gathering-title" class="text-lg font-bold text-gray-900">Schedule Gathering</h3>
+				<button type="button" onclick={() => (showModal = false)} class="text-gray-400 hover:text-gray-600" aria-label="Close"
 					>✕</button
 				>
 			</div>
@@ -199,9 +206,10 @@
 									min="2"
 									max="12"
 									value="4"
-									oninput={(e) =>
-										(document.getElementById('week_disp').innerText =
-											e.currentTarget.value + ' Weeks')}
+									oninput={(e) => {
+										const disp = document.getElementById('week_disp');
+										if (disp) disp.innerText = e.currentTarget.value + ' Weeks';
+									}}
 									class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600"
 								/>
 								<span

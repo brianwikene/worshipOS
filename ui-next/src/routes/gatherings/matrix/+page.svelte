@@ -3,6 +3,11 @@
 
 	let { data } = $props();
 
+	// Type assertion for plan items that may have leader_name
+	type PlanItemWithLeader = (typeof data.gatherings)[number]['instances'][number]['planItems'][number] & {
+		leader_name?: string;
+	};
+
 	const formatDate = (dateStr: string) => {
 		return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
 			month: 'short',
@@ -77,7 +82,8 @@
 
 					<div class="flex-1 space-y-2 overflow-y-auto bg-white p-2">
 						{#if gathering.instances[0]}
-							{#each gathering.instances[0].planItems as item}
+							{#each gathering.instances[0].planItems as rawItem}
+								{@const item = rawItem as PlanItemWithLeader}
 								{#if item.type === 'header'}
 									<div
 										class="sticky top-0 z-10 mt-4 mb-2 border-b-2 border-gray-800 bg-white px-2 pb-1"

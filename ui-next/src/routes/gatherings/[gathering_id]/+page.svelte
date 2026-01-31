@@ -40,6 +40,7 @@
 			</div>
 
 			<button
+				type="button"
 				onclick={() => (showModal = true)}
 				class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-100"
 			>
@@ -102,13 +103,19 @@
 {#if showModal}
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
 		<button
+			type="button"
 			class="absolute inset-0 h-full w-full cursor-default bg-gray-900/60 backdrop-blur-sm"
 			aria-label="Close add service time modal"
 			onclick={() => (showModal = false)}
 		></button>
 
-		<div class="relative z-10 w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl">
-			<h3 class="mb-4 text-lg font-bold text-gray-900">Add Service Time</h3>
+		<div
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="add-service-time-title"
+			class="relative z-10 w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl"
+		>
+			<h3 id="add-service-time-title" class="mb-4 text-lg font-bold text-gray-900">Add Service Time</h3>
 
 			<form
 				method="POST"

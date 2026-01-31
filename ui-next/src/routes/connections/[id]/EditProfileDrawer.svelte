@@ -2,9 +2,16 @@
 	import { enhance } from '$app/forms';
 	import Drawer from '$lib/components/ui/Drawer.svelte';
 	import { Info, LoaderCircle, Shield } from '@lucide/svelte';
+	import type { PageData } from './$types';
 
-	let { open = $bindable(false), person } = $props();
+	type Person = PageData['person'];
+
+	let { open = $bindable(false), person } = $props<{
+		open: boolean;
+		person: Person;
+	}>();
 	let isSubmitting = $state(false);
+	let formError = $state<string | null>(null);
 </script>
 
 <Drawer bind:open title="Edit Profile">
@@ -13,14 +20,25 @@
 		action="?/updateProfile"
 		use:enhance={() => {
 			isSubmitting = true;
-			return async ({ update }) => {
+			formError = null;
+			return async ({ result, update }) => {
 				await update();
 				isSubmitting = false;
-				open = false; // Close on success
+				if (result.type === 'success') {
+					open = false;
+				} else if (result.type === 'failure' && result.data?.error) {
+					formError = result.data.error as string;
+				}
 			};
 		}}
 		class="flex h-full flex-col gap-6"
 	>
+		{#if formError}
+			<div class="rounded-md border border-red-200 bg-red-50 p-3" role="alert">
+				<p class="text-sm font-medium text-red-800">{formError}</p>
+			</div>
+		{/if}
+
 		<div class="space-y-4">
 			<h4 class="text-xs font-bold tracking-wider text-gray-500 uppercase">Identity</h4>
 			<div class="grid grid-cols-2 gap-4">

@@ -15,8 +15,18 @@
 
 	let { data } = $props();
 
+	// FIX: Define a type that includes the extra calculated fields
+	type ExtendedPlanItem = (typeof data.items)[number] & {
+		duration_seconds?: number;
+		leader_name?: string;
+		private_notes?: string;
+	};
+
+	// Use a derived value to cast the data to this new type
+	let planItems = $derived(data.items as ExtendedPlanItem[]);
+
 	// svelte-ignore state_referenced_locally
-	let items = $state(data.items);
+	let items = $state(planItems);
 	let showModal = $state(false);
 	let editingItem = $state<any>(null);
 
@@ -50,18 +60,19 @@
 
 	let personMatches = $derived(
 		personSearchTerm.length > 0 &&
-			personSearchTerm !== (selectedPerson?.nickname || selectedPerson?.first_name)
+			personSearchTerm !== (selectedPerson?.preferred_name || selectedPerson?.first_name)
 			? data.peopleDirectory.filter(
 					(p: any) =>
 						p.first_name.toLowerCase().includes(personSearchTerm.toLowerCase()) ||
-						(p.nickname && p.nickname.toLowerCase().includes(personSearchTerm.toLowerCase()))
+						(p.preferred_name &&
+							p.preferred_name.toLowerCase().includes(personSearchTerm.toLowerCase()))
 				)
 			: []
 	);
 
 	function selectPerson(person: any) {
 		selectedPerson = person;
-		const nameToUse = person.nickname || person.first_name;
+		const nameToUse = person.preferred_name || person.first_name;
 
 		if (editingItem) {
 			editingItem.leader_name = nameToUse;
@@ -71,7 +82,7 @@
 	}
 
 	$effect(() => {
-		items = data.items;
+		items = planItems;
 	});
 
 	// --- SMART TIME ENGINE ---
@@ -341,9 +352,9 @@
 												Key: {item.song.original_key}
 											</span>
 										{/if}
-										{#if item.song.bpm}
+										{#if item.song.tempo}
 											<span class="font-mono text-[10px] text-gray-500">
-												{item.song.bpm} bpm
+												{item.song.tempo} bpm
 											</span>
 										{/if}
 										{#if item.song.author}
@@ -467,7 +478,7 @@
 									>
 										<span class="font-bold text-gray-800">{song.title}</span>
 										<span class="text-xs text-gray-400"
-											>{song.original_key || '-'} • {song.bpm || '-'} bpm</span
+											>{song.original_key || '-'} • {song.tempo || '-'} bpm</span
 										>
 									</button>
 								{/each}
@@ -544,7 +555,7 @@
 
 									if (
 										selectedPerson &&
-										val !== (selectedPerson.nickname || selectedPerson.first_name)
+										val !== (selectedPerson.preferred_name || selectedPerson.first_name)
 									) {
 										selectedPerson = null;
 									}
@@ -571,7 +582,7 @@
 										</div>
 										<div>
 											<span class="font-bold text-gray-800"
-												>{person.nickname || person.first_name}</span
+												>{person.preferred_name || person.first_name}</span
 											>
 											<span class="ml-1 text-xs text-gray-400">{person.last_name}</span>
 										</div>

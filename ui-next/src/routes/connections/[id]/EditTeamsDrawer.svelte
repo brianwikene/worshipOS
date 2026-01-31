@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Archive, Plus, RotateCcw, Trash2, X } from '@lucide/svelte';
+	import type { PageData } from './$types';
+
+	type Person = PageData['person'];
+	type Team = PageData['allTeams'][number];
+	type TeamMembership = NonNullable<Person['teamMemberships']>[number];
 
 	let {
 		open = $bindable(),
@@ -8,26 +13,28 @@
 		allTeams = []
 	} = $props<{
 		open: boolean;
-		person: any;
-		allTeams: any[];
+		person: Person;
+		allTeams: Team[];
 	}>();
 
 	let loading = $state(false);
 	let isCreatingTeam = $state(false);
+	let formError = $state<string | null>(null);
 
 	// 1. Filter Lists
 	let activeMemberships = $derived(
-		person.teamMemberships.filter((m: any) => m.status === 'active') || []
+		(person.teamMemberships || []).filter((m) => m.status === 'active')
 	);
 	let inactiveMemberships = $derived(
-		person.teamMemberships.filter((m: any) => m.status !== 'active') || []
+		(person.teamMemberships || []).filter((m) => m.status !== 'active')
 	);
 
-	// 2. Grouping Function (The Magic)
-	function groupMemberships(list: any[]) {
-		const groups: Record<string, { team: any; memberships: any[] }> = {};
+	// 2. Grouping Function
+	function groupMemberships(list: TeamMembership[]) {
+		const groups: Record<string, { team: TeamMembership['team']; memberships: TeamMembership[] }> = {};
 
 		for (const m of list) {
+			if (!m.team) continue;
 			if (!groups[m.team.id]) {
 				groups[m.team.id] = { team: m.team, memberships: [] };
 			}
@@ -150,16 +157,27 @@
 							</button>
 						</div>
 
-						{#if isCreatingTeam}
+						{#if formError}
+						<div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3" role="alert">
+							<p class="text-sm font-medium text-red-800">{formError}</p>
+						</div>
+					{/if}
+
+					{#if isCreatingTeam}
 							<form
 								method="POST"
 								action="?/createTeam"
 								use:enhance={() => {
 									loading = true;
-									return async ({ update }) => {
+									formError = null;
+									return async ({ result, update }) => {
 										await update();
 										loading = false;
-										isCreatingTeam = false;
+										if (result.type === 'success') {
+											isCreatingTeam = false;
+										} else if (result.type === 'failure' && result.data?.error) {
+											formError = result.data.error as string;
+										}
 									};
 								}}
 								class="space-y-4"
@@ -190,9 +208,13 @@
 								action="?/joinTeam"
 								use:enhance={() => {
 									loading = true;
-									return async ({ update }) => {
+									formError = null;
+									return async ({ result, update }) => {
 										await update();
 										loading = false;
+										if (result.type === 'failure' && result.data?.error) {
+											formError = result.data.error as string;
+										}
 									};
 								}}
 								class="space-y-4"
