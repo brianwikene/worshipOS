@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	// FIX: Switched to @lucide/svelte to match your project
+	import { page } from '$app/stores';
 	import AuthorInput from '$lib/components/AuthorInput.svelte';
 	import { ArrowLeft, Copy, Edit3, Eye, Save } from '@lucide/svelte';
+
+	// --- CONSTANTS (Moved Up) ---
+	const SECTION_KEYWORDS =
+		/^(Verse|Chorus|Bridge|Pre-Chorus|Intro|Outro|Tag|Interlude|Instrumental|Hook|V\d|C\d|B\d)/i;
+
+	const KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
 	// --- TYPES ---
 	type Arrangement = {
@@ -53,13 +59,15 @@
 			.map((rel) => ({ id: rel.author.id, name: rel.author.name }))
 	);
 
-	const KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
-
 	// --- SYNC EFFECT ---
 	// Ensure local state updates if the server data changes (e.g. after save)
 	$effect(() => {
+		// 1. Update the state
 		song = data.song as SongWithRelations;
-		localAuthors = (song.authors || [])
+
+		// 2. Derive authors from DATA (the source), NOT 'song' (the state we just wrote to)
+		// This prevents the infinite loop: Write song -> Read song -> Trigger Effect -> Write song...
+		localAuthors = (data.song.authors || [])
 			.sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
 			.map((rel) => ({ id: rel.author.id, name: rel.author.name }));
 	});
@@ -71,7 +79,7 @@
 
 	let displayKey = $derived(currentArrangement?.key || song.original_key || 'C');
 
-	// If we have a current arrangement, use its key as the default for the dropdown
+	// Sync dropdown when arrangement changes
 	$effect(() => {
 		if (currentArrangement?.key) {
 			selectedKey = currentArrangement.key;
@@ -92,6 +100,9 @@
 	let displayNotes = $derived(song.performance_notes);
 
 	let songMap = $derived(generateSongMap(displayContent));
+
+	// We pass 'notation' explicitly so it updates when the toggle button is clicked
+	let parsedLines = $derived(parseChart(displayContent, selectedKey, notation));
 
 	// --- HELPERS ---
 
@@ -148,36 +159,28 @@
 			10: 'b7',
 			11: '7'
 		};
-
 		return (degrees[interval] || '?') + quality;
 	}
 
 	// --- PARSERS ---
 
-	const SECTION_KEYWORDS =
-		/^(Verse|Chorus|Bridge|Pre-Chorus|Intro|Outro|Tag|Interlude|Instrumental|Hook|V\d|C\d|B\d)/i;
-
 	function generateSongMap(content: string | null) {
 		if (!content) return [];
 		const map: string[] = [];
 		const lines = content.split('\n');
-
 		for (const line of lines) {
 			const trim = line.trim();
 			if (!trim) continue;
 
-			// 1. [Square Brackets]
 			const bracketMatch = trim.match(/^\[(.*?)\]\s*$/);
 			if (bracketMatch && SECTION_KEYWORDS.test(bracketMatch[1])) {
 				map.push(bracketMatch[1]);
 			}
 
-			// 2. {ChordPro Tags}
 			const braceMatch = trim.match(/^\{(.*?)(?::\s*(.*?))?\}$/);
 			if (braceMatch) {
 				const tag = braceMatch[1].toLowerCase();
 				const value = braceMatch[2];
-
 				if (tag === 'soc' || tag === 'start_of_chorus' || tag === 'chorus')
 					map.push(value || 'Chorus');
 				else if (tag === 'sov' || tag === 'start_of_verse') map.push(value || 'Verse');
@@ -186,7 +189,11 @@
 		return map;
 	}
 
-	function parseChart(text: string | null, targetKey: string) {
+	function parseChart(
+		text: string | null,
+		targetKey: string,
+		currentNotation: 'chords' | 'numbers'
+	) {
 		if (!text) return [];
 		const original = displayKey || 'C';
 		const semitones = getSemitoneShift(original, targetKey);
@@ -203,20 +210,17 @@
 
 				if (tag === 'soc' || tag === 'start_of_chorus' || tag === 'chorus')
 					return { type: 'section' as const, content: value || 'Chorus' };
-
 				if (tag === 'sov' || tag === 'start_of_verse')
 					return { type: 'section' as const, content: value || 'Verse' };
-
 				if (['eoc', 'end_of_chorus', 'eov', 'end_of_verse'].includes(tag))
 					return { type: 'empty' as const };
-
 				if (['c', 'comment', 'cb'].includes(tag))
 					return { type: 'comment' as const, content: value };
 
 				return { type: 'directive' as const, label: tag, value: value };
 			}
 
-			// 2. HEADERS [Verse 1]
+			// 2. HEADERS
 			const bracketMatch = trimmed.match(/^\[(.*?)\]$/);
 			if (bracketMatch && SECTION_KEYWORDS.test(bracketMatch[1])) {
 				return { type: 'section' as const, content: bracketMatch[1] };
@@ -225,7 +229,6 @@
 			// 3. LYRICS/CHORDS
 			const rawChunks = line.split('[');
 			const pairs: { chord: string | null; lyric: string }[] = [];
-
 			rawChunks.forEach((chunk, index) => {
 				if (index === 0) {
 					if (chunk) pairs.push({ chord: null, lyric: chunk });
@@ -237,7 +240,7 @@
 						let finalChord = rawChord;
 
 						if (semitones !== 0) finalChord = transposeChord(rawChord, semitones);
-						if (notation === 'numbers') finalChord = noteToNumber(finalChord, targetKey);
+						if (currentNotation === 'numbers') finalChord = noteToNumber(finalChord, targetKey);
 
 						pairs.push({ chord: finalChord, lyric: lyric });
 					} else {
@@ -466,13 +469,15 @@
 									>
 									<div class="flex rounded-md shadow-sm" role="group" aria-label="Notation style">
 										<button
-											type="button" onclick={() => (notation = 'chords')}
+											type="button"
+											onclick={() => (notation = 'chords')}
 											class={`flex-1 rounded-l-md border px-2 py-2 text-xs font-bold ${notation === 'chords' ? 'border-slate-900 bg-slate-900 text-white' : 'border-stone-200 bg-white text-stone-500'}`}
 										>
 											A
 										</button>
 										<button
-											type="button" onclick={() => (notation = 'numbers')}
+											type="button"
+											onclick={() => (notation = 'numbers')}
 											class={`flex-1 rounded-r-md border px-2 py-2 text-xs font-bold ${notation === 'numbers' ? 'border-slate-900 bg-slate-900 text-white' : 'border-stone-200 bg-white text-stone-500'}`}
 										>
 											1
@@ -488,19 +493,22 @@
 								<div class="flex flex-col gap-2">
 									<div class="flex gap-2">
 										<button
-											type="button" onclick={() => (columnCount = 1)}
+											type="button"
+											onclick={() => (columnCount = 1)}
 											class={`flex-1 rounded border py-1.5 text-xs font-bold ${columnCount === 1 ? 'border-blue-500 bg-white text-blue-700 shadow-sm' : 'border-transparent bg-stone-100 text-stone-500'}`}
 											>1 Col</button
 										>
 										<button
-											type="button" onclick={() => (columnCount = 2)}
+											type="button"
+											onclick={() => (columnCount = 2)}
 											class={`flex-1 rounded border py-1.5 text-xs font-bold ${columnCount === 2 ? 'border-blue-500 bg-white text-blue-700 shadow-sm' : 'border-transparent bg-stone-100 text-stone-500'}`}
 											>2 Cols</button
 										>
 									</div>
 
 									<button
-										type="button" onclick={() => (showChords = !showChords)}
+										type="button"
+										onclick={() => (showChords = !showChords)}
 										class={`flex w-full items-center justify-center gap-2 rounded border py-1.5 text-xs font-bold ${!showChords ? 'border-purple-200 bg-purple-50 text-purple-700' : 'border-stone-200 bg-white text-stone-500'}`}
 									>
 										{#if !showChords}
@@ -599,7 +607,7 @@
 
 						<div class={`flex-grow ${columnCount === 2 ? 'columns-1 gap-12 md:columns-2' : ''}`}>
 							{#if displayContent}
-								{#each parseChart(displayContent, selectedKey) as line}
+								{#each parsedLines as line}
 									<div class="mb-2 break-inside-avoid">
 										{#if line.type === 'section'}
 											<h3
@@ -662,7 +670,7 @@
 								</p>
 								<p class="mt-0.5">
 									Generated by WorshipOS for <span class="font-bold text-stone-600"
-										>Mountain Vineyard</span
+										>{$page.data.church?.name || 'Your Church'}</span
 									>.
 								</p>
 							</div>
@@ -701,7 +709,9 @@
 			aria-labelledby="save-version-title"
 			class="relative w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
 		>
-			<h3 id="save-version-title" class="mb-4 text-lg font-bold text-slate-900">Save New Version</h3>
+			<h3 id="save-version-title" class="mb-4 text-lg font-bold text-slate-900">
+				Save New Version
+			</h3>
 			<form
 				method="POST"
 				action="?/createArrangement"

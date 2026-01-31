@@ -30,7 +30,7 @@
 			isSubmitting = false;
 			formError = null;
 		} else if (form?.error) {
-			formError = form.error;
+			formError = form.message || (form.errors ? 'Please fix the errors below.' : 'An error occurred.');
 			isSubmitting = false;
 		}
 	});
@@ -199,9 +199,13 @@
 					type="text"
 					name="first_name"
 					id="first_name"
+					value={form?.values?.first_name ?? ''}
 					required
-					class="focus:border-meadow-500 focus:ring-meadow-500 mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+					class="focus:border-meadow-500 focus:ring-meadow-500 mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm {form?.errors?.first_name ? 'border-red-300 ring-red-500' : ''}"
 				/>
+				{#if form?.errors?.first_name}
+					<p class="mt-1 text-xs text-red-600">{form.errors.first_name}</p>
+				{/if}
 			</div>
 
 			<div>
@@ -210,9 +214,13 @@
 					type="text"
 					name="last_name"
 					id="last_name"
+					value={form?.values?.last_name ?? ''}
 					required
-					class="focus:border-meadow-500 focus:ring-meadow-500 mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+					class="focus:border-meadow-500 focus:ring-meadow-500 mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm {form?.errors?.last_name ? 'border-red-300 ring-red-500' : ''}"
 				/>
+				{#if form?.errors?.last_name}
+					<p class="mt-1 text-xs text-red-600">{form.errors.last_name}</p>
+				{/if}
 			</div>
 
 			<div class="border-t border-gray-100 pt-4">
@@ -227,6 +235,7 @@
 							type="email"
 							name="email"
 							id="email"
+							value={form?.values?.email ?? ''}
 							class="focus:border-meadow-500 focus:ring-meadow-500 mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 						/>
 					</div>
@@ -237,6 +246,7 @@
 							type="tel"
 							name="phone"
 							id="phone"
+							value={form?.values?.phone ?? ''}
 							class="focus:border-meadow-500 focus:ring-meadow-500 mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
 						/>
 					</div>

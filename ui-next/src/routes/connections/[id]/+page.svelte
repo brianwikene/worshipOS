@@ -17,7 +17,7 @@
 		Users
 	} from '@lucide/svelte';
 
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 	import AddCareNoteDrawer from './AddCareNoteDrawer.svelte';
 	import ConnectFamilyDrawer from './ConnectFamilyDrawer.svelte';
 	import EditCapabilityDrawer from './EditCapabilityDrawer.svelte';
@@ -25,7 +25,7 @@
 	import EditProfileDrawer from './EditProfileDrawer.svelte';
 	import EditTeamsDrawer from './EditTeamsDrawer.svelte';
 
-	let { data } = $props<{ data: PageData }>();
+	let { data, form } = $props<{ data: PageData; form: ActionData }>();
 	let person = $derived(data.person);
 
 	// Safe derivation for family members
@@ -495,7 +495,7 @@
 	</div>
 </div>
 
-<EditProfileDrawer bind:open={isEditProfileOpen} {person} />
+<EditProfileDrawer bind:open={isEditProfileOpen} {person} {form} />
 <ConnectFamilyDrawer bind:open={isConnectFamilyOpen} allFamilies={data.allFamilies} />
 <EditHouseholdDrawer bind:open={isEditHouseholdOpen} {person} />
 <EditCapabilityDrawer bind:open={isEditCapabilitiesOpen} {person} />

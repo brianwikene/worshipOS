@@ -23,8 +23,17 @@
 
 		// Debounce search
 		searchTimeout = setTimeout(async () => {
-			const res = await fetch(`/api/authors?q=${encodeURIComponent(val)}`);
-			suggestions = await res.json();
+			try {
+				const res = await fetch(`/api/authors?q=${encodeURIComponent(val)}`);
+				if (res.ok) {
+					suggestions = await res.json();
+				} else {
+					suggestions = [];
+				}
+			} catch {
+				// Silently fail - user can still create new authors
+				suggestions = [];
+			}
 		}, 300);
 	}
 
@@ -65,6 +74,7 @@
 	<div class="relative">
 		<input
 			type="text"
+			id="author-input"
 			bind:value={inputValue}
 			oninput={handleInput}
 			onfocus={() => (isFocused = true)}

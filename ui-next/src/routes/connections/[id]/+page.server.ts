@@ -49,31 +49,63 @@ export const actions: Actions = {
 	// 1. UPDATE PROFILE (Bio, Phone, Season/Capacity)
 	updateProfile: async ({ request, params, locals }) => {
 		const { church } = locals;
-		if (!church) return fail(401);
+		if (!church) return fail(401, { error: true, message: 'Unauthorized' });
 
 		const data = await request.formData();
-		const first_name = data.get('first_name') as string;
-		const last_name = data.get('last_name') as string;
+		const firstName = (data.get('first_name') as string)?.trim();
+		const lastName = (data.get('last_name') as string)?.trim();
 		const email = data.get('email') as string;
 		const phone = data.get('phone') as string;
 		const bio = data.get('bio') as string;
-
+		const occupation = data.get('occupation') as string;
 		const capacity_note = data.get('capacity_note') as string;
 
-		await db
-			.update(people)
-			.set({
-				first_name,
-				last_name,
-				email,
-				phone,
-				bio,
-				capacity_note,
-				updated_at: new Date()
-			})
-			.where(and(eq(people.id, params.id), eq(people.church_id, church.id)));
+		// 1. VALIDATION SHIELD
+		const errors: Record<string, string> = {};
 
-		return { success: true };
+		if (!firstName || firstName.length < 2) {
+			errors.first_name = 'First name is required (min 2 chars)';
+		}
+		if (!lastName || lastName.length < 2) {
+			errors.last_name = 'Last name is required (min 2 chars)';
+		}
+
+		if (Object.keys(errors).length > 0) {
+			return fail(400, {
+				error: true,
+				errors,
+				values: {
+					first_name: firstName,
+					last_name: lastName,
+					email,
+					phone,
+					bio,
+					occupation,
+					capacity_note
+				}
+			});
+		}
+
+		try {
+			await db
+				.update(people)
+				.set({
+					first_name: firstName,
+					last_name: lastName,
+					email,
+					phone,
+					bio,
+					occupation,
+					capacity_note,
+					updated_at: new Date()
+				})
+				.where(and(eq(people.id, params.id), eq(people.church_id, church.id)));
+
+			return { success: true };
+		} catch (err) {
+			console.error(err);
+			return fail(500, { error: true, message: 'Database error. Please try again.' });
+		}
 	},
 
 	// 2. CONNECT EXISTING FAMILY
@@ -93,9 +125,15 @@ export const actions: Actions = {
 	// 3. CREATE & CONNECT NEW FAMILY
 	createFamily: async ({ request, params, locals }) => {
 		const { church } = locals;
+		if (!church) return fail(401, { error: 'Unauthorized' });
+
 		const data = await request.formData();
-		const name = data.get('name') as string;
+		const name = (data.get('name') as string)?.trim();
 		const address_city = data.get('city') as string;
+
+		if (!name) {
+			return fail(400, { error: 'Family name is required' });
+		}
 
 		const newFamilyId = uuidv4();
 
@@ -119,10 +157,16 @@ export const actions: Actions = {
 	// 4. ADD CAPABILITY
 	addCapability: async ({ request, params, locals }) => {
 		const { church } = locals;
+		if (!church) return fail(401, { error: 'Unauthorized' });
+
 		const data = await request.formData();
-		const capability = data.get('capability') as string;
+		const capability = (data.get('capability') as string)?.trim();
 		const rating = parseInt(data.get('rating') as string) || 3;
 		const notes = data.get('notes') as string;
+
+		if (!capability) {
+			return fail(400, { error: 'Capability name is required' });
+		}
 
 		await db.insert(person_capabilities).values({
 			church_id: church.id,
@@ -190,8 +234,14 @@ export const actions: Actions = {
 	// 7. CREATE TEAM (New)
 	createTeam: async ({ request, locals }) => {
 		const { church } = locals;
+		if (!church) return fail(401, { error: 'Unauthorized' });
+
 		const data = await request.formData();
-		const name = data.get('name') as string;
+		const name = (data.get('name') as string)?.trim();
+
+		if (!name) {
+			return fail(400, { error: 'Team name is required' });
+		}
 
 		await db.insert(teams).values({
 			church_id: church.id,
@@ -205,11 +255,17 @@ export const actions: Actions = {
 	// 8. JOIN TEAM (Updated for Multi-Role)
 	joinTeam: async ({ request, params, locals }) => {
 		const { church } = locals;
+		if (!church) return fail(401, { error: 'Unauthorized' });
+
 		const data = await request.formData();
 		const team_id = data.get('team_id') as string;
 
+		if (!team_id) {
+			return fail(400, { error: 'Please select a team' });
+		}
+
 		// Default to 'Member' if blank, but usually they will type 'Nursery', 'Guitar', etc.
-		const role = (data.get('role') as string) || 'Member';
+		const role = (data.get('role') as string)?.trim() || 'Member';
 
 		// CHECK: Allow same team, but block EXACT duplicate role
 		const existing = await db.query.team_members.findFirst({
@@ -291,9 +347,15 @@ export const actions: Actions = {
 	// 10. ADD CARE NOTE
 	addCareNote: async ({ request, params, locals }) => {
 		const { church } = locals;
+		if (!church) return fail(401, { error: 'Unauthorized' });
+
 		const data = await request.formData();
-		const content = data.get('content') as string;
+		const content = (data.get('content') as string)?.trim();
 		const category = (data.get('category') as string) || 'General';
+
+		if (!content) {
+			return fail(400, { error: 'Note content is required' });
+		}
 
 		await db.insert(care_notes).values({
 			church_id: church.id,

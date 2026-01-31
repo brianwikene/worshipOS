@@ -8,11 +8,13 @@ import {
 	template_items,
 	templates
 } from '$lib/server/db/schema';
-import { fail } from '@sveltejs/kit'; // <--- THIS WAS MISSING
+import { error, fail } from '@sveltejs/kit';
 import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
+	const { church } = locals;
+	if (!church) error(401, 'Unauthorized');
 	// 1. Fetch current items (Now with Song AND Person details)
 	const items = await db.query.plan_items.findMany({
 		where: and(eq(plan_items.instance_id, params.instance_id), isNull(plan_items.deleted_at)),
@@ -60,7 +62,10 @@ export const load: PageServerLoad = async ({ params }) => {
 
 export const actions: Actions = {
 	// 1. CREATE ITEM (With Song & Person Linking)
-	addItem: async ({ request, params }) => {
+	addItem: async ({ request, params, locals }) => {
+		const { church } = locals;
+		if (!church) return fail(401, { error: 'Unauthorized' });
+
 		const data = await request.formData();
 		const title = data.get('title') as string;
 		const type = data.get('type') as string;
@@ -104,7 +109,10 @@ export const actions: Actions = {
 	},
 
 	// 2. EDIT ITEM (With Song & Person Linking)
-	editItem: async ({ request }) => {
+	editItem: async ({ request, locals }) => {
+		const { church } = locals;
+		if (!church) return fail(401, { error: 'Unauthorized' });
+
 		const data = await request.formData();
 		const id = data.get('id') as string;
 		const title = data.get('title') as string;
@@ -143,7 +151,10 @@ export const actions: Actions = {
 	},
 
 	// 3. DELETE (With Re-Sequencing)
-	deleteItem: async ({ request }) => {
+	deleteItem: async ({ request, locals }) => {
+		const { church } = locals;
+		if (!church) return fail(401, { error: 'Unauthorized' });
+
 		const data = await request.formData();
 		const id = data.get('id') as string;
 		const currentOrderJson = data.get('current_order') as string;

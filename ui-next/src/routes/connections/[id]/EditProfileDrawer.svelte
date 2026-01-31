@@ -2,16 +2,36 @@
 	import { enhance } from '$app/forms';
 	import Drawer from '$lib/components/ui/Drawer.svelte';
 	import { Info, LoaderCircle, Shield } from '@lucide/svelte';
-	import type { PageData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
 	type Person = PageData['person'];
 
-	let { open = $bindable(false), person } = $props<{
+	let {
+		open = $bindable(false),
+		person,
+		form
+	} = $props<{
 		open: boolean;
 		person: Person;
+		form: ActionData;
 	}>();
 	let isSubmitting = $state(false);
 	let formError = $state<string | null>(null);
+
+	// Derived errors and values for cleaner template
+	let errors = $derived(form?.errors || {});
+	let values = $derived(form?.values || {});
+
+	$effect(() => {
+		if (form?.success) {
+			open = false;
+			isSubmitting = false;
+			formError = null;
+		} else if (form?.error) {
+			formError = form.message || (form.errors ? 'Please fix the errors below.' : 'An error occurred.');
+			isSubmitting = false;
+		}
+	});
 </script>
 
 <Drawer bind:open title="Edit Profile">
@@ -21,14 +41,9 @@
 		use:enhance={() => {
 			isSubmitting = true;
 			formError = null;
-			return async ({ result, update }) => {
+			return async ({ update }) => {
 				await update();
 				isSubmitting = false;
-				if (result.type === 'success') {
-					open = false;
-				} else if (result.type === 'failure' && result.data?.error) {
-					formError = result.data.error as string;
-				}
 			};
 		}}
 		class="flex h-full flex-col gap-6"
@@ -48,10 +63,15 @@
 						type="text"
 						name="first_name"
 						id="first_name"
-						value={person.first_name}
+						value={values.first_name ?? person.first_name}
 						required
-						class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+						class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm {errors.first_name
+							? 'border-red-500'
+							: ''}"
 					/>
+					{#if errors.first_name}
+						<p class="mt-1 text-xs text-red-600">{errors.first_name}</p>
+					{/if}
 				</div>
 				<div>
 					<label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
@@ -59,10 +79,15 @@
 						type="text"
 						name="last_name"
 						id="last_name"
-						value={person.last_name}
+						value={values.last_name ?? person.last_name}
 						required
-						class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+						class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm {errors.last_name
+							? 'border-red-500'
+							: ''}"
 					/>
+					{#if errors.last_name}
+						<p class="mt-1 text-xs text-red-600">{errors.last_name}</p>
+					{/if}
 				</div>
 			</div>
 
@@ -72,7 +97,7 @@
 					type="text"
 					name="occupation"
 					id="occupation"
-					value={person.occupation || ''}
+					value={values.occupation ?? person.occupation ?? ''}
 					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 				/>
 			</div>
@@ -88,7 +113,7 @@
 					type="email"
 					name="email"
 					id="email"
-					value={person.email || ''}
+					value={values.email ?? person.email ?? ''}
 					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 				/>
 			</div>
@@ -98,7 +123,7 @@
 					type="tel"
 					name="phone"
 					id="phone"
-					value={person.phone || ''}
+					value={values.phone ?? person.phone ?? ''}
 					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 				/>
 			</div>
@@ -115,7 +140,7 @@
 					id="bio"
 					rows="3"
 					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-					placeholder="Brief context about who they are...">{person.bio || ''}</textarea
+					placeholder="Brief context about who they are...">{values.bio ?? person.bio ?? ''}</textarea
 				>
 			</div>
 		</div>
@@ -136,7 +161,7 @@
 				id="capacity_note"
 				rows="2"
 				class="block w-full rounded-md border-blue-200 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-				placeholder="e.g. 'Stepping back for family leave.'">{person.capacity_note || ''}</textarea
+				placeholder="e.g. 'Stepping back for family leave.'">{values.capacity_note ?? person.capacity_note ?? ''}</textarea
 			>
 
 			<div class="mt-2 flex items-start gap-1.5 text-[10px] text-blue-600/80">
