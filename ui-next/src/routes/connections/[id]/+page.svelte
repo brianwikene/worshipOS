@@ -18,20 +18,32 @@
 	} from '@lucide/svelte';
 
 	import type { ActionData, PageData } from './$types';
+
+	// Import your Drawers
 	import AddCareNoteDrawer from './AddCareNoteDrawer.svelte';
 	import ConnectFamilyDrawer from './ConnectFamilyDrawer.svelte';
 	import EditCapabilityDrawer from './EditCapabilityDrawer.svelte';
 	import EditHouseholdDrawer from './EditHouseholdDrawer.svelte';
 	import EditProfileDrawer from './EditProfileDrawer.svelte';
 	import EditTeamsDrawer from './EditTeamsDrawer.svelte';
+	import ManageAddressesDrawer from './ManageAddressesDrawer.svelte';
+	// <--- NEW IMPORT
 
 	let { data, form } = $props<{ data: PageData; form: ActionData }>();
+
+	// 1. Reactive Data Access
 	let person = $derived(data.person);
+	let careNotes = $derived(data.careNotes);
+	let allFamilies = $derived(data.allFamilies);
+	let allTeams = $derived(data.allTeams);
 
-	// Safe derivation for family members
-	let familyMembers = $derived(person.family?.members?.filter((m) => m.id !== person.id) || []);
+	// 2. Safe Proxy for Relations (handles 'any' typing issues)
+	let p = $derived(person as any);
 
-	// State variables
+	// 3. Derived Helpers
+	let familyMembers = $derived(p.family?.members?.filter((m: any) => m.id !== p.id) || []);
+
+	// 4. UI State
 	let isCareRevealed = $state(false);
 	let isEditProfileOpen = $state(false);
 	let isConnectFamilyOpen = $state(false);
@@ -39,8 +51,8 @@
 	let isEditCapabilitiesOpen = $state(false);
 	let isEditTeamsOpen = $state(false);
 	let isAddCareNoteOpen = $state(false);
+	let isManageAddressesOpen = $state(false); // <--- NEW STATE
 
-	// Helper for Capabilities
 	function getComfortLabel(rating: number | null) {
 		if (!rating) return 'Unrated';
 		if (rating <= 2) return 'Learning';
@@ -48,32 +60,29 @@
 		return 'Leading';
 	}
 
-	// --- TEAM GROUPING LOGIC (FIXED TYPES) ---
-
-	// 1. Define the shape so TypeScript stops complaining
+	// --- TEAM GROUPING LOGIC ---
 	type GroupedTeam = {
 		team: { name: string; [key: string]: any };
 		roles: string[];
 	};
 
-	// 2. Filter Active Only
 	let activeMemberships = $derived(
-		person.teamMemberships.filter((m) => m.status === 'active') || []
+		(p.teamMemberships || []).filter((m: any) => m.status === 'active')
 	);
 
-	// 3. Group by Team (with explicit typing)
 	let groupedTeams = $derived(
 		Object.values(
-			activeMemberships.reduce<Record<string, GroupedTeam>>((acc, m) => {
-				// Create the group if it doesn't exist
-				if (!acc[m.team.id]) {
-					acc[m.team.id] = { team: m.team, roles: [] };
-				}
-				// Add role (default to 'Member' if null)
-				acc[m.team.id].roles.push(m.role || 'Member');
-				return acc;
-			}, {})
-		).sort((a, b) => a.team.name.localeCompare(b.team.name))
+			activeMemberships.reduce(
+				(acc: Record<string, GroupedTeam>, m: any) => {
+					if (!acc[m.team.id]) {
+						acc[m.team.id] = { team: m.team, roles: [] };
+					}
+					acc[m.team.id].roles.push(m.role || 'Member');
+					return acc;
+				},
+				{} as Record<string, GroupedTeam>
+			)
+		).sort((a: any, b: any) => a.team.name.localeCompare(b.team.name)) as GroupedTeam[]
 	);
 </script>
 
@@ -89,11 +98,6 @@
 			</a>
 			<div class="flex gap-2">
 				<button
-					class="rounded-md px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-200 hover:text-stone-900"
-				>
-					Tend / Archive
-				</button>
-				<button
 					onclick={() => (isEditProfileOpen = true)}
 					class="rounded-md bg-slate-800 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-slate-700"
 				>
@@ -108,37 +112,37 @@
 					<div
 						class="mx-auto mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-stone-100 text-2xl font-bold text-stone-500"
 					>
-						{#if person.avatar_url}
+						{#if p.avatar_url}
 							<img
-								src={person.avatar_url}
-								alt={person.first_name ?? 'Person'}
+								src={p.avatar_url}
+								alt={p.first_name ?? 'Person'}
 								class="h-full w-full object-cover"
 							/>
 						{:else}
-							{person.first_name?.[0] ?? '?'}{person.last_name?.[0] ?? ''}
+							{p.first_name?.[0] ?? '?'}{p.last_name?.[0] ?? ''}
 						{/if}
 					</div>
-					<h1 class="text-2xl font-bold text-slate-900">{person.first_name} {person.last_name}</h1>
-					{#if person.occupation}
+					<h1 class="text-2xl font-bold text-slate-900">{p.first_name} {p.last_name}</h1>
+					{#if p.occupation}
 						<p class="mt-1 flex items-center justify-center gap-1 text-sm text-stone-500">
 							<Briefcase size={12} />
-							{person.occupation}
+							{p.occupation}
 						</p>
 					{/if}
 
 					<div class="mt-6 space-y-3 text-left">
-						{#if person.email}
+						{#if p.email}
 							<div class="flex items-center gap-3 text-sm text-stone-600">
 								<Mail size={16} class="text-stone-400" />
-								<a href="mailto:{person.email}" class="transition-colors hover:text-slate-900"
-									>{person.email}</a
+								<a href="mailto:{p.email}" class="transition-colors hover:text-slate-900"
+									>{p.email}</a
 								>
 							</div>
 						{/if}
-						{#if person.phone}
+						{#if p.phone}
 							<div class="flex items-center gap-3 text-sm text-stone-600">
 								<Phone size={16} class="text-stone-400" />
-								<span>{person.phone}</span>
+								<span>{p.phone}</span>
 							</div>
 						{/if}
 					</div>
@@ -152,28 +156,45 @@
 							>
 								<House class="h-3 w-3" /> Household
 							</h3>
-							<p class="mt-1 text-xs text-stone-400 italic">
-								Members, address, shared contact info
-							</p>
 						</div>
 
-						{#if person.family}
+						<div class="flex gap-2">
 							<button
-								onclick={() => (isEditHouseholdOpen = true)}
-								class="rounded-md border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-600 shadow-sm transition-all hover:border-stone-300 hover:bg-white hover:text-slate-900"
+								onclick={() => (isManageAddressesOpen = true)}
+								class="rounded-md border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-600 shadow-sm transition-all hover:bg-white hover:text-slate-900"
 							>
-								Edit
+								Addresses
 							</button>
-						{/if}
+
+							{#if p.family}
+								<button
+									onclick={() => (isEditHouseholdOpen = true)}
+									class="rounded-md border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-600 shadow-sm transition-all hover:border-stone-300 hover:bg-white hover:text-slate-900"
+								>
+									Edit
+								</button>
+							{/if}
+						</div>
 					</div>
 
-					{#if person.family}
+					{#if p.family}
 						<div class="mb-5 border-b border-stone-100 pb-4">
-							<div class="text-sm font-bold text-slate-900">{person.family.name}</div>
-							{#if person.family.address_city}
+							<div class="text-sm font-bold text-slate-900">{p.family.name}</div>
+
+							{#if p.family.addresses && p.family.addresses.length > 0}
+								{@const primary =
+									p.family.addresses.find((a: any) => a.is_primary) || p.family.addresses[0]}
+								<div class="mt-2 flex items-start gap-2 text-xs text-stone-500">
+									<MapPin size={12} class="mt-0.5 shrink-0" />
+									<div>
+										{primary.street}<br />
+										{primary.city}, {primary.state}
+									</div>
+								</div>
+							{:else if p.family.address_city}
 								<div class="mt-1 flex items-center gap-1 text-xs text-stone-500">
 									<MapPin size={10} />
-									{person.family.address_city}, {person.family.address_state}
+									{p.family.address_city}, {p.family.address_state}
 								</div>
 							{/if}
 						</div>
@@ -223,7 +244,7 @@
 					{/if}
 				</div>
 
-				{#if person.relationships.length > 0}
+				{#if p.relationships && p.relationships.length > 0}
 					<div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
 						<h3
 							class="mb-4 flex items-center gap-2 text-xs font-bold tracking-wider text-stone-400 uppercase"
@@ -231,7 +252,7 @@
 							<Heart size={12} /> Connected Lives
 						</h3>
 						<div class="space-y-2">
-							{#each person.relationships as rel}
+							{#each p.relationships as rel}
 								<a
 									href="/connections/{rel.relatedPerson.id}"
 									class="-mx-2 flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-stone-50"
@@ -256,45 +277,34 @@
 				<div
 					class="relative overflow-hidden rounded-xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-6 shadow-sm"
 				>
-					<div
-						class="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-sky-100 opacity-50 blur-xl"
-					></div>
-
-					<div class="relative z-10">
-						<div class="mb-3 flex items-center gap-2">
-							{#if person.capacity_note}
-								<Shield size={18} class="text-sky-600" />
-								<h3 class="text-sm font-bold tracking-wide text-sky-900 uppercase">
-									Current Season
-								</h3>
-							{:else}
-								<Calendar size={18} class="text-sky-400" />
-								<h3 class="text-sm font-bold tracking-wide text-sky-800 uppercase">
-									Current Context
-								</h3>
-							{/if}
-						</div>
-
-						{#if person.bio}
-							<p class="mb-4 leading-relaxed text-stone-700">{person.bio}</p>
+					<div class="mb-3 flex items-center gap-2">
+						{#if p.capacity_note}
+							<Shield size={18} class="text-sky-600" />
+							<h3 class="text-sm font-bold tracking-wide text-sky-900 uppercase">Current Season</h3>
 						{:else}
-							<p class="mb-4 text-sm text-stone-400 italic">No bio added yet.</p>
-						{/if}
-
-						{#if person.capacity_note}
-							<div class="mt-4 rounded-lg border border-sky-200 bg-white/80 p-4 backdrop-blur-sm">
-								<p class="text-xs font-semibold tracking-wider text-sky-800 uppercase opacity-70">
-									Capacity Note
-								</p>
-								<p class="mt-1 text-sm font-medium text-slate-900 italic">
-									"{person.capacity_note}"
-								</p>
-								<p class="mt-2 text-[10px] text-sky-700/60">
-									* This note serves as a reminder to protect this person's season.
-								</p>
-							</div>
+							<Calendar size={18} class="text-sky-400" />
+							<h3 class="text-sm font-bold tracking-wide text-sky-800 uppercase">
+								Current Context
+							</h3>
 						{/if}
 					</div>
+
+					{#if p.bio}
+						<p class="mb-4 leading-relaxed text-stone-700">{p.bio}</p>
+					{:else}
+						<p class="mb-4 text-sm text-stone-400 italic">No bio added yet.</p>
+					{/if}
+
+					{#if p.capacity_note}
+						<div class="mt-4 rounded-lg border border-sky-200 bg-white/80 p-4 backdrop-blur-sm">
+							<p class="text-xs font-semibold tracking-wider text-sky-800 uppercase opacity-70">
+								Capacity Note
+							</p>
+							<p class="mt-1 text-sm font-medium text-slate-900 italic">
+								"{p.capacity_note}"
+							</p>
+						</div>
+					{/if}
 				</div>
 
 				<div
@@ -365,9 +375,9 @@
 						</button>
 					</div>
 
-					{#if person.capabilities.length > 0}
+					{#if p.capabilities && p.capabilities.length > 0}
 						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-							{#each person.capabilities as cap}
+							{#each p.capabilities as cap}
 								<div
 									class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
 								>
@@ -446,9 +456,9 @@
 								View Notes
 							</button>
 						</div>
-					{:else if person.careNotes.length > 0}
+					{:else if careNotes.length > 0}
 						<div class="animate-in fade-in slide-in-from-top-2 space-y-4 duration-300">
-							{#each person.careNotes as note}
+							{#each careNotes as note}
 								<div
 									class="relative rounded-lg border border-amber-100 bg-white p-4 text-sm shadow-sm transition-shadow hover:shadow-md"
 								>
@@ -495,9 +505,10 @@
 	</div>
 </div>
 
-<EditProfileDrawer bind:open={isEditProfileOpen} {person} {form} />
-<ConnectFamilyDrawer bind:open={isConnectFamilyOpen} allFamilies={data.allFamilies} />
-<EditHouseholdDrawer bind:open={isEditHouseholdOpen} {person} />
-<EditCapabilityDrawer bind:open={isEditCapabilitiesOpen} {person} />
-<EditTeamsDrawer bind:open={isEditTeamsOpen} {person} allTeams={data.allTeams} />
+<EditProfileDrawer bind:open={isEditProfileOpen} person={p} {form} />
+<ConnectFamilyDrawer bind:open={isConnectFamilyOpen} {allFamilies} />
+<EditHouseholdDrawer bind:open={isEditHouseholdOpen} person={p} />
+<EditCapabilityDrawer bind:open={isEditCapabilitiesOpen} person={p} />
+<EditTeamsDrawer bind:open={isEditTeamsOpen} person={p} {allTeams} />
 <AddCareNoteDrawer bind:open={isAddCareNoteOpen} />
+<ManageAddressesDrawer bind:open={isManageAddressesOpen} person={p} />

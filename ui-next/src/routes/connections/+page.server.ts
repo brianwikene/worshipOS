@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { people } from '$lib/server/db/schema';
+import * as schema from '$lib/server/db/schema'; // Import as namespace
 import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -7,8 +7,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const { church } = locals;
 	if (!church) error(404, 'Church not found');
 
-	// Fetch all people for this tenant
-	const people = await db.query.people.findMany({
+	const peopleList = await db.query.people.findMany({
 		where: (people, { eq }) => eq(people.church_id, church.id),
 		with: {
 			family: true,
@@ -21,7 +20,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		orderBy: (people, { asc }) => [asc(people.last_name), asc(people.first_name)]
 	});
 
-	return { people };
+	return { people: peopleList };
 };
 
 export const actions = {
@@ -35,7 +34,6 @@ export const actions = {
 		const email = data.get('email') as string;
 		const phone = data.get('phone') as string;
 
-		// 1. VALIDATION SHIELD
 		const errors: Record<string, string> = {};
 
 		if (!firstName || firstName.length < 2) {
@@ -45,19 +43,16 @@ export const actions = {
 			errors.last_name = 'Last name is required (min 2 chars)';
 		}
 
-		// If errors exist, stop and send them back
 		if (Object.keys(errors).length > 0) {
 			return fail(400, {
 				error: true,
 				errors,
-				// Return values so user doesn't have to re-type
 				values: { first_name: firstName, last_name: lastName, email, phone }
 			});
 		}
 
-		// 2. PROCEED WITH INSERT
 		try {
-			await db.insert(people).values({
+			await db.insert(schema.people).values({
 				church_id: church.id,
 				first_name: firstName,
 				last_name: lastName,

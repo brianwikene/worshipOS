@@ -160,6 +160,7 @@
 					<div>
 						<span class="mb-1 block text-xs font-medium text-slate-700">Author(s)</span>
 						<AuthorInput bind:selectedAuthors={localAuthors} />
+						<input type="hidden" name="authors_json" value={JSON.stringify(localAuthors)} />
 					</div>
 
 					<div class="grid grid-cols-2 gap-4">

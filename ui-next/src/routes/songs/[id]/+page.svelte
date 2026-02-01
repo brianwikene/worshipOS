@@ -2,11 +2,11 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/stores';
 	import AuthorInput from '$lib/components/AuthorInput.svelte';
-	import { ArrowLeft, Copy, Eye, Pencil, Save, Trash2 } from '@lucide/svelte';
+	import { ArrowLeft, CircleHelp, Copy, Eye, Pencil, Save, Trash2, X } from '@lucide/svelte';
 
-	// --- CONSTANTS (Moved Up) ---
+	// --- CONSTANTS ---
 	const SECTION_KEYWORDS =
-		/^(Verse|Chorus|Bridge|Pre-Chorus|Intro|Outro|Tag|Interlude|Instrumental|Hook|V\d|C\d|B\d)/i;
+		/^(Verse|Chorus|Bridge|Pre-Chorus|PreChorus|Intro|Outro|Tag|Interlude|Instrumental|Hook|Ending|V\d|C\d|B\d)/i;
 
 	const KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
@@ -38,6 +38,7 @@
 
 	// UI State
 	let isEditing = $state(false);
+	let showHelp = $state(false);
 	let isSaveVersionOpen = $state(false);
 	let loading = $state(false);
 
@@ -60,13 +61,8 @@
 	);
 
 	// --- SYNC EFFECT ---
-	// Ensure local state updates if the server data changes (e.g. after save)
 	$effect(() => {
-		// 1. Update the state
 		song = data.song as SongWithRelations;
-
-		// 2. Derive authors from DATA (the source), NOT 'song' (the state we just wrote to)
-		// This prevents the infinite loop: Write song -> Read song -> Trigger Effect -> Write song...
 		localAuthors = (data.song.authors || [])
 			.sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
 			.map((rel) => ({ id: rel.author.id, name: rel.author.name }));
@@ -93,15 +89,14 @@
 	let displayAuthors = $derived(
 		song.authors && song.authors.length > 0
 			? song.authors.map((rel) => rel.author.name).join(', ')
-			: song.author || 'Unknown Author'
+			: song.authors || 'Unknown Author'
 	);
 
 	let displayContent = $derived(currentArrangement?.content || song.content);
 	let displayNotes = $derived(song.performance_notes);
 
+	// Derived Parsing
 	let songMap = $derived(generateSongMap(displayContent));
-
-	// We pass 'notation' explicitly so it updates when the toggle button is clicked
 	let parsedLines = $derived(parseChart(displayContent, selectedKey, notation));
 
 	// --- HELPERS ---
@@ -162,28 +157,66 @@
 		return (degrees[interval] || '?') + quality;
 	}
 
+	// --- SMART LABELING (Verse -> Verse 1) ---
+	function smartLabel(raw: string, counters: Record<string, number>) {
+		let label = raw.trim();
+		const lower = label.toLowerCase();
+
+		// 1. If it already has a number ("Verse 2", "V3"), keep it.
+		if (/\d/.test(label)) return label;
+
+		// 2. Normalize common types for counting
+		let type = '';
+		if (lower.startsWith('verse') || lower.startsWith('v')) type = 'Verse';
+		else if (lower.startsWith('chorus') || lower.startsWith('c')) type = 'Chorus';
+		else if (lower.startsWith('bridge') || lower.startsWith('b')) type = 'Bridge';
+
+		// 3. Auto-increment
+		if (type) {
+			counters[type] = (counters[type] || 0) + 1;
+			// Only append number for Verses by default
+			if (type === 'Verse') return `${type} ${counters[type]}`;
+		}
+
+		return label;
+	}
+
 	// --- PARSERS ---
 
 	function generateSongMap(content: string | null) {
 		if (!content) return [];
+
+		// 1. Check for explicit Manual Flow
+		const flowMatch = content.match(/\{(?:flow|order|sequence):\s*(.*?)\}/i);
+		if (flowMatch) {
+			return flowMatch[1].split(',').map((s) => s.trim());
+		}
+
 		const map: string[] = [];
+		const counters: Record<string, number> = {};
 		const lines = content.split('\n');
+
 		for (const line of lines) {
 			const trim = line.trim();
 			if (!trim) continue;
 
-			const bracketMatch = trim.match(/^\[(.*?)\]\s*$/);
+			// [Verse]
+			const bracketMatch = trim.match(/^\[([^\[\]]+)\]\s*$/);
 			if (bracketMatch && SECTION_KEYWORDS.test(bracketMatch[1])) {
-				map.push(bracketMatch[1]);
+				map.push(smartLabel(bracketMatch[1], counters));
 			}
 
+			// {Verse} or {soc}
 			const braceMatch = trim.match(/^\{(.*?)(?::\s*(.*?))?\}$/);
 			if (braceMatch) {
 				const tag = braceMatch[1].toLowerCase();
 				const value = braceMatch[2];
-				if (tag === 'soc' || tag === 'start_of_chorus' || tag === 'chorus')
-					map.push(value || 'Chorus');
-				else if (tag === 'sov' || tag === 'start_of_verse') map.push(value || 'Verse');
+
+				if (['soc', 'start_of_chorus', 'chorus'].includes(tag))
+					map.push(smartLabel('Chorus', counters));
+				else if (['sov', 'start_of_verse'].includes(tag)) map.push(smartLabel('Verse', counters));
+				else if (SECTION_KEYWORDS.test(tag))
+					map.push(smartLabel(tag + (value ? ' ' + value : ''), counters));
 			}
 		}
 		return map;
@@ -197,6 +230,7 @@
 		if (!text) return [];
 		const original = displayKey || 'C';
 		const semitones = getSemitoneShift(original, targetKey);
+		const counters: Record<string, number> = {};
 
 		return text.split('\n').map((line) => {
 			const trimmed = line.trim();
@@ -208,22 +242,30 @@
 				const tag = dirMatch[1].toLowerCase();
 				const value = dirMatch[2] || '';
 
-				if (tag === 'soc' || tag === 'start_of_chorus' || tag === 'chorus')
-					return { type: 'section' as const, content: value || 'Chorus' };
-				if (tag === 'sov' || tag === 'start_of_verse')
-					return { type: 'section' as const, content: value || 'Verse' };
-				if (['eoc', 'end_of_chorus', 'eov', 'end_of_verse'].includes(tag))
+				if (['soc', 'start_of_chorus', 'chorus'].includes(tag))
+					return { type: 'section' as const, content: smartLabel('Chorus', counters) };
+				if (['sov', 'start_of_verse'].includes(tag))
+					return { type: 'section' as const, content: smartLabel('Verse', counters) };
+				if (['eoc', 'end_of_chorus', 'eov', 'end_of_verse', 'flow', 'order'].includes(tag))
 					return { type: 'empty' as const };
+
+				if (SECTION_KEYWORDS.test(dirMatch[1])) {
+					return {
+						type: 'section' as const,
+						content: smartLabel(dirMatch[1] + (value ? ' ' + value : ''), counters)
+					};
+				}
+
 				if (['c', 'comment', 'cb'].includes(tag))
 					return { type: 'comment' as const, content: value };
 
 				return { type: 'directive' as const, label: tag, value: value };
 			}
 
-			// 2. HEADERS
-			const bracketMatch = trimmed.match(/^\[(.*?)\]$/);
+			// 2. HEADERS [Verse]
+			const bracketMatch = trimmed.match(/^\[([^\[\]]+)\]\s*$/);
 			if (bracketMatch && SECTION_KEYWORDS.test(bracketMatch[1])) {
-				return { type: 'section' as const, content: bracketMatch[1] };
+				return { type: 'section' as const, content: smartLabel(bracketMatch[1], counters) };
 			}
 
 			// 3. LYRICS/CHORDS
@@ -250,6 +292,17 @@
 			});
 			return { type: 'lyric' as const, pairs };
 		});
+	}
+
+	// --- ACTIONS ---
+	// (Your save logic usually lives here, but it's handled by form actions in SvelteKit usually)
+	// We'll keep the simple 'saveChanges' function stub if you had one, or rely on the form action.
+	function saveChanges() {
+		loading = true;
+		// The form submission is handled by the browser's default <form> action or use:enhance
+		// This is just a UI toggle state if you need it.
+		// If you are using the hidden form approach, you might need to submit it manually here:
+		// document.getElementById('editForm')?.requestSubmit();
 	}
 </script>
 
@@ -281,6 +334,7 @@
 					>
 						<Copy size={14} /> Save Version
 					</button>
+
 					<button
 						type="button"
 						onclick={() => (isEditing = !isEditing)}
@@ -292,7 +346,16 @@
 							<Pencil size={14} /> Edit
 						{/if}
 					</button>
+
 					{#if isEditing}
+						<button
+							type="button"
+							onclick={() => (showHelp = true)}
+							class="flex items-center gap-2 rounded-md border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-600 hover:bg-stone-50"
+						>
+							<CircleHelp size={14} /> Syntax
+						</button>
+
 						<button
 							form="editForm"
 							disabled={loading}
@@ -685,7 +748,7 @@
 						>
 							<div>
 								<p>
-									© {song.author || 'Copyright Holder'}. {#if song.ccli_number}CCLI #{song.ccli_number}{/if}.
+									© {song.authors || 'Copyright Holder'}. {#if song.ccli_number}CCLI #{song.ccli_number}{/if}.
 								</p>
 								<p class="mt-0.5">
 									Generated by WorshipOS for <span class="font-bold text-stone-600"
@@ -763,6 +826,91 @@
 					>
 				</div>
 			</form>
+		</div>
+	</div>
+{/if}
+{#if showHelp}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
+	>
+		<div
+			class="animate-in fade-in zoom-in-95 w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl duration-200"
+		>
+			<div
+				class="flex items-center justify-between border-b border-stone-200 bg-stone-50 px-6 py-4"
+			>
+				<h3 class="flex items-center gap-2 text-lg font-bold text-slate-900">
+					<CircleHelp size={20} class="text-blue-600" />
+					Formatting Guide
+				</h3>
+				<button
+					onclick={() => (showHelp = false)}
+					class="text-stone-400 transition-colors hover:text-stone-600"
+				>
+					<X size={20} />
+				</button>
+			</div>
+
+			<div class="max-h-[70vh] space-y-6 overflow-y-auto p-6">
+				<div>
+					<h4 class="mb-2 text-xs font-bold text-stone-400 uppercase">Sections</h4>
+					<p class="mb-2 text-sm text-stone-600">Use square brackets to define song sections.</p>
+					<div
+						class="rounded-lg border border-stone-200 bg-stone-100 p-3 font-mono text-xs text-slate-700"
+					>
+						[Verse]<br />
+						[Chorus]<br />
+						[Bridge]<br />
+						[Tag]
+					</div>
+				</div>
+
+				<div>
+					<h4 class="mb-2 text-xs font-bold text-stone-400 uppercase">Chords & Lyrics</h4>
+					<p class="mb-2 text-sm text-stone-600">
+						Place chords in brackets exactly where they change.
+					</p>
+					<div
+						class="rounded-lg border border-stone-200 bg-stone-100 p-3 font-mono text-xs text-slate-700"
+					>
+						Amazing [C]grace how [F]sweet the [C]sound
+					</div>
+				</div>
+
+				<div>
+					<h4 class="mb-2 text-xs font-bold text-stone-400 uppercase">Notes & Comments</h4>
+					<p class="mb-2 text-sm text-stone-600">
+						Use curly braces for instructions or tempo notes.
+					</p>
+					<div
+						class="rounded-lg border border-stone-200 bg-stone-100 p-3 font-mono text-xs text-slate-700"
+					>
+						&#123;c: Build Intensity&#125;<br />
+						&#123;comment: Repeat 2x&#125;
+					</div>
+				</div>
+
+				<div>
+					<h4 class="mb-2 text-xs font-bold text-blue-600 uppercase">Advanced: Custom Map</h4>
+					<p class="mb-2 text-sm text-stone-600">
+						Define the song order manually to update the top navigation bar.
+					</p>
+					<div
+						class="rounded-lg border border-blue-100 bg-blue-50 p-3 font-mono text-xs text-blue-900"
+					>
+						&#123;flow: Verse 1, Chorus, Verse 2, Chorus, Tag&#125;
+					</div>
+				</div>
+			</div>
+
+			<div class="border-t border-stone-200 bg-stone-50 px-6 py-4 text-right">
+				<button
+					onclick={() => (showHelp = false)}
+					class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800"
+				>
+					Got it
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}

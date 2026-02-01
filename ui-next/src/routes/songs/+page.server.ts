@@ -20,12 +20,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 // 2. ACTIONS
 export const actions: Actions = {
-	// RESET LIBRARY (The "Nuclear Option" to fix duplicates)
-	resetLibrary: async ({ locals }) => {
+	// SEED LIBRARY (Was resetLibrary)
+	seedLibrary: async ({ locals }) => {
 		const { church } = locals;
 		if (!church) error(401, 'Unauthorized');
 
-		console.log('⚠️ Resetting Library...');
+		console.log('⚠️ Seeding Library...');
 
 		// A. DELETE ALL (Fixes the 17 duplicates issue)
 		await db.delete(songs).where(eq(songs.church_id, church.id));
