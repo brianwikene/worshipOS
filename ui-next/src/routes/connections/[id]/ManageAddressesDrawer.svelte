@@ -66,6 +66,7 @@
 				{#if person.family}
 					<div class="grid grid-cols-2 gap-2 rounded-lg bg-stone-100 p-1">
 						<label
+							for="scope-family"
 							class="flex cursor-pointer items-center justify-center gap-2 rounded-md p-2 transition-colors {editData.family_id
 								? 'bg-white font-bold text-slate-900 shadow-sm'
 								: 'text-stone-500'}"
@@ -73,6 +74,7 @@
 							<input
 								type="radio"
 								name="scope"
+								id="scope-family"
 								class="hidden"
 								checked={!!editData.family_id}
 								onchange={() => {
@@ -83,6 +85,7 @@
 							<Home size={16} /> Family
 						</label>
 						<label
+							for="scope-person"
 							class="flex cursor-pointer items-center justify-center gap-2 rounded-md p-2 transition-colors {editData.person_id
 								? 'bg-white font-bold text-slate-900 shadow-sm'
 								: 'text-stone-500'}"
@@ -90,6 +93,7 @@
 							<input
 								type="radio"
 								name="scope"
+								id="scope-person"
 								class="hidden"
 								checked={!!editData.person_id}
 								onchange={() => {
@@ -108,9 +112,12 @@
 
 				<div class="grid grid-cols-2 gap-4">
 					<div class="col-span-1">
-						<label class="block text-xs font-bold text-stone-500 uppercase">Type</label>
+						<label for="addr-type" class="block text-xs font-bold text-stone-500 uppercase"
+							>Type</label
+						>
 						<select
 							name="type"
+							id="addr-type"
 							class="mt-1 w-full rounded-md border-stone-300 text-sm"
 							bind:value={editData.type}
 						>
@@ -123,10 +130,13 @@
 						</select>
 					</div>
 					<div class="col-span-1">
-						<label class="block text-xs font-bold text-stone-500 uppercase">Company (Opt)</label>
+						<label for="addr-company" class="block text-xs font-bold text-stone-500 uppercase"
+							>Company (Opt)</label
+						>
 						<input
 							type="text"
 							name="company_name"
+							id="addr-company"
 							class="mt-1 w-full rounded-md border-stone-300 text-sm"
 							bind:value={editData.company_name}
 							placeholder="e.g. Office"
@@ -135,10 +145,13 @@
 				</div>
 
 				<div>
-					<label class="block text-xs font-bold text-stone-500 uppercase">Street</label>
+					<label for="addr-street" class="block text-xs font-bold text-stone-500 uppercase"
+						>Street</label
+					>
 					<input
 						type="text"
 						name="street"
+						id="addr-street"
 						required
 						class="mt-1 w-full rounded-md border-stone-300 text-sm"
 						bind:value={editData.street}
@@ -147,28 +160,37 @@
 
 				<div class="grid grid-cols-6 gap-2">
 					<div class="col-span-3">
-						<label class="block text-xs font-bold text-stone-500 uppercase">City</label>
+						<label for="addr-city" class="block text-xs font-bold text-stone-500 uppercase"
+							>City</label
+						>
 						<input
 							type="text"
 							name="city"
+							id="addr-city"
 							class="mt-1 w-full rounded-md border-stone-300 text-sm"
 							bind:value={editData.city}
 						/>
 					</div>
 					<div class="col-span-1">
-						<label class="block text-xs font-bold text-stone-500 uppercase">State</label>
+						<label for="addr-state" class="block text-xs font-bold text-stone-500 uppercase"
+							>State</label
+						>
 						<input
 							type="text"
 							name="state"
+							id="addr-state"
 							class="mt-1 w-full rounded-md border-stone-300 text-sm"
 							bind:value={editData.state}
 						/>
 					</div>
 					<div class="col-span-2">
-						<label class="block text-xs font-bold text-stone-500 uppercase">Zip</label>
+						<label for="addr-zip" class="block text-xs font-bold text-stone-500 uppercase"
+							>Zip</label
+						>
 						<input
 							type="text"
 							name="zip"
+							id="addr-zip"
 							class="mt-1 w-full rounded-md border-stone-300 text-sm"
 							bind:value={editData.zip}
 						/>
@@ -177,10 +199,13 @@
 
 				<div class="grid grid-cols-2 gap-4 border-t border-stone-100 pt-2">
 					<div>
-						<label class="block text-xs font-bold text-stone-400 uppercase">Start Date (Opt)</label>
+						<label for="addr-start" class="block text-xs font-bold text-stone-400 uppercase"
+							>Start Date (Opt)</label
+						>
 						<input
 							type="date"
 							name="start_date"
+							id="addr-start"
 							class="mt-1 w-full rounded-md border-stone-300 text-xs text-stone-600"
 							value={editData.start_date
 								? new Date(editData.start_date).toISOString().split('T')[0]
@@ -188,10 +213,13 @@
 						/>
 					</div>
 					<div>
-						<label class="block text-xs font-bold text-stone-400 uppercase">End Date (Opt)</label>
+						<label for="addr-end" class="block text-xs font-bold text-stone-400 uppercase"
+							>End Date (Opt)</label
+						>
 						<input
 							type="date"
 							name="end_date"
+							id="addr-end"
 							class="mt-1 w-full rounded-md border-stone-300 text-xs text-stone-600"
 							value={editData.end_date
 								? new Date(editData.end_date).toISOString().split('T')[0]
@@ -227,24 +255,27 @@
 						<h4 class="mb-2 text-xs font-bold text-stone-400 uppercase">Personal Addresses</h4>
 						<div class="space-y-2">
 							{#each personalAddresses as addr}
+								{@const Icon = getTypeIcon(addr.type)}
+
 								<div
 									class="flex items-start justify-between rounded-lg border border-stone-200 bg-white p-3 shadow-sm"
 								>
 									<div class="flex items-start gap-3">
 										<div class="rounded bg-stone-100 p-2 text-stone-600">
-											<svelte:component this={getTypeIcon(addr.type)} size={16} />
+											<Icon size={16} />
 										</div>
 										<div>
 											<div class="flex items-center gap-2">
 												<span class="text-sm font-bold text-slate-900 capitalize">{addr.type}</span>
-												{#if addr.start_date}<span
-														class="rounded bg-sky-100 px-1.5 text-[10px] text-sky-700"
+												{#if addr.start_date}
+													<span class="rounded bg-sky-100 px-1.5 text-[10px] text-sky-700"
 														>Seasonal</span
-													>{/if}
+													>
+												{/if}
 											</div>
-											{#if addr.company_name}<div class="text-xs font-semibold text-stone-600">
-													{addr.company_name}
-												</div>{/if}
+											{#if addr.company_name}
+												<div class="text-xs font-semibold text-stone-600">{addr.company_name}</div>
+											{/if}
 											<div class="mt-0.5 text-xs text-stone-500">
 												{addr.street}<br />
 												{addr.city}, {addr.state}
@@ -259,9 +290,9 @@
 										>
 										<form method="POST" action="?/deleteAddress" use:enhance>
 											<input type="hidden" name="address_id" value={addr.id} />
-											<button class="text-xs text-stone-400 hover:text-red-600"
-												><Trash2 size={14} /></button
-											>
+											<button class="text-xs text-stone-400 hover:text-red-600">
+												<Trash2 size={14} />
+											</button>
 										</form>
 									</div>
 								</div>
