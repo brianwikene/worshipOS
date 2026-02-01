@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { authors, song_authors, songs } from '$lib/server/db/schema';
-import { error, redirect } from '@sveltejs/kit';
-import type { Actions, PageServerLoad } from './$types';
+import { error, redirect } from '@sveltejs/kit'; // <--- Added 'error'
+import type { Actions, PageServerLoad } from './$types'; // <--- Added 'PageServerLoad'
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const { church } = locals;
@@ -10,7 +10,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-	create: async ({ request, locals }) => {
+	// Rename 'create' to 'default'
+	default: async ({ request, locals }) => {
 		const { church } = locals;
 		const data = await request.formData();
 
@@ -31,22 +32,24 @@ export const actions: Actions = {
 				tempo,
 				performance_notes: notes,
 				ccli_number: ccli,
-				content,
-				author: '' // Fallback for legacy column
+				content
+				// REMOVED: author: '' (This was causing the error)
 			})
 			.returning({ id: songs.id });
 
 		// 2. Handle Authors (The Chips)
 		const authorsJson = data.get('authors_json') as string;
+
 		if (authorsJson) {
 			const incomingAuthors = JSON.parse(authorsJson) as { id?: string; name: string }[];
 			const finalAuthorIds: string[] = [];
 
 			for (const authorObj of incomingAuthors) {
 				if (authorObj.id) {
+					// Existing author selected
 					finalAuthorIds.push(authorObj.id);
 				} else {
-					// Create new author if needed
+					// Create new author on the fly
 					const [newAuthor] = await db
 						.insert(authors)
 						.values({
