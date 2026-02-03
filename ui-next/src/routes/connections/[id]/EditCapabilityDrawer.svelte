@@ -29,7 +29,11 @@
 			<div class="flex h-full flex-col">
 				<div class="flex items-center justify-between border-b border-stone-100 px-6 py-4">
 					<h2 class="text-lg font-bold text-slate-900">Manage Capabilities</h2>
-					<button type="button" onclick={() => (open = false)} class="text-stone-400 hover:text-slate-900">
+					<button
+						type="button"
+						onclick={() => (open = false)}
+						class="text-stone-400 hover:text-slate-900"
+					>
 						<X size={20} />
 					</button>
 				</div>

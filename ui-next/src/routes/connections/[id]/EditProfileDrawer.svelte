@@ -28,7 +28,8 @@
 			isSubmitting = false;
 			formError = null;
 		} else if (form?.error) {
-			formError = form.message || (form.errors ? 'Please fix the errors below.' : 'An error occurred.');
+			formError =
+				form.message || (form.errors ? 'Please fix the errors below.' : 'An error occurred.');
 			isSubmitting = false;
 		}
 	});
@@ -140,7 +141,8 @@
 					id="bio"
 					rows="3"
 					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-					placeholder="Brief context about who they are...">{values.bio ?? person.bio ?? ''}</textarea
+					placeholder="Brief context about who they are..."
+					>{values.bio ?? person.bio ?? ''}</textarea
 				>
 			</div>
 		</div>
@@ -161,7 +163,8 @@
 				id="capacity_note"
 				rows="2"
 				class="block w-full rounded-md border-blue-200 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-				placeholder="e.g. 'Stepping back for family leave.'">{values.capacity_note ?? person.capacity_note ?? ''}</textarea
+				placeholder="e.g. 'Stepping back for family leave.'"
+				>{values.capacity_note ?? person.capacity_note ?? ''}</textarea
 			>
 
 			<div class="mt-2 flex items-start gap-1.5 text-[10px] text-blue-600/80">

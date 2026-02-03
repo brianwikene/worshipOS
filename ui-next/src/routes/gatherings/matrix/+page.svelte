@@ -4,14 +4,17 @@
 	let { data } = $props();
 
 	// Type assertion for plan items that may have leader_name
-	type PlanItemWithLeader = (typeof data.gatherings)[number]['instances'][number]['planItems'][number] & {
+	type PlanItemWithLeader = (typeof data.gatherings)[number]['plans'][number]['items'][number] & {
 		leader_name?: string;
 	};
 
 	const formatDate = (dateStr: string) => {
-		return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
+		// Handle Date object or string
+		const d = new Date(dateStr);
+		return d.toLocaleDateString('en-US', {
 			month: 'short',
-			day: 'numeric'
+			day: 'numeric',
+			timeZone: 'UTC' // Fix timezone issue
 		});
 	};
 </script>
@@ -61,19 +64,16 @@
 						<div class="mb-1 flex items-start justify-between">
 							<div class="flex flex-col">
 								<span class="text-xs font-bold tracking-wider text-gray-400 uppercase">
-									{new Date(gathering.date + 'T00:00:00').toLocaleDateString('en-US', {
-										weekday: 'long'
+									{new Date(gathering.date).toLocaleDateString('en-US', {
+										weekday: 'long',
+										timeZone: 'UTC'
 									})}
 								</span>
 								<span class="text-2xl font-bold text-gray-900">
 									{formatDate(gathering.date)}
 								</span>
 							</div>
-							{#if gathering.status === 'planning'}
-								<span class="h-2 w-2 rounded-full bg-amber-400" title="Planning"></span>
-							{:else}
-								<span class="h-2 w-2 rounded-full bg-green-500" title="Ready"></span>
-							{/if}
+							<span class="h-2 w-2 rounded-full bg-green-500" title="Ready"></span>
 						</div>
 						<h3 class="truncate text-sm font-medium text-gray-600" title={gathering.title}>
 							{gathering.title}
@@ -81,8 +81,8 @@
 					</div>
 
 					<div class="flex-1 space-y-2 overflow-y-auto bg-white p-2">
-						{#if gathering.instances[0]}
-							{#each gathering.instances[0].planItems as rawItem}
+						{#if gathering.plans[0]}
+							{#each gathering.plans[0].items as rawItem}
 								{@const item = rawItem as PlanItemWithLeader}
 								{#if item.type === 'header'}
 									<div
@@ -140,11 +140,11 @@
 								{/if}
 							{/each}
 
-							{#if gathering.instances[0].planItems.length === 0}
+							{#if gathering.plans[0].items.length === 0}
 								<div class="py-10 text-center text-sm text-gray-300 italic">Plan is empty</div>
 							{/if}
 						{:else}
-							<div class="py-10 text-center text-sm text-red-300 italic">No service time found</div>
+							<div class="py-10 text-center text-sm text-red-300 italic">No plan found</div>
 						{/if}
 					</div>
 				</div>

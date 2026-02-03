@@ -8,6 +8,7 @@
 		Eye,
 		Heart,
 		House,
+		Info,
 		Lock,
 		Mail,
 		MapPin,
@@ -149,54 +150,110 @@
 				</div>
 
 				<div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-					<div class="mb-4 flex items-center justify-between">
+					<div class="mb-5 flex items-start justify-between">
 						<div>
 							<h3
 								class="flex items-center gap-2 text-xs font-bold tracking-wider text-stone-400 uppercase"
 							>
 								<House class="h-3 w-3" /> Household
+
+								<div class="group relative ml-1 inline-flex cursor-help items-center">
+									<Info size={12} class="text-stone-300 transition-colors hover:text-stone-500" />
+									<div
+										class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+									>
+										<div
+											class="rounded-lg bg-slate-800 p-3 text-left text-xs leading-relaxed font-normal text-stone-200 normal-case shadow-xl ring-1 ring-white/10"
+										>
+											<p>Households group people who share an address or contact details.</p>
+											<p class="mt-2 text-stone-400">
+												This does not imply guardianship or decision-making authority.
+											</p>
+										</div>
+										<div
+											class="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-slate-800"
+										></div>
+									</div>
+								</div>
 							</h3>
 						</div>
 
-						<div class="flex gap-2">
+						{#if p.family}
 							<button
-								onclick={() => (isManageAddressesOpen = true)}
-								class="rounded-md border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-600 shadow-sm transition-all hover:bg-white hover:text-slate-900"
+								onclick={() => (isEditHouseholdOpen = true)}
+								class="rounded-md border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-600 shadow-sm transition-all hover:border-stone-300 hover:bg-white hover:text-slate-900"
 							>
-								Addresses
+								Edit Family
 							</button>
-
-							{#if p.family}
-								<button
-									onclick={() => (isEditHouseholdOpen = true)}
-									class="rounded-md border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-600 shadow-sm transition-all hover:border-stone-300 hover:bg-white hover:text-slate-900"
-								>
-									Edit
-								</button>
-							{/if}
-						</div>
+						{/if}
 					</div>
 
 					{#if p.family}
-						<div class="mb-5 border-b border-stone-100 pb-4">
+						<div class="mb-5 border-b border-stone-100 pb-5">
 							<div class="text-sm font-bold text-slate-900">{p.family.name}</div>
 
-							{#if p.family.addresses && p.family.addresses.length > 0}
-								{@const primary =
-									p.family.addresses.find((a: any) => a.is_primary) || p.family.addresses[0]}
-								<div class="mt-2 flex items-start gap-2 text-xs text-stone-500">
-									<MapPin size={12} class="mt-0.5 shrink-0" />
-									<div>
-										{primary.street}<br />
-										{primary.city}, {primary.state}
-									</div>
+							<div class="mt-4 flex items-start gap-3">
+								<div
+									class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-50 text-stone-400"
+								>
+									<MapPin size={16} />
 								</div>
-							{:else if p.family.address_city}
-								<div class="mt-1 flex items-center gap-1 text-xs text-stone-500">
-									<MapPin size={10} />
-									{p.family.address_city}, {p.family.address_state}
+
+								<div class="flex-1 pt-0.5">
+									{#if p.family.addresses && p.family.addresses.length > 0}
+										{@const activeAddresses = p.family.addresses.filter(
+											(a: any) => !a.end_date || new Date(a.end_date) > new Date()
+										)}
+										{@const displayList =
+											activeAddresses.length > 0 ? activeAddresses : p.family.addresses}
+										{@const primary = displayList.find((a: any) => a.is_primary) || displayList[0]}
+
+										<div class="text-sm text-slate-700">
+											{primary.street}
+										</div>
+										<div class="text-xs text-stone-500">
+											{primary.city}, {primary.state}
+											{primary.zip}
+										</div>
+
+										{#if primary.type !== 'home' || primary.is_primary}
+											<div class="mt-1.5 flex gap-2">
+												{#if primary.is_primary}
+													<span
+														class="inline-flex items-center rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-sky-800 uppercase"
+													>
+														Primary
+													</span>
+												{/if}
+												{#if primary.type !== 'home'}
+													<span
+														class="inline-flex items-center rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-stone-600 uppercase"
+													>
+														{primary.type}
+													</span>
+												{/if}
+											</div>
+										{/if}
+									{:else if p.family.address_city}
+										<div class="text-sm text-stone-500">
+											{p.family.address_street || 'Street not listed'}
+										</div>
+										<div class="text-xs text-stone-400">
+											{p.family.address_city}, {p.family.address_state}
+											{p.family.address_zip}
+										</div>
+									{:else}
+										<div class="text-xs text-stone-400 italic">No address listed.</div>
+									{/if}
+
+									<button
+										onclick={() => (isManageAddressesOpen = true)}
+										class="mt-2 text-[10px] font-bold tracking-wide text-blue-600 uppercase hover:text-blue-800 hover:underline"
+									>
+										Manage Addresses
+									</button>
 								</div>
-							{/if}
+							</div>
 						</div>
 
 						<div class="space-y-2">

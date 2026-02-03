@@ -31,7 +31,8 @@
 
 	// 2. Grouping Function
 	function groupMemberships(list: TeamMembership[]) {
-		const groups: Record<string, { team: TeamMembership['team']; memberships: TeamMembership[] }> = {};
+		const groups: Record<string, { team: TeamMembership['team']; memberships: TeamMembership[] }> =
+			{};
 
 		for (const m of list) {
 			if (!m.team) continue;
@@ -158,12 +159,12 @@
 						</div>
 
 						{#if formError}
-						<div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3" role="alert">
-							<p class="text-sm font-medium text-red-800">{formError}</p>
-						</div>
-					{/if}
+							<div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3" role="alert">
+								<p class="text-sm font-medium text-red-800">{formError}</p>
+							</div>
+						{/if}
 
-					{#if isCreatingTeam}
+						{#if isCreatingTeam}
 							<form
 								method="POST"
 								action="?/createTeam"

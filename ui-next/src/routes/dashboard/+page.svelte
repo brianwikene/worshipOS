@@ -1,13 +1,13 @@
 <script lang="ts">
 	import {
-		Calendar,
-		Heart,
-		Users,
-		Shield,
-		Coffee,
-		Hash,
 		Activity,
-		HandHeart
+		Calendar,
+		Coffee,
+		HandHeart,
+		Hash,
+		Heart,
+		Shield,
+		Users
 	} from '@lucide/svelte';
 	import { fade } from 'svelte/transition';
 
@@ -55,10 +55,8 @@
 	</div>
 
 	<div class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-		
 		{#if viewMode === 'personal' && personal}
 			<div in:fade={{ duration: 200 }} class="grid grid-cols-1 gap-8 md:grid-cols-3">
-				
 				<div class="space-y-6 md:col-span-2">
 					<section>
 						<h2 class="mb-3 flex items-center gap-2 text-xs font-bold text-stone-400 uppercase">
@@ -134,7 +132,6 @@
 
 		{#if isLeader && viewMode === 'leader' && leader}
 			<div in:fade={{ duration: 200 }} class="grid grid-cols-1 gap-8 md:grid-cols-2">
-				
 				<section>
 					<h2 class="mb-3 flex items-center gap-2 text-xs font-bold text-stone-400 uppercase">
 						<Activity size={14} /> The Pulse

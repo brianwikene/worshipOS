@@ -5,16 +5,23 @@
 	let { data } = $props();
 	let showModal = $state(false);
 
-	// FIX: Use $derived() to silence the warning and make it reactive
-	// Added 'T00:00:00' to prevent timezone shifts (e.g. Feb 1 becoming Jan 31)
-	let dateStr = $derived(
-		new Date(data.gathering.date + 'T00:00:00').toLocaleDateString('en-US', {
+	function asDate(v: unknown): Date {
+		if (v instanceof Date) return v;
+		if (typeof v === 'string' || typeof v === 'number') return new Date(v);
+		return new Date(NaN);
+	}
+
+	let dateStr = $derived(() => {
+		const d = asDate(data.gathering.date);
+		if (Number.isNaN(d.getTime())) return 'Invalid Date';
+		return d.toLocaleDateString('en-US', {
 			weekday: 'long',
 			month: 'long',
 			day: 'numeric',
-			year: 'numeric'
-		})
-	);
+			year: 'numeric',
+			timeZone: 'UTC'
+		});
+	});
 </script>
 
 <div class="mx-auto max-w-4xl px-4 py-8">
@@ -45,35 +52,32 @@
 				class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-100"
 			>
 				<Plus size={18} />
-				Add Time
+				Add Plan
 			</button>
 		</div>
 	</div>
 
-	<h2 class="mb-4 text-sm font-bold tracking-wider text-gray-500 uppercase">Service Times</h2>
+	<h2 class="mb-4 text-sm font-bold tracking-wider text-gray-500 uppercase">Gathering Plans</h2>
 
 	<div class="grid gap-4">
-		{#each data.gathering.instances as instance}
+		{#each data.gathering.plans as plan}
+			{@const gatheringId = data.gathering.id}
 			<a
-				href="/gatherings/{data.gathering.id}/instances/{instance.id}/order"
+				href={`/gatherings/${gatheringId}/plans/${plan.id}/order`}
 				class="group flex cursor-pointer items-center justify-between rounded-xl border border-gray-200 bg-white p-5 transition-all hover:border-blue-400 hover:shadow-md"
 			>
 				<div class="flex items-center gap-5">
 					<div
 						class="flex h-16 w-16 flex-col items-center justify-center rounded-lg border border-gray-100 bg-gray-50 transition-colors group-hover:border-blue-100 group-hover:bg-blue-50"
 					>
-						<span class="text-lg font-bold text-gray-900">
-							{instance.start_time.slice(0, 5)}
-						</span>
-						<span class="text-[10px] font-medium text-gray-400 uppercase">Start</span>
+						<span class="text-sm font-bold text-gray-900">{plan.title?.[0] ?? 'P'}</span>
+						<span class="text-[10px] font-medium text-gray-400 uppercase">Plan</span>
 					</div>
 
 					<div>
-						<h3 class="text-lg font-bold text-gray-900 group-hover:text-blue-700">
-							{instance.name}
-						</h3>
+						<h3 class="text-lg font-bold text-gray-900 group-hover:text-blue-700">{plan.title}</h3>
 						<div class="mt-1 flex items-center gap-2">
-							{#if instance.planItems.length === 0}
+							{#if plan.items.length === 0}
 								<span
 									class="flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-2 py-0.5 text-xs text-amber-600"
 								>
@@ -83,7 +87,7 @@
 								<span
 									class="flex items-center gap-1 rounded-full border border-green-100 bg-green-50 px-2 py-0.5 text-xs text-green-600"
 								>
-									{instance.planItems.length} Items
+									{plan.items.length} Items
 								</span>
 							{/if}
 						</div>
@@ -105,21 +109,23 @@
 		<button
 			type="button"
 			class="absolute inset-0 h-full w-full cursor-default bg-gray-900/60 backdrop-blur-sm"
-			aria-label="Close add service time modal"
+			aria-label="Close add gathering plan modal"
 			onclick={() => (showModal = false)}
 		></button>
 
 		<div
 			role="dialog"
 			aria-modal="true"
-			aria-labelledby="add-service-time-title"
+			aria-labelledby="add-gathering-plan-title"
 			class="relative z-10 w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl"
 		>
-			<h3 id="add-service-time-title" class="mb-4 text-lg font-bold text-gray-900">Add Service Time</h3>
+			<h3 id="add-gathering-plan-title" class="mb-4 text-lg font-bold text-gray-900">
+				Add Gathering Plan
+			</h3>
 
 			<form
 				method="POST"
-				action="?/addInstance"
+				action="?/addPlan"
 				use:enhance={() => {
 					return async ({ update }) => {
 						await update();
@@ -134,18 +140,8 @@
 					<input
 						type="text"
 						name="name"
-						value="Sunday Service"
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-					/>
-				</div>
-
-				<div>
-					<label for="time" class="mb-1 block text-xs font-bold text-gray-500 uppercase">Time</label
-					>
-					<input
-						type="time"
-						name="time"
-						required
+						id="name"
+						value="Sunday Gathering"
 						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
 					/>
 				</div>
@@ -154,13 +150,16 @@
 					<button
 						type="button"
 						onclick={() => (showModal = false)}
-						class="text-sm font-medium text-gray-500">Cancel</button
+						class="text-sm font-medium text-gray-500"
 					>
+						Cancel
+					</button>
 					<button
 						type="submit"
 						class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
-						>Add Time</button
 					>
+						Add Plan
+					</button>
 				</div>
 			</form>
 		</div>

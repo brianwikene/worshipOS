@@ -327,10 +327,25 @@
 											</div>
 										</div>
 									</div>
-									<button
-										onclick={() => startEdit(addr)}
-										class="text-xs font-bold text-stone-500 hover:text-slate-900">Edit</button
-									>
+
+									<div class="flex flex-col items-end gap-2">
+										<button
+											onclick={() => startEdit(addr)}
+											class="text-xs font-bold text-stone-500 hover:text-slate-900"
+										>
+											Edit
+										</button>
+
+										<form method="POST" action="?/deleteAddress" use:enhance>
+											<input type="hidden" name="address_id" value={addr.id} />
+											<button
+												class="flex items-center gap-1 text-xs text-stone-400 hover:text-red-600"
+												title="Delete this address"
+											>
+												<Trash2 size={14} />
+											</button>
+										</form>
+									</div>
 								</div>
 							{/each}
 						</div>

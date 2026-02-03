@@ -1,26 +1,24 @@
 import { db } from '$lib/server/db';
-import * as schema from '$lib/server/db/schema'; // Import as namespace
+import { people } from '$lib/server/db/schema';
 import { error, fail } from '@sveltejs/kit';
+import { asc, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const { church } = locals;
 	if (!church) error(404, 'Church not found');
 
-	const peopleList = await db.query.people.findMany({
-		where: (people, { eq }) => eq(people.church_id, church.id),
+	// 1. Fetch the data
+	const connectionsList = await db.query.people.findMany({
+		where: eq(people.church_id, church.id),
 		with: {
-			family: true,
-			teamMemberships: {
-				with: {
-					team: true
-				}
-			}
+			family: true
 		},
-		orderBy: (people, { asc }) => [asc(people.last_name), asc(people.first_name)]
+		orderBy: [asc(people.last_name), asc(people.first_name)]
 	});
 
-	return { people: peopleList };
+	// 2. Return it as 'connections' (Matches your +page.svelte)
+	return { connections: connectionsList };
 };
 
 export const actions = {
@@ -52,7 +50,7 @@ export const actions = {
 		}
 
 		try {
-			await db.insert(schema.people).values({
+			await db.insert(people).values({
 				church_id: church.id,
 				first_name: firstName,
 				last_name: lastName,

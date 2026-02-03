@@ -1,28 +1,26 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	// CHANGED: Loader2 -> LoaderCircle
 	import Drawer from '$lib/components/ui/Drawer.svelte';
 	import { LoaderCircle, Mail, Plus, Search, User, Users } from '@lucide/svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form } = $props<{ data: PageData; form: ActionData }>();
 
-	let people = $derived(data.people);
-	let searchQuery = $state('');
+	// FIX: Cast as 'any[]' so TypeScript knows it has extra fields like 'teamMemberships'
+	let connections = $derived((data.connections || []) as any[]);
 
+	let searchQuery = $state('');
 	let isAddPersonOpen = $state(false);
 	let isSubmitting = $state(false);
+	let formError = $state<string | null>(null);
 
-	// CHANGED: Added type definition for 'p'
+	// FIX: Explicitly type 'p' as any here too, just to be safe
 	let filteredPeople = $derived(
-		people.filter((p: (typeof people)[number]) => {
+		connections.filter((p: any) => {
 			const fullName = `${p.first_name} ${p.last_name}`.toLowerCase();
 			return fullName.includes(searchQuery.toLowerCase());
 		})
 	);
-
-	// Track form error state
-	let formError = $state<string | null>(null);
 
 	$effect(() => {
 		if (form?.success) {
@@ -30,68 +28,69 @@
 			isSubmitting = false;
 			formError = null;
 		} else if (form?.error) {
-			formError = form.message || (form.errors ? 'Please fix the errors below.' : 'An error occurred.');
+			formError =
+				form.message || (form.errors ? 'Please fix the errors below.' : 'An error occurred.');
 			isSubmitting = false;
 		}
 	});
 </script>
 
-<div class="bg-meadow-50/30 min-h-screen pb-20">
+<div class="min-h-screen bg-slate-50 pb-20">
 	<div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
 		<div class="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
 			<div>
-				<h1 class="text-meadow-950 text-2xl font-bold">Connections</h1>
-				<p class="text-meadow-900/60 text-sm">People, households, teams, and serving.</p>
+				<h1 class="text-2xl font-bold text-slate-900">Connections</h1>
+				<p class="text-sm text-slate-500">People, households, teams, and serving.</p>
 			</div>
 
 			<button
 				onclick={() => (isAddPersonOpen = true)}
-				class="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-800"
+				class="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800"
 			>
 				<Plus size={16} />
 				Add Person
 			</button>
 		</div>
 
-		{#if people.length > 0}
+		{#if connections.length > 0}
 			<div class="relative mb-6">
 				<label for="person-search" class="sr-only">Search people by name</label>
 				<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-					<Search size={18} class="text-meadow-400" />
+					<Search size={18} class="text-slate-400" />
 				</div>
 				<input
 					id="person-search"
 					type="text"
 					bind:value={searchQuery}
 					placeholder="Search by name..."
-					class="border-meadow-200 placeholder-meadow-400/70 focus:border-meadow-500 focus:ring-meadow-500/20 block w-full rounded-lg border bg-white py-2 pr-3 pl-10 leading-5 shadow-sm transition duration-150 ease-in-out focus:ring-2 focus:outline-none sm:text-sm"
+					class="block w-full rounded-lg border border-slate-300 bg-white py-2 pr-3 pl-10 leading-5 placeholder-slate-400 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:outline-none sm:text-sm"
 				/>
 			</div>
 		{/if}
 
-		{#if people.length === 0}
+		{#if connections.length === 0}
 			<div
-				class="border-meadow-200 bg-meadow-50/50 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-24 text-center"
+				class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 py-24 text-center"
 			>
-				<div class="ring-meadow-100 mb-4 rounded-full bg-white p-3 shadow-sm ring-1">
-					<User size={24} class="text-meadow-400" />
+				<div class="mb-4 rounded-full bg-white p-3 shadow-sm ring-1 ring-slate-200">
+					<User size={24} class="text-slate-400" />
 				</div>
-				<h3 class="text-meadow-900 text-lg font-medium">Everyone starts somewhere.</h3>
-				<p class="text-meadow-800/70 mt-1 max-w-sm text-sm">
+				<h3 class="text-lg font-medium text-slate-900">Everyone starts somewhere.</h3>
+				<p class="mt-1 max-w-sm text-sm text-slate-500">
 					This is where people become known over time. You can add someone with just a name.
 				</p>
 				<button
 					onclick={() => (isAddPersonOpen = true)}
-					class="text-meadow-700 hover:text-meadow-900 mt-6 text-sm font-medium hover:underline"
+					class="mt-6 text-sm font-medium text-emerald-600 hover:text-emerald-800 hover:underline"
 				>
 					Add your first person &rarr;
 				</button>
 			</div>
 		{:else if filteredPeople.length === 0}
 			<div class="py-12 text-center">
-				<p class="text-meadow-800/60 text-sm">No one found matching "{searchQuery}"</p>
+				<p class="text-sm text-slate-500">No one found matching "{searchQuery}"</p>
 				<button
-					class="text-meadow-700 hover:text-meadow-900 mt-2 text-xs hover:underline"
+					class="mt-2 text-xs text-emerald-600 hover:text-emerald-800 hover:underline"
 					onclick={() => (searchQuery = '')}
 				>
 					Clear search
@@ -102,26 +101,25 @@
 				{#each filteredPeople as person}
 					<a
 						href="/connections/{person.id}"
-						class="group border-meadow-100 hover:border-meadow-300 hover:shadow-meadow-900/5 rounded-xl border bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md"
+						class="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:border-emerald-300 hover:shadow-md"
 					>
 						<div class="flex items-start justify-between">
 							<div class="flex items-center gap-4">
 								<div
-									class="bg-meadow-50 text-meadow-700 group-hover:bg-meadow-100 group-hover:text-meadow-900 flex h-12 w-12 items-center justify-center
-									rounded-full text-lg font-bold transition-colors"
+									class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-lg font-bold text-slate-600 transition-colors group-hover:bg-emerald-100 group-hover:text-emerald-800"
 								>
 									{person.first_name[0]}{person.last_name[0]}
 								</div>
 								<div>
 									<h3
-										class="group-hover:text-meadow-900 text-base font-bold text-gray-900 transition-colors"
+										class="text-base font-bold text-slate-900 transition-colors group-hover:text-emerald-900"
 									>
 										{person.first_name}
 										{person.last_name}
 									</h3>
 									{#if person.family}
 										<p
-											class="group-hover:text-meadow-700/80 mt-0.5 flex items-center gap-1 text-xs text-gray-500"
+											class="mt-0.5 flex items-center gap-1 text-xs text-slate-500 group-hover:text-emerald-700/80"
 										>
 											<Users size={10} />
 											{person.family.name}
@@ -131,27 +129,28 @@
 							</div>
 						</div>
 
-						<div class="border-meadow-50 mt-4 flex flex-col gap-2 border-t pt-4">
+						<div class="mt-4 flex flex-col gap-2 border-t border-slate-50 pt-4">
 							{#if person.email}
 								<div
-									class="flex items-center gap-2 truncate text-xs text-gray-500 group-hover:text-gray-600"
+									class="flex items-center gap-2 truncate text-xs text-slate-500 group-hover:text-slate-600"
 								>
-									<Mail size={12} class="group-hover:text-meadow-500 shrink-0 text-gray-400" />
+									<Mail size={12} class="shrink-0 text-slate-400 group-hover:text-emerald-500" />
 									{person.email}
 								</div>
 							{/if}
-							{#if person.teamMemberships.length > 0}
+
+							{#if person.teamMemberships && person.teamMemberships.length > 0}
 								<div class="mt-1 flex flex-wrap gap-1">
 									{#each person.teamMemberships.slice(0, 2) as m}
 										<span
-											class="bg-meadow-50 text-meadow-700 border-meadow-100 inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-medium"
+											class="inline-flex items-center rounded border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700"
 										>
 											{m.team.name}
 										</span>
 									{/each}
 									{#if person.teamMemberships.length > 2}
 										<span
-											class="inline-flex items-center rounded border border-gray-100 bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-600"
+											class="inline-flex items-center rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-600"
 										>
 											+{person.teamMemberships.length - 2}
 										</span>
@@ -186,68 +185,58 @@
 			</div>
 		{/if}
 
-		<div class="bg-meadow-50 border-meadow-100 rounded-md border p-4">
-			<p class="text-meadow-800 text-sm">
+		<div class="rounded-md border border-slate-200 bg-slate-50 p-4">
+			<p class="text-sm text-slate-600">
 				You can add someone with just a name. We don't need full data to start caring for them.
 			</p>
 		</div>
 
 		<div class="space-y-4">
 			<div>
-				<label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+				<label for="first_name" class="block text-sm font-medium text-slate-700">First Name</label>
 				<input
 					type="text"
 					name="first_name"
 					id="first_name"
-					value={form?.values?.first_name ?? ''}
 					required
-					class="focus:border-meadow-500 focus:ring-meadow-500 mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm {form?.errors?.first_name ? 'border-red-300 ring-red-500' : ''}"
+					class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
 				/>
-				{#if form?.errors?.first_name}
-					<p class="mt-1 text-xs text-red-600">{form.errors.first_name}</p>
-				{/if}
 			</div>
 
 			<div>
-				<label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+				<label for="last_name" class="block text-sm font-medium text-slate-700">Last Name</label>
 				<input
 					type="text"
 					name="last_name"
 					id="last_name"
-					value={form?.values?.last_name ?? ''}
 					required
-					class="focus:border-meadow-500 focus:ring-meadow-500 mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm {form?.errors?.last_name ? 'border-red-300 ring-red-500' : ''}"
+					class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
 				/>
-				{#if form?.errors?.last_name}
-					<p class="mt-1 text-xs text-red-600">{form.errors.last_name}</p>
-				{/if}
 			</div>
 
-			<div class="border-t border-gray-100 pt-4">
-				<h4 class="mb-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+			<div class="border-t border-slate-100 pt-4">
+				<h4 class="mb-3 text-xs font-semibold tracking-wider text-slate-500 uppercase">
 					Optional Contact Info
 				</h4>
 
 				<div class="space-y-4">
 					<div>
-						<label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+						<label for="email" class="block text-sm font-medium text-slate-700">Email</label>
 						<input
 							type="email"
 							name="email"
 							id="email"
-							value={form?.values?.email ?? ''}
-							class="focus:border-meadow-500 focus:ring-meadow-500 mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+							class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
 						/>
 					</div>
 
 					<div>
-						<label for="phone" class="block text-sm font-medium text-gray-700">Phone</label>
+						<label for="phone" class="block text-sm font-medium text-slate-700">Phone</label>
 						<input
 							type="tel"
 							name="phone"
 							id="phone"
-							value={form?.values?.phone ?? ''}
-							class="focus:border-meadow-500 focus:ring-meadow-500 mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
+							class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
 						/>
 					</div>
 				</div>
@@ -258,7 +247,7 @@
 			<button
 				type="submit"
 				disabled={isSubmitting}
-				class="flex w-full justify-center rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800 disabled:opacity-50"
+				class="flex w-full justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
 			>
 				{#if isSubmitting}
 					<LoaderCircle class="mr-2 animate-spin" size={16} />

@@ -1,17 +1,38 @@
+// src/routes/gatherings/[gathering_id]/+page.server.ts
+
 import { db } from '$lib/server/db';
-import { gatherings, instances } from '$lib/server/db/schema';
-import { error, fail, redirect } from '@sveltejs/kit'; // <--- Added redirect
-import { asc, eq } from 'drizzle-orm';
+import { gatherings, plans } from '$lib/server/db/schema';
+import { error, redirect } from '@sveltejs/kit';
+import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, url }) => {
+function coerceToDate(value: unknown): Date {
+	if (value instanceof Date) return value;
+	if (typeof value === 'string' || typeof value === 'number') return new Date(value);
+	return new Date(NaN);
+}
+
+function defaultStartsAtFromGatheringDate(gatheringDate: unknown): Date {
+	const d = coerceToDate(gatheringDate);
+	if (Number.isNaN(d.getTime())) return new Date();
+
+	// Default: 10:00 UTC on the gathering day
+	const yyyy = d.getUTCFullYear();
+	const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+	const dd = String(d.getUTCDate()).padStart(2, '0');
+	return new Date(`${yyyy}-${mm}-${dd}T10:00:00Z`);
+}
+
+export const load: PageServerLoad = async ({ params, url, locals }) => {
+	const churchId = locals.church?.id;
+	if (!churchId) throw error(401, 'Unauthorized');
+
 	const gathering = await db.query.gatherings.findFirst({
-		where: eq(gatherings.id, params.gathering_id),
+		where: and(eq(gatherings.id, params.gathering_id), eq(gatherings.church_id, churchId)),
 		with: {
-			instances: {
-				orderBy: [asc(instances.start_time)],
+			plans: {
 				with: {
-					planItems: { columns: { id: true } }
+					items: { columns: { id: true } }
 				}
 			},
 			campus: true
@@ -20,34 +41,37 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 	if (!gathering) throw error(404, 'Gathering not found');
 
-	// --- SMART REDIRECT LOGIC ---
-	// If there is only ONE service time, go straight to the plan.
-	// We check specifically for "?manage=true" so you can still force your way
-	// back to this dashboard if you need to add a second service time.
 	const forceManage = url.searchParams.get('manage') === 'true';
+	const onlyPlan = gathering.plans[0];
 
-	if (gathering.instances.length === 1 && !forceManage) {
-		throw redirect(
-			303,
-			`/gatherings/${params.gathering_id}/instances/${gathering.instances[0].id}/order`
-		);
+	if (gathering.plans.length === 1 && onlyPlan?.id && !forceManage) {
+		throw redirect(303, `/gatherings/${params.gathering_id}/plans/${onlyPlan.id}/order`);
 	}
 
 	return { gathering };
 };
 
 export const actions: Actions = {
-	addInstance: async ({ request, params }) => {
-		const data = await request.formData();
-		const timeStr = data.get('time') as string;
-		const name = (data.get('name') as string) || 'Service';
+	addPlan: async ({ request, params, locals }) => {
+		const churchId = locals.church?.id;
+		if (!churchId) throw error(401, 'Unauthorized');
 
-		if (!timeStr) return fail(400, { missing: true });
+		const form = await request.formData();
+		const title = (form.get('name') as string) || 'Sunday Gathering';
 
-		await db.insert(instances).values({
+		const gathering = await db.query.gatherings.findFirst({
+			where: and(eq(gatherings.id, params.gathering_id), eq(gatherings.church_id, churchId))
+		});
+
+		if (!gathering) throw error(404, 'Gathering not found');
+		if (!gathering.campus_id) throw error(400, 'Gathering campus is required');
+
+		await db.insert(plans).values({
+			church_id: churchId,
 			gathering_id: params.gathering_id,
-			name: name,
-			start_time: timeStr + ':00'
+			title,
+			campus_id: gathering.campus_id,
+			starts_at: defaultStartsAtFromGatheringDate(gathering.date)
 		});
 
 		return { success: true };

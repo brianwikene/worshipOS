@@ -26,7 +26,11 @@
 						<Lock size={18} />
 						<h2 class="text-lg font-bold">Add Care Note</h2>
 					</div>
-					<button type="button" onclick={() => (open = false)} class="text-amber-800/50 hover:text-amber-900">
+					<button
+						type="button"
+						onclick={() => (open = false)}
+						class="text-amber-800/50 hover:text-amber-900"
+					>
 						<X size={20} />
 					</button>
 				</div>

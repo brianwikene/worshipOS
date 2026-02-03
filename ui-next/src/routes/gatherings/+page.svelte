@@ -1,10 +1,28 @@
+<!--  src/routes/gatherings/+page.svelte -->
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Calendar, Layers, MapPin, Plus } from '@lucide/svelte';
 
 	let { data } = $props();
 	let showModal = $state(false);
-	let isSeriesMode = $state(false); // Toggle for "Series" mode
+	let isSeriesMode = $state(false);
+
+	function asDate(v: unknown): Date {
+		if (v instanceof Date) return v;
+		if (typeof v === 'string' || typeof v === 'number') return new Date(v);
+		return new Date(NaN);
+	}
+
+	function formatShortDate(v: unknown): string {
+		const d = asDate(v);
+		if (Number.isNaN(d.getTime())) return 'Invalid date';
+		return d.toLocaleDateString('en-US', {
+			weekday: 'short',
+			month: 'short',
+			day: 'numeric',
+			timeZone: 'UTC'
+		});
+	}
 </script>
 
 <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -39,7 +57,7 @@
 	<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 		{#each data.gatherings as gathering}
 			<a
-				href="/gatherings/{gathering.id}"
+				href={`/gatherings/${gathering.id}`}
 				class="group block overflow-hidden rounded-xl border border-gray-200 bg-white transition-all hover:border-blue-300 hover:shadow-md"
 			>
 				<div
@@ -47,23 +65,13 @@
 				>
 					<div class="flex items-center gap-2 font-medium text-gray-600">
 						<Calendar size={16} />
-						{new Date(gathering.date).toLocaleDateString('en-US', {
-							weekday: 'short',
-							month: 'short',
-							day: 'numeric'
-						})}
+						{formatShortDate(gathering.date)}
 					</div>
-					{#if gathering.status === 'planning'}
-						<span
-							class="rounded-full border border-amber-100 bg-amber-50 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-600 uppercase"
-							>Planning</span
-						>
-					{:else}
-						<span
-							class="rounded-full border border-green-100 bg-green-50 px-2 py-0.5 text-[10px] font-bold tracking-wider text-green-600 uppercase"
-							>Ready</span
-						>
-					{/if}
+
+					<span
+						class="rounded-full border border-green-100 bg-green-50 px-2 py-0.5 text-[10px] font-bold tracking-wider text-green-600 uppercase"
+						>Ready</span
+					>
 				</div>
 
 				<div class="p-5">
@@ -74,19 +82,16 @@
 					</h3>
 
 					<div class="mt-4 space-y-2">
-						{#if gathering.instances.length > 0}
-							{#each gathering.instances as instance}
+						{#if gathering.plans.length > 0}
+							{#each gathering.plans as plan}
 								<div
 									class="flex items-center justify-between rounded border border-gray-100 bg-gray-50 p-2 text-sm transition group-hover:border-blue-100 group-hover:bg-blue-50/50"
 								>
-									<span class="font-mono font-medium text-gray-600"
-										>{instance.start_time.slice(0, 5)}</span
-									>
-									<span class="text-gray-500">{instance.name}</span>
+									<span class="text-gray-500">{plan.title}</span>
 								</div>
 							{/each}
 						{:else}
-							<p class="text-sm text-gray-400 italic">No times scheduled yet.</p>
+							<p class="text-sm text-gray-400 italic">No plans scheduled yet.</p>
 						{/if}
 					</div>
 				</div>
@@ -97,7 +102,7 @@
 	{#if data.gatherings.length === 0}
 		<div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 py-20 text-center">
 			<h3 class="text-lg font-medium text-gray-900">No upcoming gatherings</h3>
-			<p class="mt-1 text-gray-500">Click "New Gathering" to schedule your first service.</p>
+			<p class="mt-1 text-gray-500">Click "New Gathering" to schedule your first gathering.</p>
 		</div>
 	{/if}
 </div>
@@ -118,22 +123,29 @@
 			class="relative z-10 w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl"
 		>
 			<div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-6 py-4">
-				<h3 id="schedule-gathering-title" class="text-lg font-bold text-gray-900">Schedule Gathering</h3>
-				<button type="button" onclick={() => (showModal = false)} class="text-gray-400 hover:text-gray-600" aria-label="Close"
-					>✕</button
+				<h3 id="schedule-gathering-title" class="text-lg font-bold text-gray-900">
+					Schedule Gathering
+				</h3>
+				<button
+					type="button"
+					onclick={() => (showModal = false)}
+					class="text-gray-400 hover:text-gray-600"
+					aria-label="Close"
 				>
+					✕
+				</button>
 			</div>
 
 			<form
 				method="POST"
 				action="?/createGathering"
 				use:enhance={() => {
-					return async ({ update }) => {
+					return async ({ result, update }) => {
 						await update();
-						showModal = false;
+						if (result.type === 'success') showModal = false;
+						else console.error('Form submission failed:', result);
 					};
 				}}
-				class="space-y-5 p-6"
 			>
 				<input type="hidden" name="campus_id" value={data.campus?.id} />
 
@@ -155,22 +167,22 @@
 
 				<div class="grid grid-cols-2 gap-4">
 					<div class="col-span-2 space-y-1">
-						<label for="title" class="text-xs font-bold text-gray-500 uppercase"
-							>Title {isSeriesMode ? '(Series Name)' : ''}</label
-						>
+						<label for="title" class="text-xs font-bold text-gray-500 uppercase">
+							Title {isSeriesMode ? '(Series Name)' : ''}
+						</label>
 						<input
 							type="text"
 							name="title"
 							required
-							placeholder={isSeriesMode ? 'e.g. Book of Philippians' : 'e.g. Sunday Service'}
+							placeholder={isSeriesMode ? 'e.g. Book of Philippians' : 'e.g. Sunday Gathering'}
 							class="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
 						/>
 					</div>
 
 					<div class="space-y-1">
-						<label for="start_date" class="text-xs font-bold text-gray-500 uppercase"
-							>Date {isSeriesMode ? '(Start)' : ''}</label
-						>
+						<label for="start_date" class="text-xs font-bold text-gray-500 uppercase">
+							Date {isSeriesMode ? '(Start)' : ''}
+						</label>
 						<input
 							type="date"
 							name="start_date"
@@ -180,7 +192,9 @@
 					</div>
 
 					<div class="space-y-1">
-						<label for="time" class="text-xs font-bold text-gray-500 uppercase">Service Time</label>
+						<label for="time" class="text-xs font-bold text-gray-500 uppercase"
+							>Gathering Time</label
+						>
 						<input
 							type="time"
 							name="time"
@@ -215,8 +229,9 @@
 								<span
 									id="week_disp"
 									class="min-w-[4rem] font-mono font-bold whitespace-nowrap text-blue-600"
-									>4 Weeks</span
 								>
+									4 Weeks
+								</span>
 							</div>
 							<p class="text-xs text-gray-400">
 								This will create a gathering for every 7 days starting from the date above.
@@ -229,8 +244,10 @@
 					<button
 						type="button"
 						onclick={() => (showModal = false)}
-						class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">Cancel</button
+						class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
 					>
+						Cancel
+					</button>
 					<button
 						type="submit"
 						class="rounded-lg bg-gray-900 px-6 py-2 text-sm font-bold text-white shadow-sm hover:bg-gray-800"

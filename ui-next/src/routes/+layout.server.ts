@@ -3,28 +3,45 @@ import { campuses } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async () => {
-	// 1. Fetch the first church in the DB
-	// TEMP: dev default tenant selection (first church)
-	// TODO: resolve tenant from subdomain/session
-	const churchData = await db.query.churches.findFirst();
-
-	// If no church exists yet (e.g. before seeding), return empty
-	if (!churchData) {
-		return { church: undefined, campus: null };
-	}
-
-	// 2. Fetch the campuses for this church
-	// TEMP: default to first campus
-	// TODO: select campus via cookie/session
-	const campusList = await db.query.campuses.findMany({
-		where: eq(campuses.church_id, churchData.id)
+export const load: LayoutServerLoad = async ({ locals, cookies }) => {
+	// 1. Fetch ALL churches (For the Dev Toolbar Switcher)
+	const allChurches = await db.query.churches.findMany({
+		columns: {
+			id: true,
+			name: true,
+			subdomain: true
+		},
+		orderBy: (churches, { asc }) => [asc(churches.name)]
 	});
 
-	// 3. Return the data to the UI
+	// 2. Resolve Current Context (From hooks.server.ts)
+	const currentChurch = locals.church;
+
+	let currentCampuses: (typeof campuses.$inferSelect)[] = [];
+	let activeCampus = null;
+
+	// 3. If we have a valid church, fetch its campuses
+	if (currentChurch) {
+		currentCampuses = await db.query.campuses.findMany({
+			where: eq(campuses.church_id, currentChurch.id)
+		});
+
+		// 4. Resolve Active Campus (Cookie -> Default)
+		const campusIdCookie = cookies.get('campus_id');
+		if (campusIdCookie) {
+			activeCampus = currentCampuses.find((c) => c.id === campusIdCookie) || null;
+		}
+
+		// Fallback to first if cookie is invalid or missing
+		if (!activeCampus && currentCampuses.length > 0) {
+			activeCampus = currentCampuses[0];
+		}
+	}
+
 	return {
-		church: churchData,
-		campus: campusList[0] || null, // Default to first campus
-		allCampuses: campusList
+		church: currentChurch, // The active church (based on subdomain)
+		campus: activeCampus, // The active campus
+		allChurches, // List for the switcher
+		allCampuses: currentCampuses // List for campus dropdowns
 	};
 };
