@@ -1,51 +1,120 @@
+import { createServerClient } from '@supabase/ssr';
+import { type Handle } from '@sveltejs/kit';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 import { db } from '$lib/server/db';
-import { churches } from '$lib/server/db/schema';
-import type { Handle } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { churches, people } from '$lib/server/db/schema';
+import { and, eq } from 'drizzle-orm';
+import type { Role } from '$lib/auth/roles';
 
 export const handle: Handle = async ({ event, resolve }) => {
+	/**
+	 * ------------------------------------------------------------------
+	 * 1. Initialize Supabase (Authentication Layer)
+	 * ------------------------------------------------------------------
+	 */
+	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+		cookies: {
+			getAll: () => event.cookies.getAll(),
+			setAll: (cookiesToSet) => {
+				cookiesToSet.forEach(({ name, value, options }) => {
+					event.cookies.set(name, value, { ...options, path: '/' });
+				});
+			}
+		}
+	});
+
+	/**
+	 * 2. Safe Session Retrieval
+	 * This creates a helper to safely get the user/session during load functions.
+	 */
+	event.locals.safeGetSession = async () => {
+		const {
+			data: { session }
+		} = await event.locals.supabase.auth.getSession();
+
+		if (!session) {
+			return { session: null, user: null };
+		}
+
+		const {
+			data: { user },
+			error
+		} = await event.locals.supabase.auth.getUser();
+
+		if (error) {
+			return { session: null, user: null };
+		}
+
+		return { session, user };
+	};
+
+	/**
+	 * ------------------------------------------------------------------
+	 * 3. Tenant Resolution (Existing Subdomain Logic)
+	 * ------------------------------------------------------------------
+	 */
 	const host = event.request.headers.get('host') || '';
-	let church;
+	let church = null;
 	let subdomain = '';
 
-	// 1. Parse Subdomain (Handles both Localhost and Production)
+	// Parse Subdomain
 	if (host.includes('localhost')) {
-		// Scenario A: Localhost
-		// "mountain.localhost:5174" -> parts = ["mountain", "localhost:5174"]
-		// "localhost:5174"          -> parts = ["localhost:5174"]
 		const parts = host.split('.');
-		if (parts.length > 1) {
-			subdomain = parts[0];
-		}
+		if (parts.length > 1) subdomain = parts[0];
 	} else {
-		// Scenario B: Production (e.g. Vercel / Railway)
-		// "mountain.worshipos.app" -> parts = ["mountain", "worshipos", "app"]
 		const parts = host.split('.');
-		if (parts.length > 2) {
-			subdomain = parts[0];
-		}
+		if (parts.length > 2) subdomain = parts[0];
 	}
 
-	// 2. Try to find Church by Subdomain
+	// Lookup Church by Subdomain
 	if (subdomain) {
 		church = await db.query.churches.findFirst({
 			where: eq(churches.subdomain, subdomain)
 		});
 	}
 
-	// 3. Dev Fallback: If no subdomain is present, grab the first one found.
-	// This prevents the app from breaking if you just visit "http://localhost:5174"
+	// Dev Fallback
 	if (!church && host.includes('localhost') && !subdomain) {
 		church = await db.query.churches.findFirst();
 	}
 
-	// 4. Attach to Locals
+	// Attach to Locals
+	event.locals.church = church || null;
+
+	/**
+	 * ------------------------------------------------------------------
+	 * 4. Person Resolution (Link Supabase User to Person record)
+	 * ------------------------------------------------------------------
+	 */
+	event.locals.person = null;
+
 	if (church) {
-		event.locals.church = church;
-	} else {
-		// Optional: Redirect to a 404 or "Create Church" page if subdomain is invalid
-		// console.log('No church found for host:', host);
+		const { user } = await event.locals.safeGetSession();
+
+		if (user) {
+			// Find the person record linked to this Supabase user
+			const person = await db.query.people.findFirst({
+				where: and(eq(people.church_id, church.id), eq(people.user_id, user.id))
+			});
+
+			if (person) {
+				event.locals.person = {
+					...person,
+					role: (person.role as Role) || 'member'
+				};
+			}
+		}
 	}
 
-	return resolve(event);
+	/**
+	 * ------------------------------------------------------------------
+	 * 5. Resolve Request
+	 * ------------------------------------------------------------------
+	 */
+	return resolve(event, {
+		filterSerializedResponseHeaders(name) {
+			// Required for Supabase to handle large list ranges
+			return name === 'content-range';
+		}
+	});
 };

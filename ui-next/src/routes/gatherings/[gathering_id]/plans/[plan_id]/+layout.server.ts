@@ -6,29 +6,19 @@ import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ params, locals }) => {
 	const { church } = locals;
-	if (!church) error(404, 'Church not found');
+	if (!church) throw error(404, 'Church not found');
 
-	// 1. Capture the correct parameter based on your folder name [plan_id]
-	const { gathering_id, plan_id } = params;
+	const { plan_id } = params;
 
-	// 2. Strict Check: If SvelteKit didn't parse them, stop here.
-	if (!gathering_id || !plan_id) {
+	if (!plan_id) {
 		throw error(400, 'Missing route parameters');
 	}
 
-	// 3. Fetch the Plan
+	// Fetch the Plan with campus info
 	const planData = await db.query.plans.findFirst({
-		where: and(
-			eq(plans.id, plan_id),
-			eq(plans.church_id, church.id),
-			eq(plans.gathering_id, gathering_id)
-		),
+		where: and(eq(plans.id, plan_id), eq(plans.church_id, church.id)),
 		with: {
-			gathering: {
-				with: {
-					campus: true
-				}
-			}
+			campus: true
 		}
 	});
 
@@ -37,7 +27,6 @@ export const load: LayoutServerLoad = async ({ params, locals }) => {
 	}
 
 	return {
-		plan: planData,
-		gathering: planData.gathering
+		plan: planData
 	};
 };

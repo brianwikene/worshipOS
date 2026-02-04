@@ -1,3 +1,4 @@
+<!-- src/routes/connections/[id]/EditProfileDrawer.svelte -->
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Drawer from '$lib/components/ui/Drawer.svelte';
@@ -9,27 +10,36 @@
 	let {
 		open = $bindable(false),
 		person,
+		campuses = [], // <--- ADDED: Default to empty array
 		form
 	} = $props<{
 		open: boolean;
 		person: Person;
+		campuses?: { id: string; name: string }[]; // <--- ADDED: Type definition
 		form: ActionData;
 	}>();
+
 	let isSubmitting = $state(false);
 	let formError = $state<string | null>(null);
 
-	// Derived errors and values for cleaner template
-	let errors = $derived(form?.errors || {});
-	let values = $derived(form?.values || {});
+	// FIX: Cast 'form' to 'any' or 'Record' to silence the TS errors
+	// This is safe here because we are just checking if the props exist
+	let safeForm = $derived(form as Record<string, any> | null);
+
+	let errors = $derived(safeForm?.errors || {});
+	let values = $derived(safeForm?.values || {});
 
 	$effect(() => {
-		if (form?.success) {
+		// Check success on the safe version
+		if (safeForm?.success) {
 			open = false;
 			isSubmitting = false;
 			formError = null;
-		} else if (form?.error) {
+		} else if (safeForm?.error) {
+			// Use the safe version to check for message or errors
 			formError =
-				form.message || (form.errors ? 'Please fix the errors below.' : 'An error occurred.');
+				safeForm.message ||
+				(safeForm.errors ? 'Please fix the errors below.' : 'An error occurred.');
 			isSubmitting = false;
 		}
 	});
@@ -127,6 +137,27 @@
 					value={values.phone ?? person.phone ?? ''}
 					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
 				/>
+			</div>
+			<div class="col-span-2">
+				<label for="preferred_campus_id" class="block text-sm font-bold text-slate-700">
+					Home Campus
+				</label>
+				<div class="mt-1">
+					<select
+						name="preferred_campus_id"
+						id="preferred_campus_id"
+						value={values.preferred_campus_id ?? person.preferred_campus_id ?? ''}
+						class="block w-full rounded-md border-slate-300 shadow-sm focus:border-slate-500 focus:ring-slate-500 sm:text-sm"
+					>
+						<option value="">-- No Preference --</option>
+						{#each campuses as campus}
+							<option value={campus.id}>{campus.name}</option>
+						{/each}
+					</select>
+				</div>
+				<p class="mt-1 text-xs text-slate-500">
+					Used for filtering rosters and campus-specific check-ins.
+				</p>
 			</div>
 		</div>
 

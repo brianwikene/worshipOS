@@ -1,38 +1,55 @@
 <script lang="ts">
-	import { page } from '$app/state'; // <--- NEW Svelte 5 Import
 	import { Building2, ChevronUp, Copy, Database, User, X } from '@lucide/svelte';
-
 	import { slide } from 'svelte/transition';
+
+	interface Tenant {
+		name: string;
+		slug: string;
+	}
+
+	// FIX: Made 'data' optional so <DevToolbar /> works without props
+	interface Props {
+		data?: {
+			church?: { id: string; name: string; subdomain?: string | null };
+			person?: { id: string; role: string; first_name?: string | null; last_name?: string | null };
+		};
+		tenants?: Tenant[];
+	}
+
+	// FIX: Added default empty object for data
+	let { data = {}, tenants = [] }: Props = $props();
 
 	// State
 	let isOpen = $state(false);
 	let copiedField = $state<string | null>(null);
 
-	// Derived Data (Note: No '$' prefix needed anymore)
-	let church = $derived(page.data.church);
-	let person = $derived(page.data.person);
+	// Derive safely from the prop
+	let church = $derived(data?.church);
+	let person = $derived(data?.person);
 
-	// MOCK DATA (Update this with real data fetch if needed later)
-	const availableTenants = [
-		{ name: 'WorshipNext Church', slug: 'worshipnext' },
-		{ name: 'Mountain Vineyard', slug: 'mountain' },
-		{ name: 'North Creek', slug: 'northcreek' }
-	];
-
-	function copyToClipboard(text: string | undefined, label: string) {
+	async function copyToClipboard(text: string | undefined, label: string) {
 		if (!text) return;
-		navigator.clipboard.writeText(text);
-		copiedField = label;
-		setTimeout(() => (copiedField = null), 2000);
+		try {
+			await navigator.clipboard.writeText(text);
+			copiedField = label;
+			setTimeout(() => (copiedField = null), 2000);
+		} catch {
+			// Clipboard access denied - fail silently
+		}
 	}
 
 	function switchTenant(slug: string) {
-		// Forces a browser redirect to the subdomain
 		const protocol = window.location.protocol;
-		const host = window.location.host.split('.').slice(-1)[0];
-		const baseDomain = host.includes('localhost') ? 'localhost:5174' : 'worshipos.dev';
+		const port = window.location.port;
+		const hostname = window.location.hostname;
 
-		window.location.href = `${protocol}//${slug}.${baseDomain}`;
+		// Handle localhost vs production domains
+		if (hostname.includes('localhost') || hostname === '127.0.0.1') {
+			window.location.href = `${protocol}//${slug}.localhost:${port}`;
+		} else {
+			const baseDomain = 'worshipos.dev';
+			window.location.href = `${protocol}//${slug}.${baseDomain}`;
+		}
 	}
 </script>
 
@@ -40,6 +57,7 @@
 	{#if !isOpen}
 		<button
 			onclick={() => (isOpen = true)}
+			aria-label="Open dev toolbar"
 			class="pointer-events-auto mb-2 flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/90 px-4 py-1.5 text-xs font-bold text-stone-400 shadow-xl backdrop-blur-md transition-all hover:scale-105 hover:bg-slate-800 hover:text-white"
 		>
 			<span class="rounded bg-pink-600 px-1 text-[9px] text-white">DEV</span>
@@ -65,9 +83,10 @@
 							<div class="group relative">
 								<button
 									onclick={() => copyToClipboard(church?.id, 'church_id')}
+									aria-label="Copy church ID to clipboard"
 									class="flex items-center gap-2 font-mono text-xs text-blue-400 hover:text-white"
 								>
-									<span class="select-all">{church?.id || 'Undefined'}</span>
+									<span>{church?.id || 'Undefined'}</span>
 									{#if copiedField === 'church_id'}
 										<span class="text-[10px] text-emerald-500">Copied!</span>
 									{:else}
@@ -89,9 +108,10 @@
 							<div class="group relative">
 								<button
 									onclick={() => copyToClipboard(person?.id, 'user_id')}
+									aria-label="Copy user ID to clipboard"
 									class="flex items-center gap-2 font-mono text-xs text-emerald-400 hover:text-white"
 								>
-									<span class="select-all">{person?.id || 'Not Logged In'}</span>
+									<span>{person?.id || 'Not Logged In'}</span>
 									{#if copiedField === 'user_id'}
 										<span class="text-[10px] text-emerald-500">Copied!</span>
 									{:else}
@@ -105,27 +125,32 @@
 						</div>
 					</div>
 
-					<div class="hidden sm:block">
-						<h4
-							class="mb-2 text-center text-[10px] font-bold tracking-wider text-slate-500 uppercase"
-						>
-							Switch Environment
-						</h4>
-						<div class="flex items-center gap-2">
-							{#each availableTenants as t}
-								<button
-									onclick={() => switchTenant(t.slug)}
-									class={`rounded px-2 py-1 text-xs font-bold transition-colors ${
-										church?.subdomain === t.slug
-											? 'cursor-default bg-blue-600 text-white'
-											: 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
-									}`}
-								>
-									{t.name}
-								</button>
-							{/each}
+					{#if tenants.length > 0}
+						<div class="hidden sm:block">
+							<h4
+								class="mb-2 text-center text-[10px] font-bold tracking-wider text-slate-500 uppercase"
+							>
+								Switch Environment
+							</h4>
+							<div class="flex items-center gap-2">
+								{#each tenants as t (t.slug)}
+									{@const isActive = church?.subdomain === t.slug}
+									<button
+										onclick={() => switchTenant(t.slug)}
+										aria-current={isActive ? 'true' : undefined}
+										aria-label="Switch to {t.name}"
+										class={`rounded px-2 py-1 text-xs font-bold transition-colors ${
+											isActive
+												? 'cursor-default bg-blue-600 text-white'
+												: 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+										}`}
+									>
+										{t.name}
+									</button>
+								{/each}
+							</div>
 						</div>
-					</div>
+					{/if}
 
 					<div class="flex items-start gap-4">
 						<a
@@ -134,7 +159,11 @@
 						>
 							<Database size={14} /> Admin Data
 						</a>
-						<button onclick={() => (isOpen = false)} class="text-slate-500 hover:text-white">
+						<button
+							onclick={() => (isOpen = false)}
+							aria-label="Close dev toolbar"
+							class="text-slate-500 hover:text-white"
+						>
 							<X size={20} />
 						</button>
 					</div>

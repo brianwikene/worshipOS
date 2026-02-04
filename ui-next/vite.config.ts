@@ -1,10 +1,13 @@
+// vite.config.ts
 import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
 import { playwright } from '@vitest/browser-playwright';
 import Icons from 'unplugin-icons/vite'; // [!code ++] // [!code focus]
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	plugins: [
+		tailwindcss(),
 		sveltekit(),
 		Icons({
 			// [!code ++] // [!code focus]

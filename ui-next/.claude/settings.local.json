@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_svelte__svelte-autofixer",
+      "Bash(yarn typecheck:*)",
+      "Bash(npx svelte-kit:*)"
+    ]
+  }
+}

@@ -39,11 +39,10 @@ const main = async () => {
 				id: uuidv4(),
 				church_id: church.id,
 				name: 'Main Campus',
-				location: '123 Main St'
+				address: '123 Main St'
 			});
 			console.log('✅ Created "Main Campus"');
 		}
-
 	} catch (e) {
 		console.error('❌ Campus Seed Failed:', e);
 	} finally {

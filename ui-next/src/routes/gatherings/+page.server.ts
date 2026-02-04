@@ -1,9 +1,9 @@
-// src/routes/gatherings/%2Bpage.server.ts
+// src/routes/gatherings/+page.server.ts
 import { db } from '$lib/server/db';
-import { campuses, gatherings, plans } from '$lib/server/db/schema';
+import { campuses, plans } from '$lib/server/db/schema';
 import { error, fail } from '@sveltejs/kit';
 import { addDays, format, parseISO } from 'date-fns';
-import { fromZonedTime } from 'date-fns-tz'; // Ensure you are on date-fns-tz v3
+import { fromZonedTime } from 'date-fns-tz';
 import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -17,29 +17,26 @@ export const load: PageServerLoad = async ({ locals }) => {
 		orderBy: asc(campuses.name)
 	});
 
-	// 2. Fetch Gatherings (Newest First)
-	const data = await db.query.gatherings.findMany({
-		where: eq(gatherings.church_id, church.id),
-		orderBy: [desc(gatherings.date)],
+	// 2. Fetch Plans (Newest First) - Plans now serve as gatherings
+	const data = await db.query.plans.findMany({
+		where: and(eq(plans.church_id, church.id), isNull(plans.deleted_at)),
+		orderBy: [desc(plans.date)],
 		with: {
 			campus: true,
-			plans: {
-				// Ensure your schema relations define 'items' on the 'plans' table
-				with: {
-					items: { columns: { id: true } }
-				}
+			items: {
+				columns: { id: true }
 			}
 		}
 	});
 
 	return {
 		campuses: allCampuses,
-		gatherings: data
+		plans: data
 	};
 };
 
 export const actions: Actions = {
-	createGathering: async ({ request, locals }) => {
+	createPlan: async ({ request, locals }) => {
 		const { church } = locals;
 		if (!church) throw error(400, 'Active church is required');
 
@@ -59,13 +56,11 @@ export const actions: Actions = {
 		let timezone = 'America/Los_Angeles';
 
 		if (targetCampusId) {
-			// A. Specific Campus Selected
 			const c = await db.query.campuses.findFirst({
 				where: eq(campuses.id, targetCampusId)
 			});
 			if (c) timezone = c.timezone;
 		} else {
-			// B. No selection? Find existing OR Create "Main Campus"
 			const existing = await db.query.campuses.findFirst({
 				where: eq(campuses.church_id, church.id)
 			});
@@ -74,14 +69,12 @@ export const actions: Actions = {
 				targetCampusId = existing.id;
 				timezone = existing.timezone;
 			} else {
-				// C. "Just-in-Time" Creation for Single-Site Churches
 				const [newCampus] = await db
 					.insert(campuses)
 					.values({
 						church_id: church.id,
 						name: 'Main Campus',
-						// Fallback to church timezone or LA default
-						timezone: (church as { timezone?: string }).timezone || 'America/Los_Angeles'
+						timezone: church.timezone || 'America/Los_Angeles'
 					})
 					.returning();
 
@@ -90,47 +83,26 @@ export const actions: Actions = {
 			}
 		}
 
-		// --- 2. GENERATE GATHERINGS & PLANS ---
+		// --- 2. GENERATE PLANS ---
 		await db.transaction(async (tx) => {
 			const baseDate = parseISO(startDateStr);
 
 			for (let i = 0; i < weekCount; i++) {
-				// A. Calculate Local Strings
 				const currentWeekDate = addDays(baseDate, i * 7);
 				const dateString = format(currentWeekDate, 'yyyy-MM-dd');
 				const dateTimeString = `${dateString} ${timeStr}`;
 
-				// B. Calculate UTC Timestamps (The Logic Split)
-
-				// 1. Gathering Anchor: Midnight in Campus Timezone
-				// This answers "What Day?"
-				const gatheringDateUTC = fromZonedTime(dateString, timezone);
-
-				// 2. Plan Start: Execution Time in Campus Timezone
-				// This answers "What Time?" (e.g., 10:00 AM)
-				const planStartUTC = fromZonedTime(dateTimeString, timezone);
+				// Plan date in campus timezone
+				const planDateUTC = fromZonedTime(dateTimeString, timezone);
 
 				const title = isSeries ? `${baseTitle} (Week ${i + 1})` : baseTitle;
 
-				// C. Create Gathering (The Bucket)
-				const [newGathering] = await tx
-					.insert(gatherings)
-					.values({
-						church_id: church.id,
-						campus_id: targetCampusId,
-						title,
-						date: gatheringDateUTC
-					})
-					.returning();
-
-				// D. Create Plan (The Execution)
 				await tx.insert(plans).values({
 					church_id: church.id,
-					gathering_id: newGathering.id,
 					campus_id: targetCampusId,
-					// RECOMMENDATION: Use 'Main' instead of repeating baseTitle
-					title: baseTitle || 'Main',
-					starts_at: planStartUTC
+					name: title,
+					date: planDateUTC,
+					status: 'draft'
 				});
 			}
 		});

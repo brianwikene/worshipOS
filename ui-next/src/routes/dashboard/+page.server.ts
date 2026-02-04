@@ -1,20 +1,12 @@
 import { db } from '$lib/server/db';
-import {
-	gatherings,
-	people,
-	plan_people,
-	plans,
-	prayer_requests,
-	team_members,
-	teams
-} from '$lib/server/db/schema';
+import { people, plan_people, plans, team_members, teams } from '$lib/server/db/schema';
 import { error } from '@sveltejs/kit';
 import { and, desc, eq, gte, inArray } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
-// Define the shape of our Activity Feed items strictly
+// --- TYPE DEFINITION ---
 type ActivityItem = {
-	type: 'join' | 'prayer' | 'signup';
+	type: 'join' | 'signup';
 	personFirst: string | null;
 	personLast: string | null;
 	targetName: string | null;
@@ -22,43 +14,46 @@ type ActivityItem = {
 	date: Date | null;
 };
 
+// --- LOAD FUNCTION ---
 export const load: PageServerLoad = async ({ locals }) => {
+	// 1. Guard Clause (Tenant Isolation)
+	if (!locals.church) {
+		throw error(404, 'Church not found');
+	}
 	const { church } = locals;
-	if (!church) error(404, 'Church not found');
 
-	// --- AUTH MOCK (Replace with real session in prod) ---
+	// 2. Resolve Current User
 	let currentUser = await db.query.people.findFirst({
 		where: (p, { and, eq }) => and(eq(p.church_id, church.id), eq(p.role, 'admin'))
 	});
+
 	if (!currentUser) {
 		currentUser = await db.query.people.findFirst({
 			where: (p, { eq }) => eq(p.church_id, church.id)
 		});
 	}
+
 	if (!currentUser) return { currentUser: null };
 
-	const isLeader = ['admin', 'pastor', 'leader', 'care_team'].includes(currentUser.role);
+	// Check if user is a leader (using valid role values from schema)
+	const isLeader = ['admin', 'staff', 'coordinator', 'org_owner'].includes(currentUser.role);
 
-	// --- 1. PERSONAL DASHBOARD ---
+	// --- 3. PERSONAL DASHBOARD DATA ---
 
-	// A. Serving Schedule
-	// We use "gte" (Greater Than or Equal) to show future servings only
+	// A. Serving Schedule (Future only) - using plans directly
 	const upcomingServings = await db
 		.select({
-			date: gatherings.date,
-			title: gatherings.title,
-			role: plan_people.role,
-			team: teams.name
+			date: plans.date,
+			title: plans.name,
+			role_name: plan_people.role_name
 		})
 		.from(plan_people)
 		.innerJoin(plans, eq(plan_people.plan_id, plans.id))
-		.innerJoin(gatherings, eq(plans.gathering_id, gatherings.id))
-		.leftJoin(teams, eq(plan_people.team_id, teams.id))
-		.where(and(eq(plan_people.person_id, currentUser.id), gte(gatherings.date, new Date())))
-		.orderBy(gatherings.date)
+		.where(and(eq(plan_people.person_id, currentUser.id), gte(plans.date, new Date())))
+		.orderBy(plans.date)
 		.limit(5);
 
-	// B. My Groups (Kinship, Small Group, Outreach)
+	// B. My Groups
 	const myGroups = await db
 		.select({
 			id: teams.id,
@@ -75,12 +70,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 			)
 		);
 
-	// --- 2. LEADER PULSE ---
+	// --- 4. LEADER PULSE DATA ---
 	let activityFeed: ActivityItem[] = [];
-	let prayerWall: (typeof prayer_requests.$inferSelect)[] = [];
 
 	if (isLeader) {
-		// A. New Joins (People joining Groups)
+		// A. New Team Joins
 		const rawJoins = await db
 			.select({
 				personFirst: people.first_name,
@@ -95,58 +89,22 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.where(
 				and(
 					eq(people.church_id, church.id),
-					inArray(teams.type, ['kinship', 'small_group', 'outreach'])
+					inArray(teams.type, ['kinship', 'small_group', 'outreach', 'ministry'])
 				)
 			)
 			.orderBy(desc(team_members.created_at))
-			.limit(5);
+			.limit(10);
 
-		// B. New Prayers
-		const rawPrayers = await db
-			.select({
-				personFirst: people.first_name,
-				personLast: people.last_name,
-				date: prayer_requests.created_at
-			})
-			.from(prayer_requests)
-			.leftJoin(people, eq(prayer_requests.person_id, people.id))
-			.where(eq(prayer_requests.church_id, church.id))
-			.orderBy(desc(prayer_requests.created_at))
-			.limit(5);
-
-		// Process & Merge in JS (Avoids SQL Type Errors)
-		const joinsMapped: ActivityItem[] = rawJoins.map((j) => ({
-			type: 'join',
+		activityFeed = rawJoins.map((j) => ({
+			type: 'join' as const,
 			...j
 		}));
-
-		const prayersMapped: ActivityItem[] = rawPrayers.map((p) => ({
-			type: 'prayer',
-			personFirst: p.personFirst,
-			personLast: p.personLast,
-			targetName: 'Prayer Wall',
-			targetType: 'prayer',
-			date: p.date
-		}));
-
-		// Sort merged list by date descending
-		activityFeed = [...joinsMapped, ...prayersMapped]
-			.sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))
-			.slice(0, 10);
-
-		// C. Open Prayer Requests
-		prayerWall = await db
-			.select()
-			.from(prayer_requests)
-			.where(and(eq(prayer_requests.church_id, church.id), eq(prayer_requests.status, 'open')))
-			.orderBy(desc(prayer_requests.created_at))
-			.limit(5);
 	}
 
 	return {
 		currentUser,
 		isLeader,
 		personal: { upcomingServings, myGroups },
-		leader: { activityFeed, prayerWall }
+		leader: { activityFeed }
 	};
 };

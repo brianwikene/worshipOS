@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { team_members, teams } from '$lib/server/db/schema';
+import { teams } from '$lib/server/db/schema';
 import { eq, isNull } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
@@ -11,10 +11,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		where: eq(teams.church_id, church.id),
 		with: {
 			members: {
-				// 1. FILTER: Only get members who are NOT archived (deleted_at is null)
-				where: isNull(team_members.deleted_at),
 				columns: {
-					person_id: true // We only need the ID to count heads
+					person_id: true
 				}
 			}
 		},
@@ -23,10 +21,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		teams: allTeams.map((t) => {
-			// 2. COUNT HEADS: Use a Set to remove duplicates
-			// If Brian has 3 roles, he appears 3 times in 'members', but only once in 'uniquePeople'
+			// Count unique people
 			const uniquePeople = new Set(t.members.map((m) => m.person_id));
-
 			return {
 				...t,
 				memberCount: uniquePeople.size

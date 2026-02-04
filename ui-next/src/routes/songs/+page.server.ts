@@ -6,8 +6,11 @@ import type { Actions, PageServerLoad } from './$types';
 
 // 1. LOAD FUNCTION
 export const load: PageServerLoad = async ({ locals }) => {
-	const { church } = locals;
-	if (!church) error(404, 'Church not found');
+	// --- THE GUARD CLAUSE ---
+	if (!locals.church) {
+		throw error(404, 'Church not found');
+	}
+	const { church } = locals; // TypeScript now knows 'church' is safe!
 
 	// Fetch songs for this church
 	const allSongs = await db.query.songs.findMany({

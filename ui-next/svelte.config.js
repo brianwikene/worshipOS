@@ -1,3 +1,4 @@
+// svelte.config.js
 import adapter from '@sveltejs/adapter-vercel'; // Or adapter-auto / adapter-node based on your deploy target
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 

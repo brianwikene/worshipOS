@@ -1,0 +1,119 @@
+
+> ui-next@0.0.1 check
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: /Users/bwikene/worshipOS/ui-next
+Getting Svelte diagnostics...
+
+/Users/bwikene/worshipOS/ui-next/src/routes/+page.svelte:15:8
+Error: Property 'gatherings' does not exist on type 'never'. (ts)
+	let upcomingGatherings = $derived(
+		data.gatherings
+			.filter((g) => g.date >= today)
+
+/Users/bwikene/worshipOS/ui-next/src/routes/+page.svelte:16:13
+Error: Parameter 'g' implicitly has an 'any' type. (ts)
+		data.gatherings
+			.filter((g) => g.date >= today)
+			.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+/Users/bwikene/worshipOS/ui-next/src/routes/+page.svelte:17:11
+Error: Parameter 'a' implicitly has an 'any' type. (ts)
+			.filter((g) => g.date >= today)
+			.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+	);
+
+/Users/bwikene/worshipOS/ui-next/src/routes/+page.svelte:17:14
+Error: Parameter 'b' implicitly has an 'any' type. (ts)
+			.filter((g) => g.date >= today)
+			.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+	);
+
+/Users/bwikene/worshipOS/ui-next/src/routes/+page.svelte:22:8
+Error: Property 'gatherings' does not exist on type 'never'. (ts)
+	let pastGatherings = $derived(
+		data.gatherings
+			.filter((g) => g.date < today)
+
+/Users/bwikene/worshipOS/ui-next/src/routes/+page.svelte:23:13
+Error: Parameter 'g' implicitly has an 'any' type. (ts)
+		data.gatherings
+			.filter((g) => g.date < today)
+			.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+/Users/bwikene/worshipOS/ui-next/src/routes/+page.svelte:24:11
+Error: Parameter 'a' implicitly has an 'any' type. (ts)
+			.filter((g) => g.date < today)
+			.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+	);
+
+/Users/bwikene/worshipOS/ui-next/src/routes/+page.svelte:24:14
+Error: Parameter 'b' implicitly has an 'any' type. (ts)
+			.filter((g) => g.date < today)
+			.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+	);
+
+/Users/bwikene/worshipOS/ui-next/src/routes/gatherings/[gathering_id]/plans/[plan_id]/+page.server.ts:2:22
+Error: Module '"$lib/server/db/schema"' has no exported member 'instances'. 
+import { db } from '$lib/server/db';
+import { gatherings, instances } from '$lib/server/db/schema';
+import { error, fail } from '@sveltejs/kit';
+
+/Users/bwikene/worshipOS/ui-next/src/routes/gatherings/[gathering_id]/plans/[plan_id]/+page.server.ts:11:4
+Error: Object literal may only specify known properties, and 'instances' does not exist in type '{ campus?: true | { columns?: { id?: boolean | undefined; church_id?: boolean | undefined; name?: boolean | undefined; location?: boolean | undefined; timezone?: boolean | undefined; created_at?: boolean | undefined; deleted_at?: boolean | undefined; } | undefined; with?: { ...; } | undefined; extras?: Record<...> |...'. 
+		with: {
+			instances: {
+				orderBy: [asc(instances.start_time)],
+
+/Users/bwikene/worshipOS/ui-next/src/routes/connections/[id]/EditProfileDrawer.svelte:22:30
+Error: Property 'errors' does not exist on type '{ message?: undefined; success: boolean; error: string; } | { message?: undefined; success: boolean; error?: undefined; } | { success?: undefined; message?: undefined; error: string; } | { error?: undefined; message?: undefined; success: boolean; } | ... 16 more ... | { ...; }'. Did you mean 'error'?
+  Property 'errors' does not exist on type '{ message?: undefined; success: boolean; error: string; }'. (ts)
+	// Derived errors and values for cleaner template
+	let errors = $derived(form?.errors || {});
+	let values = $derived(form?.values || {});
+
+/Users/bwikene/worshipOS/ui-next/src/routes/connections/[id]/EditProfileDrawer.svelte:23:30
+Error: Property 'values' does not exist on type '{ message?: undefined; success: boolean; error: string; } | { message?: undefined; success: boolean; error?: undefined; } | { success?: undefined; message?: undefined; error: string; } | { error?: undefined; message?: undefined; success: boolean; } | ... 16 more ... | { ...; }'.
+  Property 'values' does not exist on type '{ message?: undefined; success: boolean; error: string; }'. (ts)
+	let errors = $derived(form?.errors || {});
+	let values = $derived(form?.values || {});
+
+/Users/bwikene/worshipOS/ui-next/src/routes/connections/[id]/EditProfileDrawer.svelte:32:27
+Error: Property 'errors' does not exist on type '{ message?: undefined; success: boolean; error: string; } | { success?: undefined; message?: undefined; error: string; } | { success?: undefined; message?: undefined; error: string; } | { success?: undefined; message?: undefined; error: string; } | { ...; } | { ...; }'. Did you mean 'error'?
+  Property 'errors' does not exist on type '{ message?: undefined; success: boolean; error: string; }'. (ts)
+			formError =
+				form.message || (form.errors ? 'Please fix the errors below.' : 'An error occurred.');
+			isSubmitting = false;
+
+/Users/bwikene/worshipOS/ui-next/src/routes/gatherings/matrix/+page.svelte:73:22
+Error: Argument of type 'Date' is not assignable to parameter of type 'string'. (ts)
+								<span class="text-2xl font-bold text-gray-900">
+									{formatDate(gathering.date)}
+								</span>
+
+/Users/bwikene/worshipOS/ui-next/src/routes/songs/+page.svelte:15:8
+Error: Property 'author' does not exist on type '{ id: string; created_at: Date | null; updated_at: Date | null; church_id: string; title: string; original_key: string | null; tempo: string | null; time_signature: string | null; ccli_number: string | null; performance_notes: string | null; content: string | null; lyrics: string | null; }'. (ts)
+				s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+				(s.author && s.author.toLowerCase().includes(searchTerm.toLowerCase()))
+		)
+
+/Users/bwikene/worshipOS/ui-next/src/routes/songs/+page.svelte:15:20
+Error: Property 'author' does not exist on type '{ id: string; created_at: Date | null; updated_at: Date | null; church_id: string; title: string; original_key: string | null; tempo: string | null; time_signature: string | null; ccli_number: string | null; performance_notes: string | null; content: string | null; lyrics: string | null; }'. (ts)
+				s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+				(s.author && s.author.toLowerCase().includes(searchTerm.toLowerCase()))
+		)
+
+/Users/bwikene/worshipOS/ui-next/src/routes/songs/+page.svelte:81:14
+Error: Property 'author' does not exist on type '{ id: string; created_at: Date | null; updated_at: Date | null; church_id: string; title: string; original_key: string | null; tempo: string | null; time_signature: string | null; ccli_number: string | null; performance_notes: string | null; content: string | null; lyrics: string | null; }'. (ts)
+
+			{#if song.author}
+				<p class="mb-4 line-clamp-1 text-sm text-slate-500">{song.author}</p>
+
+/Users/bwikene/worshipOS/ui-next/src/routes/songs/+page.svelte:82:63
+Error: Property 'author' does not exist on type '{ id: string; created_at: Date | null; updated_at: Date | null; church_id: string; title: string; original_key: string | null; tempo: string | null; time_signature: string | null; ccli_number: string | null; performance_notes: string | null; content: string | null; lyrics: string | null; }'. (ts)
+			{#if song.author}
+				<p class="mb-4 line-clamp-1 text-sm text-slate-500">{song.author}</p>
+			{/if}
+
+====================================
+svelte-check found 18 errors and 0 warnings in 5 files

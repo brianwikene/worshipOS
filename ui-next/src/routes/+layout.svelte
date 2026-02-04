@@ -2,13 +2,30 @@
 	import { page } from '$app/state';
 	import DevToolbar from '$lib/components/dev/DevToolbar.svelte';
 	import { initTenant } from '$lib/tenant.svelte';
-	import { Check, ChevronDown } from '@lucide/svelte';
+	import type { LayoutData } from './$types';
+	// <--- 1. Import generated data type
+	import type { Snippet } from 'svelte'; // <--- 2. Import Snippet type
+	import {
+		Calendar,
+		Check,
+		ChevronDown,
+		HandHeart,
+		LayoutDashboard,
+		Menu,
+		Music,
+		Settings,
+		Users,
+		X
+	} from '@lucide/svelte';
+
 	import { slide } from 'svelte/transition';
 	import '../app.css';
+	// Note: Adjust path if app.css is in src/ (e.g. '../../app.css')
 
-	let { data, children } = $props();
+	// --- 3. Type the props explicitly ---
+	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
-	// Initialize Tenant State
+	// --- 1. TENANT LOGIC ---
 	// svelte-ignore state_referenced_locally
 	const tenant = initTenant(
 		data.church
@@ -24,27 +41,53 @@
 		tenant.campus = data.campus ? { id: data.campus.id, name: data.campus.name } : null;
 	});
 
-	// FIX: Hide the top bar when in Admin routes
+	// --- 2. STATE & CONFIG ---
+	// Hide top bar on admin, but we might want sidebar everywhere?
 	let activeChurch = $derived(!page.url.pathname.startsWith('/admin') ? data.church : null);
 	let activeCampus = $derived(data.campus);
 	let allCampuses = $derived(data.allCampuses || []);
 
 	let isCampusMenuOpen = $state(false);
+	let isMobileNavOpen = $state(false);
 
 	function switchCampus(campusId: string) {
-		// Set cookie via JS (easiest for layout switching)
-		document.cookie = `campus_id=${campusId}; path=/; max-age=31536000`; // 1 year
+		document.cookie = `campus_id=${campusId}; path=/; max-age=31536000`;
 		window.location.reload();
+	}
+
+	// --- 3. NAVIGATION CONFIG ---
+	const navItems = [
+		{ label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+		{ label: 'Gatherings', href: '/gatherings', icon: Calendar },
+		{ label: 'People', href: '/connections', icon: Users },
+		{ label: 'Songs', href: '/songs', icon: Music },
+		{ label: 'Teams', href: '/teams', icon: HandHeart }
+	];
+
+	function isActive(href: string) {
+		if (href === '/dashboard') return page.url.pathname === '/dashboard';
+		return page.url.pathname.startsWith(href);
 	}
 </script>
 
-<div class="relative flex min-h-screen flex-col bg-slate-50 font-sans">
+<div class="flex min-h-screen flex-col bg-stone-50 font-sans text-slate-900">
 	{#if activeChurch}
 		<div
-			class="flex shrink-0 items-center justify-between border-b border-gray-800 bg-gray-900 px-4 py-2.5 text-xs text-gray-400"
+			class="relative z-50 flex shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-2 text-xs text-slate-400 shadow-md"
 		>
 			<div class="flex items-center gap-2">
-				<span class="ml-1">Building for</span>
+				<div class="flex items-center gap-2 md:hidden">
+					<button onclick={() => (isMobileNavOpen = !isMobileNavOpen)} class="text-slate-200">
+						{#if isMobileNavOpen}
+							<X size={18} />
+						{:else}
+							<Menu size={18} />
+						{/if}
+					</button>
+					<div class="h-4 w-px bg-slate-700"></div>
+				</div>
+
+				<span class="hidden sm:inline">Building for</span>
 
 				<button
 					class="font-bold text-blue-400 decoration-blue-400/30 underline-offset-4 transition hover:text-blue-300 hover:underline"
@@ -53,18 +96,17 @@
 				</button>
 
 				{#if activeCampus}
-					<span>at</span>
+					<span class="text-slate-600">at</span>
 					<div class="relative">
 						<button
 							onclick={() => (isCampusMenuOpen = !isCampusMenuOpen)}
-							class="flex items-center gap-1 font-bold text-green-400 decoration-green-400/30 underline-offset-4 transition hover:text-green-300 hover:underline"
+							class="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-bold text-emerald-400 ring-1 ring-emerald-500/20 transition-all hover:bg-emerald-500/20 hover:text-emerald-300 hover:ring-emerald-500/40"
 						>
 							{activeCampus.name}
-							<ChevronDown size={10} />
+							<ChevronDown size={12} class="opacity-70" />
 						</button>
 
 						{#if isCampusMenuOpen}
-							<!-- Backdrop -->
 							<button
 								class="fixed inset-0 z-40 cursor-default"
 								onclick={() => (isCampusMenuOpen = false)}
@@ -87,7 +129,7 @@
 									>
 										{c.name}
 										{#if c.id === activeCampus.id}
-											<Check size={12} class="text-green-400" />
+											<Check size={12} class="text-emerald-400" />
 										{/if}
 									</button>
 								{/each}
@@ -97,22 +139,104 @@
 				{/if}
 			</div>
 
-			<div class="flex items-center gap-4">
-				<button
-					onclick={() => (isCampusMenuOpen = !isCampusMenuOpen)}
-					class="flex items-center gap-1 transition hover:text-white"
-				>
-					<span>Switch Location</span>
-				</button>
-				<span class="text-gray-700">|</span>
-				<button class="transition hover:text-white"> Get Help </button>
+			<div class="hidden items-center gap-4 sm:flex">
+				<button class="transition hover:text-white">Switch Location</button>
+				<span class="text-slate-700">|</span>
+				<button class="transition hover:text-white">Get Help</button>
 			</div>
 		</div>
 	{/if}
 
-	<main class="flex-1 overflow-y-auto">
-		{@render children()}
-	</main>
+	<div class="flex flex-1 overflow-hidden">
+		<aside class="hidden w-64 flex-col border-r border-stone-200 bg-stone-50 md:flex">
+			<nav class="flex-1 space-y-1 p-4">
+				{#each navItems as item}
+					{@const active = isActive(item.href)}
+					<a
+						href={item.href}
+						class={`group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
+							active
+								? 'bg-white text-slate-900 shadow-sm ring-1 ring-stone-200'
+								: 'text-stone-500 hover:bg-stone-100 hover:text-slate-900'
+						}`}
+					>
+						<item.icon
+							size={18}
+							class={`transition-colors ${active ? 'text-slate-900' : 'text-stone-400 group-hover:text-slate-600'}`}
+						/>
+						{item.label}
+					</a>
+				{/each}
+			</nav>
+
+			<div class="border-t border-stone-200 p-4">
+				<a
+					href="/admin"
+					class={`group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all ${
+						isActive('/admin')
+							? 'bg-white text-slate-900 shadow-sm ring-1 ring-stone-200'
+							: 'text-stone-500 hover:bg-stone-100 hover:text-slate-900'
+					}`}
+				>
+					<Settings
+						size={18}
+						class={`transition-colors ${isActive('/admin') ? 'text-slate-900' : 'text-stone-400 group-hover:text-slate-600'}`}
+					/>
+					Administration
+				</a>
+			</div>
+		</aside>
+
+		{#if isMobileNavOpen}
+			<div
+				class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm md:hidden"
+				onclick={() => (isMobileNavOpen = false)}
+				role="button"
+				tabindex="0"
+				onkeydown={(e) => e.key === 'Escape' && (isMobileNavOpen = false)}
+			></div>
+			<aside
+				transition:slide={{ axis: 'x', duration: 200 }}
+				class="fixed inset-y-0 left-0 z-50 w-64 bg-stone-50 shadow-2xl md:hidden"
+			>
+				<div class="flex h-full flex-col">
+					<div class="flex items-center justify-between p-4">
+						<span class="font-bold text-slate-900">Menu</span>
+						<button onclick={() => (isMobileNavOpen = false)} class="text-stone-400">
+							<X size={20} />
+						</button>
+					</div>
+					<nav class="flex-1 space-y-1 p-4">
+						{#each navItems as item}
+							<a
+								href={item.href}
+								onclick={() => (isMobileNavOpen = false)}
+								class={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold ${
+									isActive(item.href) ? 'bg-white text-slate-900 shadow-sm' : 'text-stone-500'
+								}`}
+							>
+								<item.icon size={18} />
+								{item.label}
+							</a>
+						{/each}
+						<div class="my-2 border-t border-stone-200"></div>
+						<a
+							href="/admin"
+							onclick={() => (isMobileNavOpen = false)}
+							class="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold text-stone-500"
+						>
+							<Settings size={18} />
+							Administration
+						</a>
+					</nav>
+				</div>
+			</aside>
+		{/if}
+
+		<main class="flex-1 overflow-y-auto bg-stone-50/50">
+			{@render children()}
+		</main>
+	</div>
 
 	{#if import.meta.env.DEV}
 		<DevToolbar />

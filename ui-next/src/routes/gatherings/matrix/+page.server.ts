@@ -1,37 +1,38 @@
 import { db } from '$lib/server/db';
-import { gatherings, plan_items, plans } from '$lib/server/db/schema';
-import { asc, gte, isNull } from 'drizzle-orm';
+import { plan_items, plans } from '$lib/server/db/schema';
+import { asc, gte, isNull, and, eq } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
-	// 1. Get Today's Date (UTC Safe) to filter past events
-	const today = new Date(); // Use Date object for timestamp comparison
+export const load: PageServerLoad = async ({ locals }) => {
+	const { church } = locals;
+	if (!church) {
+		return { plans: [] };
+	}
 
-	// 2. Fetch Next 3 Gatherings with FULL Details
-	const matrixData = await db.query.gatherings.findMany({
-		where: gte(gatherings.date, today),
-		orderBy: [asc(gatherings.date)],
+	// 1. Get Today's Date (UTC Safe) to filter past events
+	const today = new Date();
+
+	// 2. Fetch Next 3 Plans with FULL Details
+	const matrixData = await db.query.plans.findMany({
+		where: and(
+			eq(plans.church_id, church.id),
+			gte(plans.date, today),
+			isNull(plans.deleted_at)
+		),
+		orderBy: [asc(plans.date)],
 		limit: 3,
 		with: {
 			campus: true,
-			plans: {
-				limit: 1, // Only grab the first plan for the matrix view
+			items: {
+				orderBy: [asc(plan_items.segment), asc(plan_items.order)],
 				with: {
-					items: {
-						// FIX: Filter out deleted items
-						where: isNull(plan_items.deleted_at),
-						orderBy: [asc(plan_items.sequence)],
-						with: {
-							song: true,
-							person: true
-						}
-					}
+					song: true
 				}
 			}
 		}
 	});
 
 	return {
-		gatherings: matrixData
+		plans: matrixData
 	};
 };

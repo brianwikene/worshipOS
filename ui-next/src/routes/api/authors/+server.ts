@@ -1,10 +1,15 @@
+// src/routes/api/authors/+server.ts
 import { db } from '$lib/server/db';
 import { authors } from '$lib/server/db/schema';
 import { json } from '@sveltejs/kit';
-import { and, eq, ilike } from 'drizzle-orm'; // <--- IMPORT THESE OPERATORS
+import { and, eq, ilike } from 'drizzle-orm';
+import type { RequestHandler } from './$types'; // <--- 1. Import the generated type
 
-export async function GET({ url, locals }) {
+// 2. Use 'export const' to apply the RequestHandler type
+export const GET: RequestHandler = async ({ url, locals }) => {
 	const { church } = locals;
+
+	// Now TypeScript knows 'church' exists because we updated app.d.ts!
 	if (!church) return json([]);
 
 	const query = url.searchParams.get('q') || '';
@@ -16,14 +21,8 @@ export async function GET({ url, locals }) {
 			name: authors.name
 		})
 		.from(authors)
-		.where(
-			and(
-				// <--- USE DIRECTLY
-				eq(authors.church_id, church.id),
-				ilike(authors.name, `%${query}%`)
-			)
-		)
+		.where(and(eq(authors.church_id, church.id), ilike(authors.name, `%${query}%`)))
 		.limit(5);
 
 	return json(results);
-}
+};

@@ -1,34 +1,41 @@
 import { db } from '$lib/server/db';
-import { arrangements, authors, song_authors, songs } from '$lib/server/db/schema';
+import { authors, song_authors, songs } from '$lib/server/db/schema';
 import { error } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
+	// --- GUARD CLAUSE ---
+	if (!locals.church) {
+		throw error(404, 'Church not found');
+	}
 	const { church } = locals;
-	if (!church) error(404, 'Church not found');
+	// --------------------
 
 	const song = await db.query.songs.findFirst({
 		where: (s, { and, eq }) => and(eq(s.id, params.id), eq(s.church_id, church.id)),
 		with: {
-			arrangements: true,
 			// Fetch authors via the junction table
 			authors: {
 				with: {
 					author: true
-				}
+				},
+				orderBy: (sa, { asc }) => [asc(sa.sequence)]
 			}
 		}
 	});
 
-	if (!song) error(404, 'Song not found');
+	if (!song) throw error(404, 'Song not found');
 
 	return { song, churchName: church.name };
 };
 
 export const actions: Actions = {
 	updateSong: async ({ request, params, locals }) => {
+		if (!locals.church) throw error(401, 'Church not found');
+		if (!params.id) throw error(400, 'Song ID required');
 		const { church } = locals;
+		const songId = params.id;
 		const data = await request.formData();
 
 		// 1. Update the Song Record (Master)
@@ -38,12 +45,15 @@ export const actions: Actions = {
 				title: data.get('title') as string,
 				original_key: data.get('key') as string,
 				tempo: data.get('tempo') as string,
+				bpm: data.get('bpm') ? parseInt(data.get('bpm') as string) : null,
+				time_signature: (data.get('time_signature') as string) || '4/4',
 				ccli_number: data.get('ccli') as string,
 				performance_notes: data.get('performance_notes') as string,
+				lyrics: data.get('lyrics') as string,
 				content: data.get('content') as string,
 				updated_at: new Date()
 			})
-			.where(and(eq(songs.id, params.id), eq(songs.church_id, church.id)));
+			.where(and(eq(songs.id, songId), eq(songs.church_id, church.id)));
 
 		// 2. HANDLE AUTHORS
 		const authorsJson = data.get('authors_json') as string;
@@ -76,13 +86,13 @@ export const actions: Actions = {
 			}
 
 			// B. Clear existing links for this song
-			await db.delete(song_authors).where(eq(song_authors.song_id, params.id));
+			await db.delete(song_authors).where(eq(song_authors.song_id, songId));
 
-			// C. Insert new links (FIX: Removed church_id and id)
+			// C. Insert new links with sequence for ordering
 			if (finalAuthorIds.length > 0) {
 				await db.insert(song_authors).values(
 					finalAuthorIds.map((authorId, index) => ({
-						song_id: params.id,
+						song_id: songId,
 						author_id: authorId,
 						sequence: index
 					}))
@@ -93,56 +103,12 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	createArrangement: async ({ request, params, locals }) => {
-		const { church } = locals;
-		const data = await request.formData();
-
-		await db.insert(arrangements).values({
-			church_id: church.id,
-			song_id: params.id,
-			name: data.get('version_name') as string,
-			key: data.get('key') as string,
-			content: data.get('content') as string
-		});
-		return { success: true };
-	},
-
-	updateArrangement: async ({ request, locals }) => {
-		const { church } = locals;
-		const data = await request.formData();
-		const id = data.get('arrangement_id') as string;
-
-		await db
-			.update(arrangements)
-			.set({
-				name: data.get('name') as string,
-				// FIX: Saving Key and Content properly now
-				key: data.get('key') as string,
-				content: data.get('content') as string,
-				updated_at: new Date()
-			})
-			.where(and(eq(arrangements.id, id), eq(arrangements.church_id, church.id)));
-
-		return { success: true };
-	},
-
-	deleteArrangement: async ({ request, locals }) => {
-		const { church } = locals;
-		const data = await request.formData();
-		await db
-			.delete(arrangements)
-			.where(
-				and(
-					eq(arrangements.id, data.get('arrangement_id') as string),
-					eq(arrangements.church_id, church.id)
-				)
-			);
-		return { success: true };
-	},
-
 	deleteSong: async ({ params, locals }) => {
+		if (!locals.church) throw error(401, 'Church not found');
+		if (!params.id) throw error(400, 'Song ID required');
 		const { church } = locals;
-		await db.delete(songs).where(and(eq(songs.id, params.id), eq(songs.church_id, church.id)));
+		const songId = params.id;
+		await db.delete(songs).where(and(eq(songs.id, songId), eq(songs.church_id, church.id)));
 		return { success: true };
 	}
 };

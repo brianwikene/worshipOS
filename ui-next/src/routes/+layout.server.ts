@@ -4,7 +4,17 @@ import { eq } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals, cookies }) => {
-	// 1. Fetch ALL churches (For the Dev Toolbar Switcher)
+	// ---------------------------------------------------------
+	// 1. Authentication (The Floor)
+	// ---------------------------------------------------------
+	// Safely retrieve the session from the hooks we just built.
+	const { session, user } = await locals.safeGetSession();
+
+	// ---------------------------------------------------------
+	// 2. Multi-Tenancy (The Context)
+	// ---------------------------------------------------------
+
+	// Fetch ALL churches (For the Dev Toolbar Switcher)
 	const allChurches = await db.query.churches.findMany({
 		columns: {
 			id: true,
@@ -14,19 +24,19 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 		orderBy: (churches, { asc }) => [asc(churches.name)]
 	});
 
-	// 2. Resolve Current Context (From hooks.server.ts)
+	// Resolve Current Context (From hooks.server.ts)
 	const currentChurch = locals.church;
 
 	let currentCampuses: (typeof campuses.$inferSelect)[] = [];
 	let activeCampus = null;
 
-	// 3. If we have a valid church, fetch its campuses
+	// If we have a valid church, fetch its campuses
 	if (currentChurch) {
 		currentCampuses = await db.query.campuses.findMany({
 			where: eq(campuses.church_id, currentChurch.id)
 		});
 
-		// 4. Resolve Active Campus (Cookie -> Default)
+		// Resolve Active Campus (Cookie -> Default)
 		const campusIdCookie = cookies.get('campus_id');
 		if (campusIdCookie) {
 			activeCampus = currentCampuses.find((c) => c.id === campusIdCookie) || null;
@@ -38,10 +48,16 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 		}
 	}
 
+	// ---------------------------------------------------------
+	// 3. Return Data to Client
+	// ---------------------------------------------------------
 	return {
-		church: currentChurch, // The active church (based on subdomain)
-		campus: activeCampus, // The active campus
-		allChurches, // List for the switcher
-		allCampuses: currentCampuses // List for campus dropdowns
+		session, // <--- Critical: Auth Session
+		user, // <--- Critical: User Info
+		person: locals.person, // <--- Critical: Person record with RBAC role
+		church: currentChurch,
+		campus: activeCampus,
+		allChurches,
+		allCampuses: currentCampuses
 	};
 };

@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { ArrowLeft, Calendar, Database, LayoutDashboard, Settings, Users } from '@lucide/svelte';
 
-	let { children } = $props();
+	let { data, children } = $props();
 </script>
 
 <div class="flex min-h-screen bg-slate-50 font-sans text-slate-900">
@@ -15,7 +15,7 @@
 				<span>System Admin</span>
 			</h2>
 			<div class="mt-2 text-[10px] text-slate-400">
-				Tenant: <span class="font-mono text-slate-600">{page.data.church?.name}</span>
+				Tenant: <span class="font-mono text-slate-600">{data?.church?.name ?? 'No tenant'}</span>
 			</div>
 		</div>
 

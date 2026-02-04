@@ -1,17 +1,22 @@
+// src/routes/songs/new/+page.server.ts
 import { db } from '$lib/server/db';
 import { authors, song_authors, songs } from '$lib/server/db/schema';
 import { error, redirect } from '@sveltejs/kit'; // <--- Added 'error'
 import type { Actions, PageServerLoad } from './$types'; // <--- Added 'PageServerLoad'
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const { church } = locals;
-	if (!church) error(404, 'Church not found');
+	// --- THE GUARD CLAUSE ---
+	if (!locals.church) {
+		throw error(404, 'Church not found');
+	}
+	const { church } = locals; // TypeScript now knows 'church' is safe!
 	return {};
 };
 
 export const actions: Actions = {
 	// Rename 'create' to 'default'
-	default: async ({ request, locals }) => {
+	create: async ({ request, locals }) => {
+		if (!locals.church) throw error(401, 'Church not found');
 		const { church } = locals;
 		const data = await request.formData();
 

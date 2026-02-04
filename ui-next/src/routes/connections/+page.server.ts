@@ -1,12 +1,16 @@
 import { db } from '$lib/server/db';
 import { people } from '$lib/server/db/schema';
+import type { Actions } from '@sveltejs/kit'; // <--- Import from kit
 import { error, fail } from '@sveltejs/kit';
 import { asc, eq } from 'drizzle-orm';
-import type { Actions, PageServerLoad } from './$types';
+import type { PageServerLoad } from './$types'; // <--- Keep this for route types
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const { church } = locals;
-	if (!church) error(404, 'Church not found');
+	// --- THE GUARD CLAUSE ---
+	if (!locals.church) {
+		throw error(404, 'Church not found');
+	}
+	const { church } = locals; // TypeScript now knows 'church' is safe!
 
 	// 1. Fetch the data
 	const connectionsList = await db.query.people.findMany({

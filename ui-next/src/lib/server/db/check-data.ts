@@ -10,13 +10,13 @@ const client = postgres(process.env.DATABASE_URL);
 const db = drizzle(client, { schema: { campuses, churches } });
 
 const main = async () => {
-    const allChurches = await db.query.churches.findMany();
-    console.log('Churches:', allChurches);
+	const allChurches = await db.query.churches.findMany();
+	console.log('Churches:', allChurches);
 
-    const allCampuses = await db.query.campuses.findMany();
-    console.log('Campuses:', allCampuses);
-    
-    await client.end();
+	const allCampuses = await db.query.campuses.findMany();
+	console.log('Campuses:', allCampuses);
+
+	await client.end();
 };
 
 main();

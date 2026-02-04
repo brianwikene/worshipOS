@@ -1,0 +1,9 @@
+yarn run v1.22.22
+$ prettier --check . && eslint .
+Checking formatting...
+/Users/bwikene/worshipOS/ui-next/.prettierrc You have specified a Tailwind CSS stylesheet but your installed version of Tailwind CSS does not support this feature.
+[warn] src/lib/server/db/check-data.ts
+[warn] src/lib/server/db/seed-campus.ts
+[warn] Code style issues found in 2 files. Run Prettier with --write to fix.
+error Command failed with exit code 1.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.

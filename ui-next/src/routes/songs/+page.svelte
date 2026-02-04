@@ -25,13 +25,14 @@
 				The central library of songs, keys, and arrangements used in your gatherings.
 			</p>
 		</div>
-		<button
-			type="button"
+
+		<a
+			href="/songs/new"
 			class="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 font-bold text-white shadow-sm transition hover:bg-slate-800"
 		>
 			<Plus size={18} />
 			Add Song
-		</button>
+		</a>
 	</div>
 </div>
 

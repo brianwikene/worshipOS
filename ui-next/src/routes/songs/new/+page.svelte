@@ -1,3 +1,4 @@
+<!-- src/routes/songs/new/+page.svelte -->
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import AuthorInput from '$lib/components/AuthorInput.svelte';

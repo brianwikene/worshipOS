@@ -1,16 +1,41 @@
 import { relations } from 'drizzle-orm';
 import {
 	boolean,
+	date,
 	index,
 	integer,
 	pgEnum,
 	pgTable,
 	text,
 	timestamp,
-	uuid
+	uuid,
+	type AnyPgColumn
 } from 'drizzle-orm/pg-core';
 
 // --- ENUMS ---
+
+export const userRoleEnum = pgEnum('user_role', [
+	'org_owner', // Billing, Tenant destruction
+	'admin', // Global settings
+	'staff', // Pastoral, Planning
+	'coordinator', // Team Leader
+	'volunteer', // Schedule access
+	'user' // Base level
+]);
+
+export const planStatusEnum = pgEnum('plan_status', [
+	'draft', // Editing freely
+	'locked', // Finalized for Sunday
+	'completed' // History
+]);
+
+export const planSegmentEnum = pgEnum('plan_segment', ['pre', 'core', 'post']);
+
+export const teamDeclinePolicyEnum = pgEnum('team_decline_policy', [
+	'no_action', // Just mark as declined.
+	'reopen_position' // Create a "Needed Position" (The Hole)
+]);
+
 export const teamTypeEnum = pgEnum('team_type', [
 	'ministry',
 	'small_group',
@@ -19,26 +44,14 @@ export const teamTypeEnum = pgEnum('team_type', [
 	'demographic'
 ]);
 
-export const roleEnum = pgEnum('user_role', ['user', 'volunteer', 'leader', 'pastor', 'admin']);
-
 export const planPersonStatusEnum = pgEnum('plan_person_status', [
 	'pending',
 	'confirmed',
 	'declined'
 ]);
 
-export const addressTypeEnum = pgEnum('address_type', [
-	'home',
-	'work',
-	'mailing',
-	'vacation', // Snowbirds / Seasonal
-	'school', // College kids
-	'meeting', // Small groups / Coffee shops
-	'business', // Vendors / Contacts
-	'other'
-]);
+// --- TENANCY & CORE TABLES ---
 
-// --- 1. CORE ENTITIES (No Dependencies) ---
 export const churches = pgTable('churches', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	name: text('name').notNull(),
@@ -50,87 +63,46 @@ export const churches = pgTable('churches', {
 	deleted_at: timestamp('deleted_at')
 });
 
-export const authors = pgTable('authors', {
+export const campuses = pgTable('campuses', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	church_id: uuid('church_id')
 		.notNull()
 		.references(() => churches.id),
-	name: text('name').notNull()
+	name: text('name').notNull(),
+	timezone: text('timezone').default('America/Los_Angeles').notNull(),
+	address: text('address'),
+	created_at: timestamp('created_at').defaultNow(),
+	updated_at: timestamp('updated_at').defaultNow(),
+	deleted_at: timestamp('deleted_at')
 });
 
-// --- 2. PARENT ENTITIES ---
 export const families = pgTable('families', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	church_id: uuid('church_id')
 		.notNull()
 		.references(() => churches.id),
 	name: text('name').notNull(),
-	address_street: text('address_street'),
-	address_city: text('address_city'),
-	address_state: text('address_state'),
-	address_zip: text('address_zip'),
-	created_at: timestamp('created_at').defaultNow(),
-	deleted_at: timestamp('deleted_at')
-});
-
-export const teams = pgTable('teams', {
-	id: uuid('id').defaultRandom().primaryKey(),
-	church_id: uuid('church_id')
-		.notNull()
-		.references(() => churches.id),
-	name: text('name').notNull(),
-	type: text('type').default('ministry').notNull(),
-	description: text('description'),
-	created_at: timestamp('created_at').defaultNow()
-});
-
-export const campuses = pgTable(
-	'campuses',
-	{
-		id: uuid('id').defaultRandom().primaryKey(),
-		church_id: uuid('church_id')
-			.notNull()
-			.references(() => churches.id),
-		name: text('name').notNull(),
-		location: text('location'),
-		timezone: text('timezone').default('America/Los_Angeles').notNull(),
-		created_at: timestamp('created_at').defaultNow(),
-		deleted_at: timestamp('deleted_at')
-	},
-	(t) => [
-		index('campuses_church_idx').on(t.church_id),
-		index('campuses_church_deleted_idx').on(t.church_id, t.deleted_at)
-	]
-);
-
-export const songs = pgTable('songs', {
-	id: uuid('id').defaultRandom().primaryKey(),
-	church_id: uuid('church_id')
-		.notNull()
-		.references(() => churches.id),
-	title: text('title').notNull(),
-	original_key: text('original_key'),
-	tempo: text('tempo'),
-	time_signature: text('time_signature').default('4/4'),
-	ccli_number: text('ccli_number'),
-	performance_notes: text('performance_notes'),
-	content: text('content'),
-	lyrics: text('lyrics'),
 	created_at: timestamp('created_at').defaultNow(),
 	updated_at: timestamp('updated_at').defaultNow()
 });
 
-// --- 3. DEPENDENT ENTITIES ---
 export const people = pgTable('people', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	church_id: uuid('church_id')
 		.notNull()
 		.references(() => churches.id),
+	preferred_campus_id: uuid('preferred_campus_id').references(() => campuses.id),
 
 	first_name: text('first_name').notNull(),
 	last_name: text('last_name').notNull(),
 	preferred_name: text('preferred_name'),
 	gender: text('gender'),
+	birthdate: date('birthdate', { mode: 'string' }),
+
+	// Safeguarding
+	background_check_cleared: boolean('background_check_cleared').default(false).notNull(),
+	background_check_expires_at: timestamp('background_check_expires_at'),
+
 	email: text('email'),
 	phone: text('phone'),
 	avatar_url: text('avatar_url'),
@@ -143,258 +115,244 @@ export const people = pgTable('people', {
 	is_household_primary: boolean('is_household_primary').default(false),
 	family_id: uuid('family_id').references(() => families.id),
 
+	// Auth & Permissions
 	user_id: uuid('user_id'),
-	role: text('role').default('user').notNull(),
+	role: userRoleEnum('role').default('user').notNull(),
+	extra_permissions: text('extra_permissions').array().default([]),
 
 	created_at: timestamp('created_at').defaultNow(),
 	updated_at: timestamp('updated_at').defaultNow(),
 	deleted_at: timestamp('deleted_at')
 });
 
-export const arrangements = pgTable('arrangements', {
+// --- MUSIC & RESOURCES ---
+
+export const songs = pgTable('songs', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	church_id: uuid('church_id')
 		.notNull()
 		.references(() => churches.id),
-	song_id: uuid('song_id')
-		.notNull()
-		.references(() => songs.id),
-	name: text('name').notNull(),
-	key: text('key'),
-	bpm: text('bpm'),
-	content: text('content'),
+
+	original_song_id: uuid('original_song_id').references((): AnyPgColumn => songs.id),
+
+	title: text('title').notNull(),
+	artist: text('artist'),
+	arrangement_name: text('arrangement_name'), // e.g. "Acoustic Version"
+
+	ccli_number: text('ccli_number'),
+
+	// Musical details
+	original_key: text('original_key'),
+	bpm: integer('bpm'),
+	tempo: text('tempo'),
+	time_signature: text('time_signature'),
+
+	// Content
+	lyrics: text('lyrics'),
+	content: text('content'), // ChordPro
+	performance_notes: text('performance_notes'),
+
+	// Media Links (Added)
+	youtube_url: text('youtube_url'),
+	spotify_url: text('spotify_url'),
+
 	created_at: timestamp('created_at').defaultNow(),
-	updated_at: timestamp('updated_at').defaultNow()
-});
-
-export const song_authors = pgTable('song_authors', {
-	id: uuid('id').defaultRandom().primaryKey(),
-	song_id: uuid('song_id')
-		.notNull()
-		.references(() => songs.id),
-	author_id: uuid('author_id')
-		.notNull()
-		.references(() => authors.id),
-	sequence: integer('sequence').default(0)
-});
-
-// --- PLANNING & EVENTS ---
-
-export const gathering_types = pgTable('gathering_types', {
-	id: uuid('id').defaultRandom().primaryKey(),
-	church_id: uuid('church_id')
-		.notNull()
-		.references(() => churches.id),
-	name: text('name').notNull(), // e.g. "Sunday Morning", "Special Event"
-	description: text('description'),
+	updated_at: timestamp('updated_at').defaultNow(),
 	deleted_at: timestamp('deleted_at')
 });
 
-export const series = pgTable('series', {
+export const authors = pgTable('authors', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	church_id: uuid('church_id')
 		.notNull()
 		.references(() => churches.id),
-	title: text('title').notNull(), // e.g. "The Book of Mark"
-	description: text('description'),
-	start_date: timestamp('start_date'),
-	end_date: timestamp('end_date'),
-	artwork_url: text('artwork_url'),
-	created_at: timestamp('created_at').defaultNow()
+	name: text('name').notNull(),
+	created_at: timestamp('created_at').defaultNow(),
+	updated_at: timestamp('updated_at').defaultNow(),
+	deleted_at: timestamp('deleted_at')
 });
 
-export const templates = pgTable('templates', {
-	id: uuid('id').defaultRandom().primaryKey(),
-	church_id: uuid('church_id')
-		.notNull()
-		.references(() => churches.id),
-	gathering_type_id: uuid('gathering_type_id').references(() => gathering_types.id),
-	name: text('name').notNull(), // e.g. "9&11 Standard", "Communion Partial"
-	description: text('description'),
-	data: text('data'), // JSON blob of the item structure (songs, headers, etc)
-	is_partial: boolean('is_partial').default(false) // TRUE = "Baptism Segment", FALSE = "Full Gathering"
-});
-
-export const template_items = pgTable(
-	'template_items',
+export const song_authors = pgTable(
+	'song_authors',
 	{
 		id: uuid('id').defaultRandom().primaryKey(),
-		// Link to the parent table
-		template_id: uuid('template_id')
+		// Added: Tenant Scope
+		church_id: uuid('church_id')
 			.notNull()
-			.references(() => templates.id),
+			.references(() => churches.id),
 
-		type: text('type').notNull(),
-		title: text('title').notNull(),
-		segment: text('segment').notNull().default('core'),
+		song_id: uuid('song_id')
+			.notNull()
+			.references(() => songs.id, { onDelete: 'cascade' }),
+		author_id: uuid('author_id')
+			.notNull()
+			.references(() => authors.id, { onDelete: 'cascade' }),
 
-		duration: text('duration'),
-		duration_seconds: integer('duration_seconds').notNull().default(0),
-		description: text('description'),
-
-		sequence: integer('sequence').notNull().default(0),
-
-		song_id: uuid('song_id').references(() => songs.id),
-		person_id: uuid('person_id').references(() => people.id),
-		deleted_at: timestamp('deleted_at')
+		sequence: integer('sequence').default(0).notNull()
 	},
-	// Add the index for speed
-	(t) => [index('template_items_idx').on(t.template_id, t.segment, t.sequence)]
+	(t) => ({
+		pk: index('song_author_pk').on(t.song_id, t.author_id)
+	})
 );
 
-export const gatherings = pgTable('gatherings', {
+// --- GATHERINGS (PLANS) ---
+
+export const plans = pgTable('plans', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	church_id: uuid('church_id')
 		.notNull()
 		.references(() => churches.id),
 	campus_id: uuid('campus_id').references(() => campuses.id),
-	title: text('title').notNull(),
-
-	// THE BUCKET: The calendar date (anchored to UTC midnight of the campus)
-	date: timestamp('date', { withTimezone: true }).notNull(),
-	created_at: timestamp('created_at').defaultNow()
-});
-
-// --- 4. DEEP DEPENDENCIES ---
-export const relationships = pgTable('relationships', {
-	id: uuid('id').defaultRandom().primaryKey(),
-	church_id: uuid('church_id')
-		.notNull()
-		.references(() => churches.id),
-	person_id: uuid('person_id')
-		.notNull()
-		.references(() => people.id),
-	related_person_id: uuid('related_person_id')
-		.notNull()
-		.references(() => people.id),
-	type: text('type').notNull(),
-	created_at: timestamp('created_at').defaultNow(),
-	deleted_at: timestamp('deleted_at')
-});
-
-export const person_capabilities = pgTable('person_capabilities', {
-	id: uuid('id').defaultRandom().primaryKey(),
-	church_id: uuid('church_id')
-		.notNull()
-		.references(() => churches.id),
-	person_id: uuid('person_id')
-		.notNull()
-		.references(() => people.id),
-	capability: text('capability').notNull(),
-	rating: integer('rating').default(3),
-	notes: text('notes'),
-	created_at: timestamp('created_at').defaultNow(),
-	deleted_at: timestamp('deleted_at')
-});
-
-export const needs = pgTable('needs', {
-	id: uuid('id').defaultRandom().primaryKey(),
-	church_id: uuid('church_id')
-		.notNull()
-		.references(() => churches.id),
-	person_id: uuid('person_id').references(() => people.id),
-	type: text('type').notNull(),
-	status: text('status').default('open'),
-	description: text('description'),
-	is_confidential: boolean('is_confidential').default(true),
-	created_at: timestamp('created_at').defaultNow()
-});
-
-export const team_members = pgTable('team_members', {
-	id: uuid('id').defaultRandom().primaryKey(),
-	church_id: uuid('church_id')
-		.notNull()
-		.references(() => churches.id),
-	team_id: uuid('team_id')
-		.notNull()
-		.references(() => teams.id),
-	person_id: uuid('person_id')
-		.notNull()
-		.references(() => people.id),
-	role: text('role'),
-	status: text('status').default('active'),
+	name: text('name'),
+	date: timestamp('date').notNull(),
+	status: planStatusEnum('status').default('draft').notNull(),
 	created_at: timestamp('created_at').defaultNow(),
 	updated_at: timestamp('updated_at').defaultNow(),
 	deleted_at: timestamp('deleted_at')
 });
 
-export const plans = pgTable(
-	'plans',
-	{
-		id: uuid('id').defaultRandom().primaryKey(),
-		church_id: uuid('church_id')
-			.notNull()
-			.references(() => churches.id),
-		series_id: uuid('series_id').references(() => series.id),
-		gathering_id: uuid('gathering_id')
-			.notNull()
-			.references(() => gatherings.id),
-
-		title: text('title'),
-
-		// OPTIONAL: Only needed if this specific plan is at a different location
-		campus_id: uuid('campus_id').references(() => campuses.id),
-		starts_at: timestamp('starts_at', { withTimezone: true }).notNull(),
-
-		created_at: timestamp('created_at').defaultNow(),
-		deleted_at: timestamp('deleted_at')
-	},
-	(t) => [
-		index('plans_gathering_idx').on(t.gathering_id),
-		index('plans_campus_starts_idx').on(t.campus_id, t.starts_at),
-		index('plans_church_starts_idx').on(t.church_id, t.starts_at)
-	]
-);
-
-export const plan_people = pgTable('plan_people', {
+export const plan_items = pgTable('plan_items', {
 	id: uuid('id').defaultRandom().primaryKey(),
+	// Added: Tenant Scope
 	church_id: uuid('church_id')
 		.notNull()
 		.references(() => churches.id),
+
 	plan_id: uuid('plan_id')
 		.notNull()
 		.references(() => plans.id),
-	person_id: uuid('person_id')
+	segment: planSegmentEnum('segment').default('core').notNull(),
+
+	title: text('title').notNull(),
+	description: text('description'),
+	song_id: uuid('song_id').references(() => songs.id),
+
+	duration: integer('duration').default(0),
+	actual_duration: integer('actual_duration'),
+	order: integer('order').notNull(),
+	is_audible: boolean('is_audible').default(false).notNull(),
+
+	created_at: timestamp('created_at').defaultNow(),
+	updated_at: timestamp('updated_at').defaultNow()
+});
+
+export const plan_needed_positions = pgTable('plan_needed_positions', {
+	id: uuid('id').defaultRandom().primaryKey(),
+
+	church_id: uuid('church_id')
 		.notNull()
-		.references(() => people.id),
-	team_id: uuid('team_id').references(() => teams.id),
-	role: text('role'),
-	status: planPersonStatusEnum('status').default('pending'),
+		.references(() => churches.id),
+
+	plan_id: uuid('plan_id')
+		.notNull()
+		.references(() => plans.id),
+
+	team_id: uuid('team_id')
+		.notNull()
+		.references(() => teams.id),
+
+	capability_id: uuid('capability_id').references(() => capabilities.id),
+	role_name: text('role_name'),
+	quantity: integer('quantity').default(1).notNull(),
+	is_snoozed: boolean('is_snoozed').default(false).notNull(),
 	created_at: timestamp('created_at').defaultNow()
 });
 
-export const plan_items = pgTable(
-	'plan_items',
-	{
-		id: uuid('id').defaultRandom().primaryKey(),
-		plan_id: uuid('plan_id')
-			.notNull()
-			.references(() => plans.id),
-		type: text('type').notNull(),
-		title: text('title').notNull(),
-		segment: text('segment').notNull().default('core'),
-		duration: text('duration'),
-		duration_seconds: integer('duration_seconds').notNull().default(0),
-		description: text('description'),
-		sequence: integer('sequence').notNull().default(0),
-		song_id: uuid('song_id').references(() => songs.id),
-		person_id: uuid('person_id').references(() => people.id),
-		deleted_at: timestamp('deleted_at')
-	},
-	(t) => [index('plan_items_plan_segment_sequence_idx').on(t.plan_id, t.segment, t.sequence)]
-);
+export const plan_people = pgTable('plan_people', {
+	id: uuid('id').defaultRandom().primaryKey(),
 
-export const prayer_requests = pgTable('prayer_requests', {
+	church_id: uuid('church_id')
+		.notNull()
+		.references(() => churches.id),
+
+	plan_id: uuid('plan_id')
+		.notNull()
+		.references(() => plans.id),
+
+	person_id: uuid('person_id')
+		.notNull()
+		.references(() => people.id),
+
+	role_name: text('role_name').notNull(),
+	status: planPersonStatusEnum('status').default('pending').notNull(),
+
+	confirmed_at: timestamp('confirmed_at'),
+	confirmed_by_id: uuid('confirmed_by_id').references(() => people.id),
+
+	created_at: timestamp('created_at').defaultNow(),
+	updated_at: timestamp('updated_at').defaultNow()
+});
+
+// --- TEAMS ---
+
+export const teams = pgTable('teams', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	church_id: uuid('church_id')
 		.notNull()
 		.references(() => churches.id),
-	person_id: uuid('person_id').references(() => people.id),
-	content: text('content').notNull(),
-	is_private: boolean('is_private').default(false),
-	status: text('status').default('open'),
+	name: text('name').notNull(),
+	type: teamTypeEnum('type').notNull(),
+	description: text('description'),
+	color: text('color'),
+	requires_background_check: boolean('requires_background_check').default(false).notNull(),
+	provides_rehearsal_access: boolean('provides_rehearsal_access').default(false).notNull(),
+	reply_to_person_id: uuid('reply_to_person_id').references(() => people.id),
+	decline_policy: teamDeclinePolicyEnum('decline_policy').default('reopen_position').notNull(),
+	created_at: timestamp('created_at').defaultNow(),
+	updated_at: timestamp('updated_at').defaultNow(),
+	deleted_at: timestamp('deleted_at')
+});
+
+export const team_members = pgTable('team_members', {
+	id: uuid('id').defaultRandom().primaryKey(),
+
+	church_id: uuid('church_id')
+		.notNull()
+		.references(() => churches.id),
+
+	team_id: uuid('team_id')
+		.notNull()
+		.references(() => teams.id),
+
+	person_id: uuid('person_id')
+		.notNull()
+		.references(() => people.id),
+
+	role: text('role'),
 	created_at: timestamp('created_at').defaultNow()
 });
+
+export const capabilities = pgTable('capabilities', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	church_id: uuid('church_id')
+		.notNull()
+		.references(() => churches.id),
+	name: text('name').notNull(),
+	category: text('category'),
+	created_at: timestamp('created_at').defaultNow()
+});
+
+export const person_capabilities = pgTable('person_capabilities', {
+	id: uuid('id').defaultRandom().primaryKey(),
+
+	church_id: uuid('church_id')
+		.notNull()
+		.references(() => churches.id),
+
+	person_id: uuid('person_id')
+		.notNull()
+		.references(() => people.id),
+
+	capability_id: uuid('capability_id')
+		.notNull()
+		.references(() => capabilities.id),
+
+	rating: integer('rating').default(3),
+	preference: integer('preference').default(3),
+	created_at: timestamp('created_at').defaultNow()
+});
+
+// --- CARE & CONNECTIONS ---
 
 export const care_logs = pgTable('care_logs', {
 	id: uuid('id').defaultRandom().primaryKey(),
@@ -410,166 +368,69 @@ export const care_logs = pgTable('care_logs', {
 	type: text('type').notNull(),
 	content: text('content').notNull(),
 	is_private: boolean('is_private').default(false),
-	date: timestamp('date').defaultNow(),
 	created_at: timestamp('created_at').defaultNow()
 });
 
-export const addresses = pgTable('addresses', {
+export const relationships = pgTable('relationships', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	church_id: uuid('church_id')
 		.notNull()
 		.references(() => churches.id),
-	family_id: uuid('family_id').references(() => families.id),
-	person_id: uuid('person_id').references(() => people.id),
-	team_id: uuid('team_id').references(() => teams.id),
-	campus_id: uuid('campus_id').references(() => campuses.id),
-	company_name: text('company_name'),
-	street: text('street'),
-	city: text('city'),
-	state: text('state'),
-	zip: text('zip'),
-	country: text('country').default('US'),
-	type: addressTypeEnum('type').default('home'),
-	is_primary: boolean('is_primary').default(false),
-	description: text('description'),
-	start_date: timestamp('start_date'),
-	end_date: timestamp('end_date'),
+	person_id: uuid('person_id')
+		.notNull()
+		.references(() => people.id),
+	related_person_id: uuid('related_person_id')
+		.notNull()
+		.references(() => people.id),
+	type: text('type').notNull(),
 	created_at: timestamp('created_at').defaultNow()
 });
 
-// --- RELATIONS (Must be defined AFTER all tables) ---
-
-export const churchesRelations = relations(churches, ({ many }) => ({
-	people: many(people),
-	songs: many(songs),
-	gatherings: many(gatherings),
-	teams: many(teams),
-	needs: many(needs)
-}));
-
-export const addressesRelations = relations(addresses, ({ one }) => ({
-	family: one(families, { fields: [addresses.family_id], references: [families.id] }),
-	person: one(people, { fields: [addresses.person_id], references: [people.id] }),
-	team: one(teams, { fields: [addresses.team_id], references: [teams.id] }),
-	campus: one(campuses, { fields: [addresses.campus_id], references: [campuses.id] })
-}));
-
-export const familiesRelations = relations(families, ({ one, many }) => ({
-	church: one(churches, {
-		fields: [families.church_id],
-		references: [churches.id]
-	}),
-	members: many(people),
-	addresses: many(addresses)
-}));
+// --- RELATIONS ---
 
 export const peopleRelations = relations(people, ({ one, many }) => ({
-	church: one(churches, {
-		fields: [people.church_id],
-		references: [churches.id]
+	church: one(churches, { fields: [people.church_id], references: [churches.id] }),
+	preferredCampus: one(campuses, {
+		fields: [people.preferred_campus_id],
+		references: [campuses.id]
 	}),
-	family: one(families, {
-		fields: [people.family_id],
-		references: [families.id]
-	}),
-	teamMemberships: many(team_members, { relationName: 'person_to_memberships' }),
-	relationships: many(relationships, { relationName: 'personRelationships' }),
+	family: one(families, { fields: [people.family_id], references: [families.id] }),
+	teamMemberships: many(team_members),
 	capabilities: many(person_capabilities),
+	relationships: many(relationships, { relationName: 'personRelationships' }),
+	relatedToMe: many(relationships, { relationName: 'relatedToMe' }),
 	careLogsReceived: many(care_logs, { relationName: 'careLogReceiver' }),
 	careLogsAuthored: many(care_logs, { relationName: 'careLogAuthor' }),
-	prayerRequests: many(prayer_requests),
-	needs: many(needs),
-	planItems: many(plan_items),
-	personalAddresses: many(addresses)
-}));
-
-// ... (skipping unchanged relations)
-export const team_membersRelations = relations(team_members, ({ one }) => ({
-	person: one(people, {
-		fields: [team_members.person_id],
-		references: [people.id]
-	}),
-	team: one(teams, {
-		fields: [team_members.team_id],
-		references: [teams.id]
-	})
+	planAssignments: many(plan_people)
 }));
 
 export const teamsRelations = relations(teams, ({ many }) => ({
-	members: many(team_members),
-	locations: many(addresses)
+	members: many(team_members)
 }));
 
-export const campusesRelations = relations(campuses, ({ many }) => ({
-	gatherings: many(gatherings),
-	physicalAddress: many(addresses)
+export const teamMembersRelations = relations(team_members, ({ one }) => ({
+	team: one(teams, { fields: [team_members.team_id], references: [teams.id] }),
+	person: one(people, { fields: [team_members.person_id], references: [people.id] })
 }));
 
-export const gatheringsRelations = relations(gatherings, ({ one, many }) => ({
-	campus: one(campuses, {
-		fields: [gatherings.campus_id],
-		references: [campuses.id]
+export const songsRelations = relations(songs, ({ one, many }) => ({
+	church: one(churches, { fields: [songs.church_id], references: [churches.id] }),
+	authors: many(song_authors),
+	// Parent (The Master Chart)
+	originalSong: one(songs, {
+		fields: [songs.original_song_id],
+		references: [songs.id],
+		relationName: 'songVariations'
 	}),
-	plans: many(plans)
-}));
 
-export const plansRelations = relations(plans, ({ one, many }) => ({
-	gathering: one(gatherings, {
-		fields: [plans.gathering_id],
-		references: [gatherings.id]
-	}),
-	people: many(plan_people),
-	items: many(plan_items)
-}));
-
-export const planPeopleRelations = relations(plan_people, ({ one }) => ({
-	plan: one(plans, {
-		fields: [plan_people.plan_id],
-		references: [plans.id]
-	}),
-	person: one(people, {
-		fields: [plan_people.person_id],
-		references: [people.id]
-	}),
-	team: one(teams, {
-		fields: [plan_people.team_id],
-		references: [teams.id]
+	// Children (The Arrangements)
+	arrangements: many(songs, {
+		relationName: 'songVariations'
 	})
 }));
 
-export const planItemsRelations = relations(plan_items, ({ one }) => ({
-	plan: one(plans, {
-		fields: [plan_items.plan_id],
-		references: [plans.id]
-	}),
-	song: one(songs, {
-		fields: [plan_items.song_id],
-		references: [songs.id]
-	}),
-	person: one(people, {
-		fields: [plan_items.person_id],
-		references: [people.id]
-	})
-}));
-
-export const songsRelations = relations(songs, ({ many }) => ({
-	arrangements: many(arrangements),
-	authors: many(song_authors)
-}));
-
-export const arrangementsRelations = relations(arrangements, ({ one }) => ({
-	song: one(songs, {
-		fields: [arrangements.song_id],
-		references: [songs.id]
-	}),
-	church: one(churches, {
-		fields: [arrangements.church_id],
-		references: [churches.id]
-	})
-}));
-
-export const authorsRelations = relations(authors, ({ many }) => ({
-	songs: many(song_authors)
+export const authorsRelations = relations(authors, ({ one }) => ({
+	church: one(churches, { fields: [authors.church_id], references: [churches.id] })
 }));
 
 export const songAuthorsRelations = relations(song_authors, ({ one }) => ({
@@ -577,11 +438,42 @@ export const songAuthorsRelations = relations(song_authors, ({ one }) => ({
 	author: one(authors, { fields: [song_authors.author_id], references: [authors.id] })
 }));
 
-export const careLogsRelations = relations(care_logs, ({ one }) => ({
-	church: one(churches, {
-		fields: [care_logs.church_id],
-		references: [churches.id]
+export const plansRelations = relations(plans, ({ one, many }) => ({
+	items: many(plan_items),
+	assignments: many(plan_people),
+	neededPositions: many(plan_needed_positions),
+	campus: one(campuses, { fields: [plans.campus_id], references: [campuses.id] })
+}));
+
+export const planItemsRelations = relations(plan_items, ({ one }) => ({
+	plan: one(plans, { fields: [plan_items.plan_id], references: [plans.id] }),
+	song: one(songs, { fields: [plan_items.song_id], references: [songs.id] })
+}));
+
+export const planNeededPositionsRelations = relations(plan_needed_positions, ({ one }) => ({
+	plan: one(plans, { fields: [plan_needed_positions.plan_id], references: [plans.id] }),
+	team: one(teams, { fields: [plan_needed_positions.team_id], references: [teams.id] }),
+	capability: one(capabilities, {
+		fields: [plan_needed_positions.capability_id],
+		references: [capabilities.id]
+	})
+}));
+
+export const relationshipsRelations = relations(relationships, ({ one }) => ({
+	person: one(people, {
+		fields: [relationships.person_id],
+		references: [people.id],
+		relationName: 'personRelationships'
 	}),
+	relatedPerson: one(people, {
+		fields: [relationships.related_person_id],
+		references: [people.id],
+		relationName: 'relatedToMe'
+	})
+}));
+
+export const careLogsRelations = relations(care_logs, ({ one }) => ({
+	church: one(churches, { fields: [care_logs.church_id], references: [churches.id] }),
 	person: one(people, {
 		fields: [care_logs.person_id],
 		references: [people.id],
@@ -594,9 +486,10 @@ export const careLogsRelations = relations(care_logs, ({ one }) => ({
 	})
 }));
 
-export const prayerRequestsRelations = relations(prayer_requests, ({ one }) => ({
-	person: one(people, {
-		fields: [prayer_requests.person_id],
-		references: [people.id]
+export const personCapabilitiesRelations = relations(person_capabilities, ({ one }) => ({
+	person: one(people, { fields: [person_capabilities.person_id], references: [people.id] }),
+	capability: one(capabilities, {
+		fields: [person_capabilities.capability_id],
+		references: [capabilities.id]
 	})
 }));

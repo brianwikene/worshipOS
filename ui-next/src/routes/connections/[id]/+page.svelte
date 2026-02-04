@@ -28,7 +28,6 @@
 	import EditProfileDrawer from './EditProfileDrawer.svelte';
 	import EditTeamsDrawer from './EditTeamsDrawer.svelte';
 	import ManageAddressesDrawer from './ManageAddressesDrawer.svelte';
-	// <--- NEW IMPORT
 
 	let { data, form } = $props<{ data: PageData; form: ActionData }>();
 
@@ -37,6 +36,7 @@
 	let careNotes = $derived(data.careNotes);
 	let allFamilies = $derived(data.allFamilies);
 	let allTeams = $derived(data.allTeams);
+	let allCampuses = $derived(data.allCampuses || []); // <--- ADDED
 
 	// 2. Safe Proxy for Relations (handles 'any' typing issues)
 	let p = $derived(person as any);
@@ -52,7 +52,7 @@
 	let isEditCapabilitiesOpen = $state(false);
 	let isEditTeamsOpen = $state(false);
 	let isAddCareNoteOpen = $state(false);
-	let isManageAddressesOpen = $state(false); // <--- NEW STATE
+	let isManageAddressesOpen = $state(false);
 
 	function getComfortLabel(rating: number | null) {
 		if (!rating) return 'Unrated';
@@ -124,12 +124,24 @@
 						{/if}
 					</div>
 					<h1 class="text-2xl font-bold text-slate-900">{p.first_name} {p.last_name}</h1>
-					{#if p.occupation}
-						<p class="mt-1 flex items-center justify-center gap-1 text-sm text-stone-500">
-							<Briefcase size={12} />
-							{p.occupation}
-						</p>
-					{/if}
+
+					<div class="mt-1 flex flex-col items-center gap-1">
+						{#if p.occupation}
+							<p class="flex items-center gap-1 text-sm text-stone-500">
+								<Briefcase size={12} />
+								{p.occupation}
+							</p>
+						{/if}
+
+						{#if p.preferredCampus}
+							<span
+								class="mt-1 inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800"
+							>
+								<MapPin size={12} />
+								{p.preferredCampus.name}
+							</span>
+						{/if}
+					</div>
 
 					<div class="mt-6 space-y-3 text-left">
 						{#if p.email}
@@ -562,7 +574,7 @@
 	</div>
 </div>
 
-<EditProfileDrawer bind:open={isEditProfileOpen} person={p} {form} />
+<EditProfileDrawer bind:open={isEditProfileOpen} person={p} campuses={allCampuses} {form} />
 <ConnectFamilyDrawer bind:open={isConnectFamilyOpen} {allFamilies} />
 <EditHouseholdDrawer bind:open={isEditHouseholdOpen} person={p} />
 <EditCapabilityDrawer bind:open={isEditCapabilitiesOpen} person={p} />
