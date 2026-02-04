@@ -1,3 +1,5 @@
+// src/routes/songs/[id]/+page.server.ts
+
 import { db } from '$lib/server/db';
 import { authors, song_authors, songs } from '$lib/server/db/schema';
 import { error } from '@sveltejs/kit';
@@ -5,21 +7,14 @@ import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-	// --- GUARD CLAUSE ---
-	if (!locals.church) {
-		throw error(404, 'Church not found');
-	}
+	if (!locals.church) throw error(404, 'Church not found');
 	const { church } = locals;
-	// --------------------
 
 	const song = await db.query.songs.findFirst({
 		where: (s, { and, eq }) => and(eq(s.id, params.id), eq(s.church_id, church.id)),
 		with: {
-			// Fetch authors via the junction table
 			authors: {
-				with: {
-					author: true
-				},
+				with: { author: true },
 				orderBy: (sa, { asc }) => [asc(sa.sequence)]
 			}
 		}
@@ -34,11 +29,12 @@ export const actions: Actions = {
 	updateSong: async ({ request, params, locals }) => {
 		if (!locals.church) throw error(401, 'Church not found');
 		if (!params.id) throw error(400, 'Song ID required');
+
 		const { church } = locals;
 		const songId = params.id;
 		const data = await request.formData();
 
-		// 1. Update the Song Record (Master)
+		// --- update song ---
 		await db
 			.update(songs)
 			.set({
@@ -55,49 +51,55 @@ export const actions: Actions = {
 			})
 			.where(and(eq(songs.id, songId), eq(songs.church_id, church.id)));
 
-		// 2. HANDLE AUTHORS
-		const authorsJson = data.get('authors_json') as string;
-		if (authorsJson) {
-			let incomingAuthors: { id?: string; name: string }[];
-			try {
-				incomingAuthors = JSON.parse(authorsJson);
-			} catch {
-				return { success: true };
+		// --- authors ---
+		const authorsJson = data.get('authors_json') as string | null;
+		if (!authorsJson) return { success: true };
+
+		let incomingAuthors: { id?: string; name: string }[];
+		try {
+			incomingAuthors = JSON.parse(authorsJson);
+		} catch {
+			return { success: true };
+		}
+
+		const finalAuthorIds: string[] = [];
+
+		for (const authorObj of incomingAuthors) {
+			if (authorObj.id) {
+				// ensure author belongs to this church
+				const existing = await db.query.authors.findFirst({
+					where: (a, { and, eq }) => and(eq(a.id, authorObj.id!), eq(a.church_id, church.id))
+				});
+				if (!existing) throw error(400, 'Invalid author');
+				finalAuthorIds.push(authorObj.id);
+			} else {
+				const [newAuthor] = await db
+					.insert(authors)
+					.values({
+						church_id: church.id,
+						name: authorObj.name
+					})
+					.returning({ id: authors.id });
+
+				finalAuthorIds.push(newAuthor.id);
 			}
+		}
 
-			// A. Resolve IDs (Create new authors if they have no ID)
-			const finalAuthorIds: string[] = [];
+		// clear existing links (tenant-safe)
+		await db
+			.delete(song_authors)
+			.where(and(eq(song_authors.song_id, songId), eq(song_authors.church_id, church.id)));
 
-			for (const authorObj of incomingAuthors) {
-				if (authorObj.id) {
-					finalAuthorIds.push(authorObj.id);
-				} else {
-					// Create new author if ID is missing
-					const [newAuthor] = await db
-						.insert(authors)
-						.values({
-							church_id: church.id,
-							name: authorObj.name
-						})
-						.returning({ id: authors.id });
-
-					finalAuthorIds.push(newAuthor.id);
-				}
-			}
-
-			// B. Clear existing links for this song
-			await db.delete(song_authors).where(eq(song_authors.song_id, songId));
-
-			// C. Insert new links with sequence for ordering
-			if (finalAuthorIds.length > 0) {
-				await db.insert(song_authors).values(
-					finalAuthorIds.map((authorId, index) => ({
-						song_id: songId,
-						author_id: authorId,
-						sequence: index
-					}))
-				);
-			}
+		// insert new links (tenant-safe)
+		if (finalAuthorIds.length > 0) {
+			await db.insert(song_authors).values(
+				finalAuthorIds.map((authorId, index) => ({
+					church_id: church.id,
+					song_id: songId,
+					author_id: authorId,
+					sequence: index
+				}))
+			);
 		}
 
 		return { success: true };
@@ -106,9 +108,12 @@ export const actions: Actions = {
 	deleteSong: async ({ params, locals }) => {
 		if (!locals.church) throw error(401, 'Church not found');
 		if (!params.id) throw error(400, 'Song ID required');
+
 		const { church } = locals;
 		const songId = params.id;
+
 		await db.delete(songs).where(and(eq(songs.id, songId), eq(songs.church_id, church.id)));
+
 		return { success: true };
 	}
 };

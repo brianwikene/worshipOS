@@ -275,8 +275,11 @@ export const actions: Actions = {
 
 	addCapability: async ({ request, params, locals }) => {
 		if (!locals.church) throw error(401, 'Church not found');
+		const { church } = locals;
+
 		if (!params.id) throw error(400, 'Person ID required');
 		const personId = params.id;
+
 		const data = await request.formData();
 		const capability_id = data.get('capability_id') as string;
 		const rating = parseInt(data.get('rating') as string) || 3;
@@ -285,6 +288,7 @@ export const actions: Actions = {
 		if (!capability_id) return fail(400, { error: 'Capability is required' });
 
 		await db.insert(person_capabilities).values({
+			church_id: church.id,
 			person_id: personId,
 			capability_id,
 			rating,
@@ -294,11 +298,18 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	removeCapability: async ({ request }) => {
+	removeCapability: async ({ request, locals }) => {
+		if (!locals.church) throw error(401, 'Church not found');
+		const { church } = locals;
+
 		const data = await request.formData();
 		const capability_id = data.get('capability_id') as string;
 
-		await db.delete(person_capabilities).where(eq(person_capabilities.id, capability_id));
+		await db
+			.delete(person_capabilities)
+			.where(
+				and(eq(person_capabilities.id, capability_id), eq(person_capabilities.church_id, church.id))
+			);
 
 		return { success: true };
 	},
@@ -322,8 +333,11 @@ export const actions: Actions = {
 
 	joinTeam: async ({ request, params, locals }) => {
 		if (!locals.church) throw error(401, 'Church not found');
+		const { church } = locals;
+
 		if (!params.id) throw error(400, 'Person ID required');
 		const personId = params.id;
+
 		const data = await request.formData();
 		const team_id = data.get('team_id') as string;
 		const role = (data.get('role') as string)?.trim() || 'Member';
@@ -332,11 +346,17 @@ export const actions: Actions = {
 
 		const existing = await db.query.team_members.findFirst({
 			where: (tm, { and, eq }) =>
-				and(eq(tm.person_id, personId), eq(tm.team_id, team_id), eq(tm.role, role))
+				and(
+					eq(tm.church_id, church.id),
+					eq(tm.person_id, personId),
+					eq(tm.team_id, team_id),
+					eq(tm.role, role)
+				)
 		});
 
 		if (!existing) {
 			await db.insert(team_members).values({
+				church_id: church.id,
 				person_id: personId,
 				team_id,
 				role
@@ -346,11 +366,16 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	deleteTeamMembership: async ({ request }) => {
+	deleteTeamMembership: async ({ request, locals }) => {
+		if (!locals.church) throw error(401, 'Church not found');
+		const { church } = locals;
+
 		const data = await request.formData();
 		const membership_id = data.get('membership_id') as string;
 
-		await db.delete(team_members).where(eq(team_members.id, membership_id));
+		await db
+			.delete(team_members)
+			.where(and(eq(team_members.id, membership_id), eq(team_members.church_id, church.id)));
 
 		return { success: true };
 	}
