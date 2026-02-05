@@ -7,6 +7,8 @@
 	let showModal = $state(false);
 	let isSeriesMode = $state(false);
 
+	const gatherings = $derived(data?.gatherings ?? []);
+
 	function asDate(v: unknown): Date {
 		if (v instanceof Date) return v;
 		if (typeof v === 'string' || typeof v === 'number') return new Date(v);
@@ -56,12 +58,12 @@
 
 	<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 		{#each data.gatherings as gathering}
-			<a
-				href={`/gatherings/${gathering.id}`}
+			<div
 				class="group block overflow-hidden rounded-xl border border-gray-200 bg-white transition-all hover:border-blue-300 hover:shadow-md"
 			>
-				<div
-					class="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-5 py-3"
+				<a
+					href="/gatherings/{gathering.id}"
+					class="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-5 py-3 transition-colors hover:bg-gray-100"
 				>
 					<div class="flex items-center gap-2 font-medium text-gray-600">
 						<Calendar size={16} />
@@ -72,37 +74,51 @@
 						class="rounded-full border border-green-100 bg-green-50 px-2 py-0.5 text-[10px] font-bold tracking-wider text-green-600 uppercase"
 						>Ready</span
 					>
-				</div>
+				</a>
 
 				<div class="p-5">
-					<h3
-						class="mb-1 text-lg font-bold text-gray-900 transition-colors group-hover:text-blue-600"
-					>
+					<h3 class="mb-1 text-lg font-bold text-gray-900">
 						{gathering.title}
 					</h3>
 
 					<div class="mt-4 space-y-2">
-						{#if gathering.plans.length > 0}
+						{#if gathering.plans && gathering.plans.length > 0}
 							{#each gathering.plans as plan}
-								<div
-									class="flex items-center justify-between rounded border border-gray-100 bg-gray-50 p-2 text-sm transition group-hover:border-blue-100 group-hover:bg-blue-50/50"
+								{@const p = plan as any}
+								<a
+									href="/gatherings/{gathering.id}/plans/{p.id}/order"
+									class="flex items-center justify-between rounded border border-gray-100 bg-gray-50 p-2 text-sm transition hover:border-blue-300 hover:bg-blue-50/50"
 								>
-									<span class="text-gray-500">{plan.title}</span>
-								</div>
+									<span class="font-medium text-gray-700">
+										{p.name || p.title || 'Service Plan'}
+									</span>
+									<span class="text-[10px] text-gray-400">View →</span>
+								</a>
 							{/each}
 						{:else}
 							<p class="text-sm text-gray-400 italic">No plans scheduled yet.</p>
 						{/if}
 					</div>
 				</div>
-			</a>
+			</div>
 		{/each}
 	</div>
 
-	{#if data.gatherings.length === 0}
-		<div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 py-20 text-center">
+	{#if gatherings.length === 0}
+		<div
+			class="mt-10 rounded-2xl border border-dashed border-gray-300 bg-gray-50 py-20 text-center"
+		>
 			<h3 class="text-lg font-medium text-gray-900">No upcoming gatherings</h3>
-			<p class="mt-1 text-gray-500">Click "New Gathering" to schedule your first gathering.</p>
+			<p class="mt-1 text-gray-500">Click "New Gathering" to schedule your first service.</p>
+
+			<button
+				type="button"
+				onclick={() => (showModal = true)}
+				class="mt-6 inline-flex items-center gap-2 rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-gray-800"
+			>
+				<Plus size={18} />
+				Schedule First Gathering
+			</button>
 		</div>
 	{/if}
 </div>
