@@ -124,14 +124,15 @@ export const actions: Actions = {
 				if (templateItemsToClone.length > 0) {
 					await tx.insert(plan_items).values(
 						templateItemsToClone.map((item) => ({
+							church_id: church.id,
 							plan_id: p.id,
-							type: item.type,
 							title: item.title,
-							sequence: item.sequence,
-							duration_seconds: item.duration_seconds,
+							segment: item.segment,
+							order: item.sequence,
+							duration: item.duration_seconds,
 							description: item.description,
 							song_id: item.song_id,
-							person_id: item.person_id
+							is_audible: false
 						}))
 					);
 				}

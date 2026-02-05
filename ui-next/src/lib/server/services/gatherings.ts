@@ -106,23 +106,39 @@ export async function listGatherings(churchId: string): Promise<GatheringsListRe
 }
 
 /**
- * Get a single gathering by ID.
- * NOTE: Currently backed by `plans` table (gathering_id = plan_id).
+ * Get a single gathering by ID with its plans and plan items.
  * Throws 404 if not found.
  */
 export async function getGatheringById(churchId: string, gatheringId: string) {
-	const row = await db.query.plans.findFirst({
-		where: and(
-			eq(plans.church_id, churchId),
-			eq(plans.id, gatheringId),
-			isNull(plans.deleted_at)
-		),
+	const row = await db.query.gatherings.findFirst({
+		where: and(eq(gatherings.church_id, churchId), eq(gatherings.id, gatheringId)),
 		with: {
 			campus: true,
-			items: { columns: { id: true } }
+			plans: {
+				where: isNull(plans.deleted_at),
+				orderBy: asc(plans.date),
+				with: {
+					items: {
+						columns: { id: true }
+					}
+				}
+			}
 		}
 	});
 
 	if (!row) throw error(404, 'Gathering not found');
-	return row;
+
+	// Shape plans for UI: include title from name or formatted date
+	const shapedPlans = row.plans.map((p) => ({
+		id: p.id,
+		title: p.name ?? format(new Date(p.date), 'h:mm a'),
+		date: p.date,
+		status: p.status,
+		items: p.items
+	}));
+
+	return {
+		...row,
+		plans: shapedPlans
+	};
 }
