@@ -57,15 +57,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 	};
 	const { session, user } = await event.locals.safeGetSession();
 
-	// Debug logging (controlled by SERVER_LOG env or ?debug=1 query param)
-	if (isDebugEnabled(event)) {
-		logRequest(event, 'incoming', {
-			hasSession: !!session,
-			userId: user?.id,
-			email: user?.email
-		});
-	}
-
 	/**
 	 * ------------------------------------------------------------------
 	 * 3. Tenant Resolution (Subdomain → Church)
@@ -126,6 +117,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 	 * - We intentionally DO NOT set `event.locals.person`
 	 * - Page routes must load their own subject entities
 	 */
+
+	// Debug logging AFTER all locals are populated (tenant + actor resolved)
+	if (isDebugEnabled(event)) {
+		logRequest(event, 'incoming', {
+			hasSession: !!session,
+			userId: user?.id,
+			email: user?.email
+		});
+	}
 
 	/**
 	 * ------------------------------------------------------------------
