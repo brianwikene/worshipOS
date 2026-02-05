@@ -322,18 +322,18 @@ const main = async () => {
 		console.log('🤝 Assigning Team Members...');
 		await db.insert(schema.team_members).values([
 			// Worship Team
-			{ team_id: teamIds.worship, person_id: personIds.sarah, role: 'Worship Leader' },
-			{ team_id: teamIds.worship, person_id: personIds.kevin, role: 'Worship Leader' },
+			{ church_id: churchId, team_id: teamIds.worship, person_id: personIds.sarah, role: 'Worship Leader' },
+			{ church_id: churchId, team_id: teamIds.worship, person_id: personIds.kevin, role: 'Worship Leader' },
 			// Band
-			{ team_id: teamIds.band, person_id: personIds.emily, role: 'Keys' },
-			{ team_id: teamIds.band, person_id: personIds.lisa, role: 'Drums' },
-			{ team_id: teamIds.band, person_id: personIds.james, role: 'Bass' },
+			{ church_id: churchId, team_id: teamIds.band, person_id: personIds.emily, role: 'Keys' },
+			{ church_id: churchId, team_id: teamIds.band, person_id: personIds.lisa, role: 'Drums' },
+			{ church_id: churchId, team_id: teamIds.band, person_id: personIds.james, role: 'Bass' },
 			// Vocals
-			{ team_id: teamIds.vocals, person_id: personIds.maria, role: 'Soprano' },
-			{ team_id: teamIds.vocals, person_id: personIds.sarah, role: 'Alto' },
+			{ church_id: churchId, team_id: teamIds.vocals, person_id: personIds.maria, role: 'Soprano' },
+			{ church_id: churchId, team_id: teamIds.vocals, person_id: personIds.sarah, role: 'Alto' },
 			// Production
-			{ team_id: teamIds.production, person_id: personIds.david, role: 'Sound Engineer' },
-			{ team_id: teamIds.production, person_id: personIds.rachel, role: 'Video Director' }
+			{ church_id: churchId, team_id: teamIds.production, person_id: personIds.david, role: 'Sound Engineer' },
+			{ church_id: churchId, team_id: teamIds.production, person_id: personIds.rachel, role: 'Video Director' }
 		]);
 		console.log('   ✓ 9 team memberships created\n');
 
@@ -391,44 +391,50 @@ const main = async () => {
 		// =====================================================
 		console.log('🎯 Assigning Person Capabilities...');
 		await db.insert(schema.person_capabilities).values([
-			{ person_id: personIds.sarah, capability_id: capabilityIds.vocals, rating: 5, preference: 5 },
+			{ church_id: churchId, person_id: personIds.sarah, capability_id: capabilityIds.vocals, rating: 5, preference: 5 },
 			{
+				church_id: churchId,
 				person_id: personIds.sarah,
 				capability_id: capabilityIds.acousticGuitar,
 				rating: 4,
 				preference: 3
 			},
-			{ person_id: personIds.emily, capability_id: capabilityIds.keys, rating: 5, preference: 5 },
-			{ person_id: personIds.emily, capability_id: capabilityIds.vocals, rating: 3, preference: 2 },
-			{ person_id: personIds.lisa, capability_id: capabilityIds.drums, rating: 5, preference: 5 },
+			{ church_id: churchId, person_id: personIds.emily, capability_id: capabilityIds.keys, rating: 5, preference: 5 },
+			{ church_id: churchId, person_id: personIds.emily, capability_id: capabilityIds.vocals, rating: 3, preference: 2 },
+			{ church_id: churchId, person_id: personIds.lisa, capability_id: capabilityIds.drums, rating: 5, preference: 5 },
 			{
+				church_id: churchId,
 				person_id: personIds.lisa,
 				capability_id: capabilityIds.percussion,
 				rating: 4,
 				preference: 4
 			},
-			{ person_id: personIds.james, capability_id: capabilityIds.bass, rating: 4, preference: 5 },
+			{ church_id: churchId, person_id: personIds.james, capability_id: capabilityIds.bass, rating: 4, preference: 5 },
 			{
+				church_id: churchId,
 				person_id: personIds.james,
 				capability_id: capabilityIds.acousticGuitar,
 				rating: 3,
 				preference: 2
 			},
 			{
+				church_id: churchId,
 				person_id: personIds.david,
 				capability_id: capabilityIds.soundEngineering,
 				rating: 5,
 				preference: 5
 			},
 			{
+				church_id: churchId,
 				person_id: personIds.rachel,
 				capability_id: capabilityIds.videoProduction,
 				rating: 5,
 				preference: 5
 			},
-			{ person_id: personIds.maria, capability_id: capabilityIds.vocals, rating: 4, preference: 5 },
-			{ person_id: personIds.kevin, capability_id: capabilityIds.vocals, rating: 4, preference: 4 },
+			{ church_id: churchId, person_id: personIds.maria, capability_id: capabilityIds.vocals, rating: 4, preference: 5 },
+			{ church_id: churchId, person_id: personIds.kevin, capability_id: capabilityIds.vocals, rating: 4, preference: 4 },
 			{
+				church_id: churchId,
 				person_id: personIds.kevin,
 				capability_id: capabilityIds.acousticGuitar,
 				rating: 4,
@@ -564,52 +570,66 @@ const main = async () => {
 
 		// Link songs to authors with sequence
 		await db.insert(schema.song_authors).values([
-			{ song_id: songIds.wayMaker, author_id: authorIds.maverick, sequence: 0 },
-			{ song_id: songIds.oceans, author_id: authorIds.hillsong, sequence: 0 },
-			{ song_id: songIds.blessings, author_id: authorIds.elevation, sequence: 0 },
-			{ song_id: songIds.goodness, author_id: authorIds.bethel, sequence: 0 },
-			{ song_id: songIds.raiseAHallelujah, author_id: authorIds.bethel, sequence: 0 },
-			{ song_id: songIds.amazing, author_id: authorIds.traditional, sequence: 0 },
-			{ song_id: songIds.holySpirit, author_id: authorIds.hillsong, sequence: 0 },
-			{ song_id: songIds.greatAreYou, author_id: authorIds.bethel, sequence: 0 }
+			{ church_id: churchId, song_id: songIds.wayMaker, author_id: authorIds.maverick, sequence: 0 },
+			{ church_id: churchId, song_id: songIds.oceans, author_id: authorIds.hillsong, sequence: 0 },
+			{ church_id: churchId, song_id: songIds.blessings, author_id: authorIds.elevation, sequence: 0 },
+			{ church_id: churchId, song_id: songIds.goodness, author_id: authorIds.bethel, sequence: 0 },
+			{ church_id: churchId, song_id: songIds.raiseAHallelujah, author_id: authorIds.bethel, sequence: 0 },
+			{ church_id: churchId, song_id: songIds.amazing, author_id: authorIds.traditional, sequence: 0 },
+			{ church_id: churchId, song_id: songIds.holySpirit, author_id: authorIds.hillsong, sequence: 0 },
+			{ church_id: churchId, song_id: songIds.greatAreYou, author_id: authorIds.bethel, sequence: 0 }
 		]);
 		console.log('   ✓ 5 authors and 8 songs created\n');
 
 		// =====================================================
-		// 10. PLANS (formerly Gatherings)
+		// 10. GATHERINGS & PLANS
 		// =====================================================
-		console.log('🗓️  Creating Plans...');
+		console.log('🗓️  Creating Gatherings and Plans...');
 
+		const gatheringIds: string[] = [];
 		const planIds: string[] = [];
 
-		// Create plans for the next 4 Sundays
+		// Create gatherings and plans for the next 4 Sundays
 		for (let week = 0; week < 4; week++) {
 			// Calculate next Sunday + weeks
 			const today = new Date();
 			const daysUntilSunday = (7 - today.getDay()) % 7 || 7;
-			const planDate = new Date(today);
-			planDate.setDate(today.getDate() + daysUntilSunday + week * 7);
-			planDate.setHours(9, 0, 0, 0);
+			const gatheringDate = new Date(today);
+			gatheringDate.setDate(today.getDate() + daysUntilSunday + week * 7);
+			gatheringDate.setHours(0, 0, 0, 0);
+
+			// Create one gathering per Sunday (date bucket)
+			const gatheringId = uuidv4();
+			gatheringIds.push(gatheringId);
+
+			await db.insert(schema.gatherings).values({
+				id: gatheringId,
+				church_id: churchId,
+				campus_id: campusIds.main,
+				title: `Sunday Worship - Week ${week + 1}`,
+				date: gatheringDate
+			});
 
 			// Create two plans per Sunday (9am and 11am)
 			for (const hour of [9, 11]) {
 				const planId = uuidv4();
 				planIds.push(planId);
 
-				const serviceDate = new Date(planDate);
+				const serviceDate = new Date(gatheringDate);
 				serviceDate.setHours(hour, 0, 0, 0);
 
 				await db.insert(schema.plans).values({
 					id: planId,
 					church_id: churchId,
 					campus_id: campusIds.main,
-					name: `${hour === 9 ? '9am' : '11am'} Service - Week ${week + 1}`,
+					gathering_id: gatheringId,
+					name: `${hour === 9 ? '9am' : '11am'} Service`,
 					date: serviceDate,
 					status: week === 0 ? 'locked' : 'draft'
 				});
 			}
 		}
-		console.log('   ✓ 8 plans created\n');
+		console.log('   ✓ 4 gatherings and 8 plans created\n');
 
 		// =====================================================
 		// 11. PLAN ITEMS (for first plan)
@@ -619,6 +639,7 @@ const main = async () => {
 
 		await db.insert(schema.plan_items).values([
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				title: 'Way Maker',
 				segment: 'pre',
@@ -628,6 +649,7 @@ const main = async () => {
 				is_audible: true
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				title: 'Welcome & Announcements',
 				description: 'Pastor Mike welcomes congregation',
@@ -637,6 +659,7 @@ const main = async () => {
 				is_audible: false
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				title: 'Raise a Hallelujah',
 				segment: 'core',
@@ -646,6 +669,7 @@ const main = async () => {
 				is_audible: true
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				title: 'Goodness of God',
 				segment: 'core',
@@ -655,6 +679,7 @@ const main = async () => {
 				is_audible: true
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				title: 'Prayer',
 				segment: 'core',
@@ -663,6 +688,7 @@ const main = async () => {
 				is_audible: false
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				title: 'Message: Created to Worship',
 				description: 'Week 1 of The Heart of Worship series',
@@ -672,6 +698,7 @@ const main = async () => {
 				is_audible: false
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				title: 'The Blessing',
 				segment: 'core',
@@ -681,6 +708,7 @@ const main = async () => {
 				is_audible: true
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				title: 'Benediction',
 				segment: 'post',
@@ -697,42 +725,49 @@ const main = async () => {
 		console.log('👤 Assigning People to Plans...');
 		await db.insert(schema.plan_people).values([
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				person_id: personIds.sarah,
 				role_name: 'Worship Leader',
 				status: 'confirmed'
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				person_id: personIds.emily,
 				role_name: 'Keys',
 				status: 'confirmed'
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				person_id: personIds.lisa,
 				role_name: 'Drums',
 				status: 'pending'
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				person_id: personIds.james,
 				role_name: 'Bass',
 				status: 'confirmed'
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				person_id: personIds.maria,
 				role_name: 'Vocals',
 				status: 'confirmed'
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				person_id: personIds.david,
 				role_name: 'Sound',
 				status: 'confirmed'
 			},
 			{
+				church_id: churchId,
 				plan_id: firstPlanId,
 				person_id: personIds.mike,
 				role_name: 'Speaker',

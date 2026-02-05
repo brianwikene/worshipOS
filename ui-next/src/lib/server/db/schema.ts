@@ -196,6 +196,16 @@ export const song_authors = pgTable(
 );
 
 // --- GATHERINGS (PLANS) ---
+export const gatherings = pgTable('gatherings', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	church_id: uuid('church_id')
+		.notNull()
+		.references(() => churches.id),
+	campus_id: uuid('campus_id').references(() => campuses.id),
+	title: text('title').notNull(),
+	date: timestamp('date', { withTimezone: true }).notNull(),
+	created_at: timestamp('created_at').defaultNow()
+});
 
 export const plans = pgTable('plans', {
 	id: uuid('id').defaultRandom().primaryKey(),
@@ -204,6 +214,9 @@ export const plans = pgTable('plans', {
 		.references(() => churches.id),
 	campus_id: uuid('campus_id').references(() => campuses.id),
 	name: text('name'),
+	gathering_id: uuid('gathering_id')
+		.notNull()
+		.references(() => gatherings.id),
 	date: timestamp('date').notNull(),
 	status: planStatusEnum('status').default('draft').notNull(),
 	created_at: timestamp('created_at').defaultNow(),
@@ -281,6 +294,39 @@ export const plan_people = pgTable('plan_people', {
 
 	created_at: timestamp('created_at').defaultNow(),
 	updated_at: timestamp('updated_at').defaultNow()
+});
+
+// --- TEMPLATES ---
+
+export const templates = pgTable('templates', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	church_id: uuid('church_id')
+		.notNull()
+		.references(() => churches.id),
+	name: text('name').notNull(),
+	description: text('description'),
+	created_at: timestamp('created_at').defaultNow(),
+	updated_at: timestamp('updated_at').defaultNow(),
+	deleted_at: timestamp('deleted_at')
+});
+
+export const template_items = pgTable('template_items', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	church_id: uuid('church_id')
+		.notNull()
+		.references(() => churches.id),
+	template_id: uuid('template_id')
+		.notNull()
+		.references(() => templates.id),
+	type: text('type').notNull(),
+	title: text('title').notNull(),
+	segment: text('segment').notNull().default('core'),
+	duration_seconds: integer('duration_seconds').notNull().default(0),
+	description: text('description'),
+	sequence: integer('sequence').notNull().default(0),
+	song_id: uuid('song_id').references(() => songs.id),
+	person_id: uuid('person_id').references(() => people.id),
+	deleted_at: timestamp('deleted_at')
 });
 
 // --- TEAMS ---
@@ -438,7 +484,20 @@ export const songAuthorsRelations = relations(song_authors, ({ one }) => ({
 	author: one(authors, { fields: [song_authors.author_id], references: [authors.id] })
 }));
 
+export const gatheringsRelations = relations(gatherings, ({ one, many }) => ({
+	campus: one(campuses, {
+		fields: [gatherings.campus_id],
+		references: [campuses.id]
+	}),
+	plans: many(plans) // <--- ENSURE THIS LINE IS HERE
+}));
+
 export const plansRelations = relations(plans, ({ one, many }) => ({
+	gathering: one(gatherings, {
+		fields: [plans.gathering_id],
+		references: [gatherings.id]
+	}),
+	planPeople: many(plan_people),
 	items: many(plan_items),
 	assignments: many(plan_people),
 	neededPositions: many(plan_needed_positions),

@@ -1,31 +1,21 @@
 // src/routes/gatherings/[gathering_id]/+page.server.ts
-// Note: This route uses gathering_id but actually queries plans directly
-// since the schema no longer has a separate gatherings table.
+// Note: gathering_id currently maps to plan_id (legacy behavior)
 
-import { db } from '$lib/server/db';
-import { plans } from '$lib/server/db/schema';
+import { logRequest, logStep } from '$lib/server/log';
+import { getGatheringById } from '$lib/server/services/gatherings';
 import { error, redirect } from '@sveltejs/kit';
-import { and, eq } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
-	const churchId = locals.church?.id;
+export const load: PageServerLoad = async (event) => {
+	logRequest(event, 'page.gatherings.detail.load', { id: event.params.gathering_id });
+
+	const churchId = event.locals.church?.id;
 	if (!churchId) throw error(401, 'Unauthorized');
 
-	// In the current schema, gathering_id IS the plan_id
-	// (plans serve as gatherings directly)
-	const plan = await db.query.plans.findFirst({
-		where: and(eq(plans.id, params.gathering_id), eq(plans.church_id, churchId)),
-		with: {
-			campus: true,
-			items: {
-				columns: { id: true }
-			}
-		}
-	});
+	// Validates gathering exists (throws 404 if not)
+	await getGatheringById(churchId, event.params.gathering_id);
 
-	if (!plan) throw error(404, 'Plan not found');
-
+	logStep(event, 'redirecting to plan order');
 	// Redirect directly to the plan order page
-	throw redirect(303, `/gatherings/${params.gathering_id}/plans/${params.gathering_id}/order`);
+	throw redirect(303, `/gatherings/${event.params.gathering_id}/plans/${event.params.gathering_id}/order`);
 };
