@@ -14,6 +14,11 @@ Run after each chunk of work. Check off manually or use as a guide.
 - [ ] Click a gathering → `/gatherings/[id]` detail page loads
 - [ ] Detail page shows correct gathering title + date + plans list
 
+## Gathering Order (Read-Only)
+- [ ] `GET /api/gatherings/:id/order` returns plans + items
+- [ ] `/gatherings/:id/order` renders without error
+- [ ] Shows plan title, status, and ordered items
+
 ## Plans
 - [ ] `/gatherings/[id]/plans/[plan_id]` loads
 - [ ] Plan items display (if any exist)
