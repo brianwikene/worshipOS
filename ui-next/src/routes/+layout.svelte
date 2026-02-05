@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import DevToolbar from '$lib/components/dev/DevToolbar.svelte';
+	import { installClientErrorCapture } from '$lib/client/error-capture';
 	import { initTenant } from '$lib/tenant.svelte';
 	import type { LayoutData } from './$types';
-	// <--- 1. Import generated data type
-	import type { Snippet } from 'svelte'; // <--- 2. Import Snippet type
+	import type { Snippet } from 'svelte';
+	import { onMount } from 'svelte';
 	import {
 		Calendar,
 		Check,
@@ -20,6 +21,11 @@
 
 	import { slide } from 'svelte/transition';
 	import '../app.css';
+
+	// Install global client error capture
+	onMount(() => {
+		installClientErrorCapture();
+	});
 	// Note: Adjust path if app.css is in src/ (e.g. '../../app.css')
 
 	// --- 3. Type the props explicitly ---

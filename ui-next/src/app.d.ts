@@ -1,35 +1,71 @@
 // src/app.d.ts
 // See https://svelte.dev/docs/kit/types#app.d.ts
-import type { churches, people } from '$lib/server/db/schema';
+
 import type { Role } from '$lib/auth/roles';
-import { Session, SupabaseClient, User } from '@supabase/supabase-js';
+import type { churches, people } from '$lib/server/db/schema';
+import type { Session, SupabaseClient, User } from '@supabase/supabase-js';
 
 declare global {
 	namespace App {
-		// interface Error {}
-
 		interface Locals {
-			// Supabase Auth & Client
-			supabase: SupabaseClient;
-			safeGetSession: () => Promise<{ session: Session | null; user: User | null }>;
+			// ------------------------------------------------------------
+			// Request Tracking
+			// ------------------------------------------------------------
+			/** Short request ID for log correlation (set in hooks.server.ts) */
+			rid: string;
 
-			// Tenant Context (Nullable because a user might visit an invalid subdomain)
+			// ------------------------------------------------------------
+			// Supabase Auth & Client
+			// ------------------------------------------------------------
+			supabase: SupabaseClient;
+			safeGetSession: () => Promise<{
+				session: Session | null;
+				user: User | null;
+			}>;
+
+			// ------------------------------------------------------------
+			// Tenant Context (nullable for invalid subdomains / public pages)
+			// ------------------------------------------------------------
 			church: typeof churches.$inferSelect | null;
 
-			// Current Person (linked to Supabase user, null if not logged in)
-			person: (typeof people.$inferSelect & { role: Role }) | null;
+			// ------------------------------------------------------------
+			// ACTOR — authenticated human (WHO AM I)
+			// ------------------------------------------------------------
+			// - Derived from auth.user → people.user_id
+			// - MUST NOT depend on route params
+			// - Stable for the entire request lifecycle
+			actor: (typeof people.$inferSelect & { role: Role }) | null;
+
+			// ------------------------------------------------------------
+			// LEGACY / TRANSITIONAL (optional)
+			// ------------------------------------------------------------
+			// ⚠️ DO NOT use for auth or permissions.
+			// ⚠️ May be removed once all routes are migrated.
+			// Prefer:
+			//   - locals.actor (who is logged in)
+			//   - page.data.person (who is being viewed)
+			person?: (typeof people.$inferSelect & { role: Role }) | null;
 		}
 
 		interface PageData {
 			session: Session | null;
+			church?: typeof churches.$inferSelect | null;
+			actor?: (typeof people.$inferSelect & { role: Role }) | null;
 		}
 
+		interface Error {
+			message: string;
+			rid?: string;
+			status?: number;
+		}
 		// interface PageState {}
 		// interface Platform {}
 	}
 }
 
-// Ensure external icon libraries work (if you use unplugin-icons)
+// ------------------------------------------------------------
+// External icon support (unplugin-icons, etc.)
+// ------------------------------------------------------------
 declare module '~icons/*' {
 	import type { Component } from 'svelte';
 	const component: Component;
