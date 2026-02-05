@@ -19,6 +19,11 @@ Run after each chunk of work. Check off manually or use as a guide.
 - [ ] `/gatherings/:id/order` renders without error
 - [ ] Shows plan title, status, and ordered items
 
+## Rehearse (Read-Only)
+- [ ] `GET /api/gatherings/:id/rehearse` returns songs only
+- [ ] `/gatherings/:id/rehearse` renders song-only list
+- [ ] Shows song number, title, key, artist
+
 ## Plans
 - [ ] `/gatherings/[id]/plans/[plan_id]` loads
 - [ ] Plan items display (if any exist)
