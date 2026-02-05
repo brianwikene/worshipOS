@@ -1,53 +1,60 @@
 <!-- src/routes/gatherings/[gathering_id]/rehearse/+page.svelte -->
 <!-- Read-only rehearse view - songs only, musician-focused -->
 <script lang="ts">
-	import { ArrowLeft, Music } from '@lucide/svelte';
+	import { ArrowLeft, List, Music } from '@lucide/svelte';
 
 	let { data } = $props();
 
-	function formatDate(v: unknown): string {
-		const d = v instanceof Date ? v : new Date(String(v));
-		if (Number.isNaN(d.getTime())) return '';
-		return d.toLocaleDateString('en-US', {
-			weekday: 'long',
-			month: 'long',
-			day: 'numeric',
-			timeZone: 'UTC'
-		});
-	}
-
-	function formatDuration(seconds: number | null): string {
-		if (!seconds) return '';
-		const mins = Math.floor(seconds / 60);
-		const secs = seconds % 60;
-		return secs > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${mins}:00`;
-	}
-</script>
-
-<div class="min-h-screen bg-stone-50">
+<div class="min-h-screen bg-stone-50 pb-20">
 	<!-- Header -->
-	<header class="border-b border-stone-200 bg-white px-4 py-4 shadow-sm">
+	<header class="border-b border-stone-200 bg-white px-4 pt-4 shadow-sm">
 		<div class="mx-auto max-w-2xl">
 			<a
 				href="/gatherings/{data.rehearse.gathering.id}"
 				class="mb-3 inline-flex items-center gap-2 text-sm text-stone-500 transition hover:text-stone-900"
 			>
 				<ArrowLeft size={16} />
-				Back
+				Back to Gathering
 			</a>
 
 			<h1 class="text-2xl font-bold text-stone-900">{data.rehearse.gathering.title}</h1>
 			<p class="mt-1 text-stone-500">{formatDate(data.rehearse.gathering.date)}</p>
+
+			<!-- Simple Tab Navigation -->
+			<div class="mt-6 flex gap-6">
+				<a
+					href="/gatherings/{data.rehearse.gathering.id}/order"
+					class="border-b-2 border-transparent pb-3 text-sm font-medium text-stone-500 transition hover:text-stone-900"
+				>
+					<div class="flex items-center gap-2">
+						<List size={16} />
+						Service Flow
+					</div>
+				</a>
+				<a
+					href="/gatherings/{data.rehearse.gathering.id}/rehearse"
+					class="border-b-2 border-stone-900 pb-3 text-sm font-bold text-stone-900"
+				>
+					<div class="flex items-center gap-2">
+						<Music size={16} />
+						Songs & Rehearsal
+					</div>
+				</a>
+			</div>
 		</div>
 	</header>
 
 	<!-- Song List -->
 	<main class="mx-auto max-w-2xl px-4 py-8">
 		{#if data.rehearse.songs.length === 0}
-			<div class="rounded-xl border border-dashed border-stone-300 bg-white py-16 text-center">
-				<Music size={48} class="mx-auto mb-4 text-stone-300" />
-				<p class="text-lg text-stone-500">No songs in this gathering yet</p>
-				<p class="mt-1 text-sm text-stone-400">Songs will appear here once added to the flow</p>
+			<div class="rounded-xl border border-dashed border-stone-300 bg-white py-16 text-center shadow-sm">
+				<div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-50">
+					<Music size={32} class="text-stone-300" />
+				</div>
+				<h3 class="text-lg font-bold text-stone-900">The setlist is still taking shape</h3>
+				<p class="mx-auto mt-2 max-w-xs text-stone-500">
+					Songs will appear here once they are added to the service flow. Check back soon as we prepare for this gathering.
+				</p>
 			</div>
 		{:else}
 			<div class="mb-6 flex items-center justify-between">
