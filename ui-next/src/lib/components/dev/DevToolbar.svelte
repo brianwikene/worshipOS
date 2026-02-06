@@ -49,7 +49,7 @@
 	}
 </script>
 
-<div class="pointer-events-none fixed inset-x-0 bottom-0 z-[9999] flex justify-center">
+<div class="pointer-events-none fixed inset-x-0 bottom-0 z-[9999] flex justify-center print:hidden">
 	{#if !isOpen}
 		<button
 			onclick={() => (isOpen = true)}

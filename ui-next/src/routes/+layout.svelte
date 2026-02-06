@@ -79,7 +79,7 @@
 <div class="flex min-h-screen flex-col bg-stone-50 font-sans text-slate-900">
 	{#if activeChurch}
 		<div
-			class="relative z-50 flex shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-2 text-xs text-slate-400 shadow-md"
+			class="relative z-50 flex shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-2 text-xs text-slate-400 shadow-md print:hidden"
 		>
 			<div class="flex items-center gap-2">
 				<div class="flex items-center gap-2 md:hidden">
@@ -154,7 +154,7 @@
 	{/if}
 
 	<div class="flex min-h-0 flex-1">
-		<aside class="hidden w-64 flex-col border-r border-stone-200 bg-stone-50 md:flex">
+		<aside class="hidden w-64 flex-col border-r border-stone-200 bg-stone-50 md:flex print:!hidden">
 			<nav class="flex-1 space-y-1 p-4">
 				{#each navItems as item}
 					{@const active = isActive(item.href)}

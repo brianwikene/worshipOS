@@ -2,13 +2,49 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/stores';
 	import AuthorInput from '$lib/components/AuthorInput.svelte';
-	import { ArrowLeft, ChevronLeft, ChevronRight, CircleHelp, Copy, ExternalLink, Eye, Pencil, Save, Trash2, X } from '@lucide/svelte';
+	import {
+		ArrowLeft,
+		ChevronLeft,
+		ChevronRight,
+		CircleHelp,
+		Copy,
+		ExternalLink,
+		Eye,
+		Pencil,
+		Save,
+		Trash2,
+		X
+	} from '@lucide/svelte';
 
 	// --- CONSTANTS ---
 	const SECTION_KEYWORDS =
 		/^(Verse|Chorus|Bridge|Pre-Chorus|PreChorus|Intro|Outro|Tag|Interlude|Instrumental|Hook|Ending|V\d|C\d|B\d)/i;
 
 	const KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+	const NOTE_TO_SEMITONE: Record<string, number> = {
+		C: 0,
+		'B#': 0,
+		'C#': 1,
+		Db: 1,
+		D: 2,
+		'D#': 3,
+		Eb: 3,
+		E: 4,
+		Fb: 4,
+		F: 5,
+		'E#': 5,
+		'F#': 6,
+		Gb: 6,
+		G: 7,
+		'G#': 8,
+		Ab: 8,
+		A: 9,
+		'A#': 10,
+		Bb: 10,
+		B: 11,
+		Cb: 11
+	};
 
 	// --- TYPES ---
 	type Arrangement = {
@@ -134,7 +170,11 @@
 		return segment.lines.reduce((sum, l) => sum + estimateHeight(l, chordsVisible), 0);
 	}
 
-	function paginateSegments(segments: Segment[], chordsVisible: boolean, cols: number): Segment[][] {
+	function paginateSegments(
+		segments: Segment[],
+		chordsVisible: boolean,
+		cols: number
+	): Segment[][] {
 		const PAGE1_BUDGET = 736;
 		const PAGEN_BUDGET = 916;
 		const multiplier = cols === 2 ? 2 : 1;
@@ -179,9 +219,9 @@
 	}
 
 	function getSemitoneShift(original: string, target: string) {
-		const idx1 = KEYS.indexOf(normalizeKey(original));
-		const idx2 = KEYS.indexOf(normalizeKey(target));
-		if (idx1 === -1 || idx2 === -1) return 0;
+		const idx1 = NOTE_TO_SEMITONE[normalizeKey(original)];
+		const idx2 = NOTE_TO_SEMITONE[normalizeKey(target)];
+		if (idx1 === undefined || idx2 === undefined) return 0;
 		return idx2 - idx1;
 	}
 
@@ -191,9 +231,9 @@
 
 		const root = normalizeKey(match[1]);
 		const quality = match[2];
-		const rootIndex = KEYS.indexOf(root);
+		const rootIndex = NOTE_TO_SEMITONE[root];
 
-		if (rootIndex === -1) return chord;
+		if (rootIndex === undefined) return chord;
 
 		let newIndex = (rootIndex + semitones) % 12;
 		if (newIndex < 0) newIndex += 12;
@@ -216,9 +256,9 @@
 		const root = normalizeKey(match[1]);
 		const quality = match[2];
 
-		const keyIndex = KEYS.indexOf(normalizeKey(key));
-		const rootIndex = KEYS.indexOf(root);
-		if (keyIndex === -1 || rootIndex === -1) return chord;
+		const keyIndex = NOTE_TO_SEMITONE[normalizeKey(key)];
+		const rootIndex = NOTE_TO_SEMITONE[root];
+		if (keyIndex === undefined || rootIndex === undefined) return chord;
 
 		let interval = (rootIndex - keyIndex + 12) % 12;
 		const degrees: Record<number, string> = {
@@ -339,7 +379,19 @@
 					return { type: 'section' as const, content: smartLabel('Chorus', counters) };
 				if (['sov', 'start_of_verse'].includes(tag))
 					return { type: 'section' as const, content: smartLabel('Verse', counters) };
-				if (['eoc', 'end_of_chorus', 'eov', 'end_of_verse', 'flow', 'order', 'copyright', 'time', 'time_signature'].includes(tag))
+				if (
+					[
+						'eoc',
+						'end_of_chorus',
+						'eov',
+						'end_of_verse',
+						'flow',
+						'order',
+						'copyright',
+						'time',
+						'time_signature'
+					].includes(tag)
+				)
 					return { type: 'empty' as const };
 
 				if (SECTION_KEYWORDS.test(dirMatch[1])) {
@@ -526,7 +578,9 @@
 									</p>
 								</div>
 								<div>
-									<label for="artist" class="block text-xs font-medium text-slate-700">Recording Artist</label>
+									<label for="artist" class="block text-xs font-medium text-slate-700"
+										>Recording Artist</label
+									>
 									<input
 										type="text"
 										id="artist"
@@ -560,7 +614,9 @@
 										/>
 									</div>
 									<div>
-										<label for="time_signature" class="block text-xs font-medium text-slate-700">Time Sig.</label>
+										<label for="time_signature" class="block text-xs font-medium text-slate-700"
+											>Time Sig.</label
+										>
 										<select
 											name="time_signature"
 											id="time_signature"
@@ -599,7 +655,9 @@
 									/>
 								</div>
 								<div>
-									<label for="copyright" class="block text-xs font-medium text-slate-700">Copyright</label>
+									<label for="copyright" class="block text-xs font-medium text-slate-700"
+										>Copyright</label
+									>
 									<input
 										type="text"
 										id="copyright"
@@ -610,7 +668,9 @@
 									/>
 								</div>
 								<div>
-									<label for="youtube_url" class="block text-xs font-medium text-slate-700">YouTube URL</label>
+									<label for="youtube_url" class="block text-xs font-medium text-slate-700"
+										>YouTube URL</label
+									>
 									<input
 										type="url"
 										id="youtube_url"
@@ -621,7 +681,9 @@
 									/>
 								</div>
 								<div>
-									<label for="spotify_url" class="block text-xs font-medium text-slate-700">Spotify URL</label>
+									<label for="spotify_url" class="block text-xs font-medium text-slate-700"
+										>Spotify URL</label
+									>
 									<input
 										type="url"
 										id="spotify_url"
@@ -959,7 +1021,8 @@
 								<button
 									type="button"
 									disabled={currentPageIndex >= totalPages - 1}
-									onclick={() => (currentPageIndex = Math.min(totalPages - 1, currentPageIndex + 1))}
+									onclick={() =>
+										(currentPageIndex = Math.min(totalPages - 1, currentPageIndex + 1))}
 									class="rounded-md border border-stone-200 p-1.5 text-stone-500 hover:bg-stone-50 disabled:opacity-30"
 									aria-label="Next page"
 								>
@@ -973,7 +1036,8 @@
 						>
 							<div>
 								<p>
-									{#if song.copyright}{song.copyright}{:else}© {displayAuthors}{/if}. {#if song.ccli_number}CCLI #{song.ccli_number}{/if}.
+									{#if song.copyright}{song.copyright}{:else}© {displayAuthors}{/if}. {#if song.ccli_number}CCLI
+										#{song.ccli_number}{/if}.
 								</p>
 								<p class="mt-0.5">
 									Generated by WorshipOS for <span class="font-bold text-stone-600"
@@ -1000,22 +1064,26 @@
 					<!-- Print: render all pages sequentially with page breaks -->
 					<div class="hidden print:block">
 						{#each pages as pageSegments, pageIdx}
-							<div class="relative flex min-h-[100vh] flex-col p-0" style={pageIdx > 0 ? 'page-break-before: always' : ''}>
-								<div class="absolute top-6 right-8 rounded border border-stone-400 px-2 py-0.5 text-xs font-bold text-stone-500">
-									{pageIdx + 1} / {totalPages}
-								</div>
-
+							<div
+								class="relative flex min-h-[100vh] flex-col p-0"
+								style={pageIdx > 0 ? 'page-break-before: always' : ''}
+							>
 								{#if pageIdx === 0}
 									<div class="mb-6 border-b-2 border-slate-900 pb-4">
-										<h1 class="mb-1 text-3xl font-bold tracking-tight text-slate-900 uppercase">{song.title}</h1>
+										<h1 class="mb-1 text-3xl font-bold tracking-tight text-slate-900 uppercase">
+											{song.title}
+										</h1>
 										<div class="flex items-center justify-between text-sm">
 											<div class="font-medium text-slate-600">{displayAuthors}</div>
 											<div class="flex items-center gap-4 font-bold text-slate-900">
-												<span class="text-xs font-normal text-stone-400 uppercase">Key</span> {selectedKey}
+												<span class="text-xs font-normal text-stone-400 uppercase">Key</span>
+												{selectedKey}
 												{#if displayTempo}
-													<span class="text-xs font-normal text-stone-400 uppercase">BPM</span> {displayTempo}
+													<span class="text-xs font-normal text-stone-400 uppercase">BPM</span>
+													{displayTempo}
 												{/if}
-												<span class="text-xs font-normal text-stone-400 uppercase">Time</span> {song.time_signature || '4/4'}
+												<span class="text-xs font-normal text-stone-400 uppercase">Time</span>
+												{song.time_signature || '4/4'}
 											</div>
 										</div>
 									</div>
@@ -1026,12 +1094,23 @@
 										{#each segment.lines as line}
 											<div class="mb-2 break-inside-avoid">
 												{#if line.type === 'section'}
-													<h3 class="mt-4 mb-2 inline-block rounded-sm border border-slate-900 px-2 py-0.5 text-sm font-bold tracking-wider text-slate-900 uppercase">{line.content}</h3>
+													<h3
+														class="mt-4 mb-2 inline-block rounded-sm border border-slate-900 px-2 py-0.5 text-sm font-bold tracking-wider text-slate-900 uppercase"
+													>
+														{line.content}
+													</h3>
 												{:else if line.type === 'comment'}
-													<div class="my-2 inline-block rounded border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-600 italic">{line.content}</div>
+													<div
+														class="my-2 inline-block rounded border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-600 italic"
+													>
+														{line.content}
+													</div>
 												{:else if line.type === 'directive'}
 													<div class="my-2 flex items-center gap-2 font-sans text-sm">
-														<span class="rounded border border-stone-200 bg-stone-100 px-2 py-0.5 text-xs font-bold tracking-wide text-stone-500 uppercase">{line.label}</span>
+														<span
+															class="rounded border border-stone-200 bg-stone-100 px-2 py-0.5 text-xs font-bold tracking-wide text-stone-500 uppercase"
+															>{line.label}</span
+														>
 														<span class="font-bold text-slate-900">{line.value}</span>
 													</div>
 												{:else if line.type === 'empty'}
@@ -1041,9 +1120,17 @@
 														{#each line.pairs as pair}
 															<div class="flex flex-col">
 																{#if showChords}
-																	<div class="h-5 font-mono text-sm leading-none font-bold text-black select-none">{pair.chord || '\u00A0'}</div>
+																	<div
+																		class="h-5 font-mono text-sm leading-none font-bold text-black select-none"
+																	>
+																		{pair.chord || '\u00A0'}
+																	</div>
 																{/if}
-																<div class="font-sans text-base leading-normal font-medium whitespace-pre-wrap text-black">{pair.lyric}</div>
+																<div
+																	class="font-sans text-base leading-normal font-medium whitespace-pre-wrap text-black"
+																>
+																	{pair.lyric}
+																</div>
 															</div>
 														{/each}
 													</div>
@@ -1053,12 +1140,32 @@
 									{/each}
 								</div>
 
-								<div class="mt-8 flex items-end justify-between border-t border-stone-200 pt-4 text-[10px] text-stone-500">
+								<div
+									class="mt-8 flex items-end justify-between border-t border-stone-200 pt-4 text-[10px] text-stone-500"
+								>
 									<div>
-										<p>{#if song.copyright}{song.copyright}{:else}© {displayAuthors}{/if}. {#if song.ccli_number}CCLI #{song.ccli_number}{/if}.</p>
+										<p>
+											{#if song.copyright}{song.copyright}{:else}© {displayAuthors}{/if}. {#if song.ccli_number}CCLI
+												#{song.ccli_number}{/if}.
+										</p>
+										<p class="mt-0.5">
+											Generated by WorshipOS for <span class="font-bold text-stone-600"
+												>{$page.data.church?.name || 'Your Church'}</span
+											>.
+										</p>
 									</div>
 									<div class="text-right">
 										<p>{pageIdx + 1} / {totalPages}</p>
+										<p>
+											Last Updated:
+											{new Date(
+												song.updated_at || song.created_at || new Date()
+											).toLocaleDateString('en-US', {
+												year: 'numeric',
+												month: 'short',
+												day: 'numeric'
+											})}
+										</p>
 									</div>
 								</div>
 							</div>
