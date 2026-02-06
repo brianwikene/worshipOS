@@ -6,7 +6,7 @@
 		ArrowLeft,
 		ChevronLeft,
 		ChevronRight,
-		CircleHelp,
+		CircleQuestionMark,
 		Copy,
 		ExternalLink,
 		Eye,
@@ -18,7 +18,7 @@
 
 	// --- CONSTANTS ---
 	const SECTION_KEYWORDS =
-		/^(Verse|Chorus|Bridge|Pre-Chorus|PreChorus|Intro|Outro|Tag|Interlude|Instrumental|Hook|Ending|V\d|C\d|B\d)/i;
+		/^(Verse|Chorus|Bridge|Pre-Chorus|PreChorus|Pre Chorus|Intro|Outro|Tag|Interlude|Instrumental|Hook|Ending|V\d|C\d|B\d)/i;
 
 	const KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
@@ -175,7 +175,7 @@
 		chordsVisible: boolean,
 		cols: number
 	): Segment[][] {
-		const PAGE1_BUDGET = 736;
+		const PAGE1_BUDGET = 700;
 		const PAGEN_BUDGET = 916;
 		const multiplier = cols === 2 ? 2 : 1;
 
@@ -498,7 +498,7 @@
 							onclick={() => (showHelp = true)}
 							class="flex items-center gap-2 rounded-md border border-stone-200 px-3 py-1.5 text-xs font-bold text-stone-600 hover:bg-stone-50"
 						>
-							<CircleHelp size={14} /> Syntax
+							<CircleQuestionMark size={14} /> Syntax
 						</button>
 
 						<button
@@ -946,11 +946,11 @@
 							{/if}
 						</div>
 
-						<div class={`flex-grow ${columnCount === 2 ? 'columns-1 gap-12 md:columns-2' : ''}`}>
+						<div class={`song-content-columns flex-grow ${columnCount === 2 ? 'columns-1 gap-12 md:columns-2' : ''}`}>
 							{#if displayContent}
 								{#each pages[currentPageIndex] as segment}
 									{#each segment.lines as line}
-										<div class="mb-2 break-inside-avoid">
+										<div class="lyric-line mb-2 break-inside-avoid">
 											{#if line.type === 'section'}
 												<h3
 													class="mt-4 mb-2 inline-block rounded-sm bg-slate-900 px-2 py-0.5 text-sm font-bold tracking-wider text-white uppercase print:border print:border-slate-900 print:bg-transparent print:text-slate-900"
@@ -977,7 +977,7 @@
 											{:else if line.pairs}
 												<div class="mt-3 mb-1 flex flex-wrap items-end gap-0.5">
 													{#each line.pairs as pair}
-														<div class="flex flex-col">
+														<div class="flex flex-col whitespace-nowrap">
 															{#if showChords}
 																<div
 																	class="h-5 font-mono text-sm leading-none font-bold text-slate-900 select-none print:text-black"
@@ -986,7 +986,7 @@
 																</div>
 															{/if}
 															<div
-																class="font-sans text-base leading-normal font-medium whitespace-pre-wrap text-slate-800 print:text-black"
+																class="font-sans text-base leading-normal font-medium text-slate-800 print:text-black"
 															>
 																{pair.lyric}
 															</div>
@@ -1061,64 +1061,98 @@
 						</div>
 					</div>
 
-					<!-- Print: render all pages sequentially with page breaks -->
+					<!-- Print: paginated with per-page headers, footers, and column support -->
 					<div class="hidden print:block">
 						{#each pages as pageSegments, pageIdx}
 							<div
 								class="relative flex min-h-[100vh] flex-col p-0"
 								style={pageIdx > 0 ? 'page-break-before: always' : ''}
 							>
+								<!-- Page 1: full banner header -->
 								{#if pageIdx === 0}
 									<div class="mb-6 border-b-2 border-slate-900 pb-4">
-										<h1 class="mb-1 text-3xl font-bold tracking-tight text-slate-900 uppercase">
+										<h1
+											class="mb-1 text-3xl font-bold tracking-tight text-slate-900 uppercase"
+										>
 											{song.title}
 										</h1>
 										<div class="flex items-center justify-between text-sm">
 											<div class="font-medium text-slate-600">{displayAuthors}</div>
 											<div class="flex items-center gap-4 font-bold text-slate-900">
-												<span class="text-xs font-normal text-stone-400 uppercase">Key</span>
+												<span class="text-xs font-normal text-stone-400 uppercase"
+													>Key</span
+												>
 												{selectedKey}
 												{#if displayTempo}
-													<span class="text-xs font-normal text-stone-400 uppercase">BPM</span>
+													<span class="text-xs font-normal text-stone-400 uppercase"
+														>BPM</span
+													>
 													{displayTempo}
 												{/if}
-												<span class="text-xs font-normal text-stone-400 uppercase">Time</span>
+												<span class="text-xs font-normal text-stone-400 uppercase"
+													>Time</span
+												>
 												{song.time_signature || '4/4'}
 											</div>
 										</div>
 									</div>
+								{:else}
+									<!-- Page 2+: compact "Continued" header -->
+									<div
+										class="mb-4 flex items-center justify-between border-b border-stone-300 pb-2"
+									>
+										<h2 class="text-sm font-bold text-slate-900 uppercase">
+											{song.title} — Continued
+										</h2>
+										<div class="flex items-center gap-3 text-xs text-stone-500 italic">
+											<span>{selectedKey}</span>
+											{#if displayTempo}<span>{displayTempo} BPM</span>{/if}
+											<span>p. {pageIdx + 1}/{totalPages}</span>
+										</div>
+									</div>
 								{/if}
 
-								<div class="flex-grow">
+								<!-- Song content with column support -->
+								<div
+									class="song-content-columns flex-grow"
+									style="column-count: {columnCount}; column-gap: 2em;"
+								>
 									{#each pageSegments as segment}
-										{#each segment.lines as line}
-											<div class="mb-2 break-inside-avoid">
+										<div
+											class="break-inside-avoid"
+											style="page-break-inside: avoid;"
+										>
+											{#each segment.lines as line}
 												{#if line.type === 'section'}
 													<h3
-														class="mt-4 mb-2 inline-block rounded-sm border border-slate-900 px-2 py-0.5 text-sm font-bold tracking-wider text-slate-900 uppercase"
+														class="lyric-line mt-4 mb-2 inline-block rounded-sm border border-slate-900 px-2 py-0.5 text-sm font-bold tracking-wider text-slate-900 uppercase"
 													>
 														{line.content}
 													</h3>
 												{:else if line.type === 'comment'}
 													<div
-														class="my-2 inline-block rounded border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-600 italic"
+														class="lyric-line my-2 inline-block rounded border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-600 italic"
 													>
 														{line.content}
 													</div>
 												{:else if line.type === 'directive'}
-													<div class="my-2 flex items-center gap-2 font-sans text-sm">
+													<div
+														class="lyric-line my-2 flex items-center gap-2 font-sans text-sm"
+													>
 														<span
 															class="rounded border border-stone-200 bg-stone-100 px-2 py-0.5 text-xs font-bold tracking-wide text-stone-500 uppercase"
 															>{line.label}</span
 														>
-														<span class="font-bold text-slate-900">{line.value}</span>
+														<span class="font-bold text-slate-900"
+															>{line.value}</span
+														>
 													</div>
-												{:else if line.type === 'empty'}
-													<div class="h-4"></div>
-												{:else if line.pairs}
-													<div class="mt-3 mb-1 flex flex-wrap items-end gap-0.5">
+												{:else if line.type === 'lyric' && line.pairs}
+													<div
+														class="lyric-line mt-3 mb-1 flex flex-wrap items-end gap-0.5"
+													>
 														{#each line.pairs as pair}
-															<div class="flex flex-col">
+															<div class="flex flex-col whitespace-nowrap">
 																{#if showChords}
 																	<div
 																		class="h-5 font-mono text-sm leading-none font-bold text-black select-none"
@@ -1127,7 +1161,7 @@
 																	</div>
 																{/if}
 																<div
-																	class="font-sans text-base leading-normal font-medium whitespace-pre-wrap text-black"
+																	class="font-sans text-base leading-normal font-medium text-black"
 																>
 																	{pair.lyric}
 																</div>
@@ -1135,21 +1169,24 @@
 														{/each}
 													</div>
 												{/if}
-											</div>
-										{/each}
+											{/each}
+										</div>
 									{/each}
 								</div>
 
+								<!-- Attribution pinned to bottom via mt-auto -->
 								<div
-									class="mt-8 flex items-end justify-between border-t border-stone-200 pt-4 text-[10px] text-stone-500"
+									class="mt-auto flex items-end justify-between border-t border-stone-200 pt-4 text-[10px] text-stone-500"
 								>
 									<div>
 										<p>
-											{#if song.copyright}{song.copyright}{:else}© {displayAuthors}{/if}. {#if song.ccli_number}CCLI
-												#{song.ccli_number}{/if}.
+											{#if song.copyright}{song.copyright}{:else}©
+												{displayAuthors}{/if}.
+											{#if song.ccli_number}CCLI #{song.ccli_number}{/if}.
 										</p>
 										<p class="mt-0.5">
-											Generated by WorshipOS for <span class="font-bold text-stone-600"
+											Generated by WorshipOS for <span
+												class="font-bold text-stone-600"
 												>{$page.data.church?.name || 'Your Church'}</span
 											>.
 										</p>
@@ -1240,7 +1277,7 @@
 				class="flex items-center justify-between border-b border-stone-200 bg-stone-50 px-6 py-4"
 			>
 				<h3 class="flex items-center gap-2 text-lg font-bold text-slate-900">
-					<CircleHelp size={20} class="text-blue-600" />
+					<CircleQuestionMark size={20} class="text-blue-600" />
 					Formatting Guide
 				</h3>
 				<button
@@ -1314,3 +1351,25 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	.song-content-columns {
+		word-break: normal;
+		overflow-wrap: normal;
+		hyphens: none;
+	}
+
+	.lyric-line {
+		white-space: nowrap;
+		break-inside: avoid-column;
+		-webkit-column-break-inside: avoid;
+		page-break-inside: avoid;
+	}
+
+	@media print {
+		.song-content-columns {
+			display: block !important;
+			column-fill: auto;
+		}
+	}
+</style>

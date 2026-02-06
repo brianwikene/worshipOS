@@ -1,2 +1,45 @@
 /* stylelint-disable at-rule-no-unknown */
 @import 'tailwindcss';
+
+@media print {
+	/* 1. Header Logic */
+	.large-banner {
+		display: block; /* Shown on Page 1 by default flow */
+	}
+
+	/* Hidden on first page, shown on subsequent ones */
+	.small-header-continued {
+		display: none;
+		position: fixed;
+		top: 0;
+		width: 100%;
+		font-size: 0.8rem;
+		border-bottom: 1px solid #ccc;
+	}
+
+	/* 2. Attribution at the bottom */
+	.song-attribution {
+		position: running(footer); /* If using a tool like Paged.js or WeasyPrint */
+		/* For standard browser printing, we use fixed positioning */
+		position: fixed;
+		bottom: 0;
+		width: 100%;
+		font-size: 0.75rem;
+		text-align: center;
+	}
+
+	/* Logic to hide/show headers based on page */
+	@page :first {
+		margin-top: 0;
+		@top-left {
+			content: none;
+		} /* Clear continued header on page 1 */
+	}
+
+	@page {
+		margin: 1cm;
+		/* This ensures a gap for the fixed footer/header */
+		margin-bottom: 2cm;
+		margin-top: 2cm;
+	}
+}
