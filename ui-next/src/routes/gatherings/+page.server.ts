@@ -78,7 +78,7 @@ export const actions: Actions = {
 		await db.transaction(async (tx) => {
 			const baseDate = parseISO(startDateStr);
 
-			let templateItemsToClone: any[] = [];
+			let templateItemsToClone: (typeof template_items.$inferSelect)[] = [];
 			if (templateId) {
 				// Use the table object directly if tx.query.template_items is giving trouble
 				templateItemsToClone = await tx
@@ -127,7 +127,7 @@ export const actions: Actions = {
 							church_id: church.id,
 							plan_id: p.id,
 							title: item.title,
-							segment: item.segment,
+							segment: item.segment as 'pre' | 'core' | 'post',
 							order: item.sequence,
 							duration: item.duration_seconds,
 							description: item.description,

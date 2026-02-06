@@ -86,7 +86,7 @@
 					>
 						<div>
 							<div class="font-bold text-slate-900">{campus.name}</div>
-							<div class="text-xs text-slate-500">{campus.location || 'No address set'}</div>
+							<div class="text-xs text-slate-500">{campus.address || 'No address set'}</div>
 						</div>
 						<form method="POST" action="?/deleteCampus" use:enhance>
 							<input type="hidden" name="id" value={campus.id} />

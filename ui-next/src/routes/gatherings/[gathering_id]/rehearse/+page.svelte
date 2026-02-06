@@ -5,6 +5,26 @@
 
 	let { data } = $props();
 
+	function formatDate(v: unknown): string {
+		const d = v instanceof Date ? v : new Date(String(v));
+		if (Number.isNaN(d.getTime())) return 'Invalid date';
+		return d.toLocaleDateString('en-US', {
+			weekday: 'long',
+			month: 'long',
+			day: 'numeric',
+			year: 'numeric',
+			timeZone: 'UTC'
+		});
+	}
+
+	function formatDuration(seconds: number | null): string {
+		if (!seconds) return '';
+		const mins = Math.floor(seconds / 60);
+		const secs = seconds % 60;
+		return secs > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${mins} min`;
+	}
+</script>
+
 <div class="min-h-screen bg-stone-50 pb-20">
 	<!-- Header -->
 	<header class="border-b border-stone-200 bg-white px-4 pt-4 shadow-sm">
@@ -47,13 +67,18 @@
 	<!-- Song List -->
 	<main class="mx-auto max-w-2xl px-4 py-8">
 		{#if data.rehearse.songs.length === 0}
-			<div class="rounded-xl border border-dashed border-stone-300 bg-white py-16 text-center shadow-sm">
-				<div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-50">
+			<div
+				class="rounded-xl border border-dashed border-stone-300 bg-white py-16 text-center shadow-sm"
+			>
+				<div
+					class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-50"
+				>
 					<Music size={32} class="text-stone-300" />
 				</div>
 				<h3 class="text-lg font-bold text-stone-900">The setlist is still taking shape</h3>
 				<p class="mx-auto mt-2 max-w-xs text-stone-500">
-					Songs will appear here once they are added to the service flow. Check back soon as we prepare for this gathering.
+					Songs will appear here once they are added to the service flow. Check back soon as we
+					prepare for this gathering.
 				</p>
 			</div>
 		{:else}

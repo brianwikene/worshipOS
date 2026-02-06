@@ -4,17 +4,16 @@
 	let { data } = $props();
 
 	// Type assertion for plan items that may have leader_name
-	type PlanItemWithLeader = (typeof data.gatherings)[number]['plans'][number]['items'][number] & {
+	type PlanItemWithLeader = (typeof data.plans)[number]['items'][number] & {
 		leader_name?: string;
 	};
 
-	const formatDate = (dateStr: string) => {
-		// Handle Date object or string
-		const d = new Date(dateStr);
+	const formatDate = (dateStr: string | Date) => {
+		const d = dateStr instanceof Date ? dateStr : new Date(dateStr);
 		return d.toLocaleDateString('en-US', {
 			month: 'short',
 			day: 'numeric',
-			timeZone: 'UTC' // Fix timezone issue
+			timeZone: 'UTC'
 		});
 	};
 </script>
@@ -34,7 +33,7 @@
 					<h1 class="text-xl font-bold text-gray-900">Planning Matrix</h1>
 					<p class="flex items-center gap-1 text-xs text-gray-500">
 						<MapPin size={12} />
-						Next 3 Weeks • {data.gatherings[0]?.campus?.name || 'Main Campus'}
+						Next 3 Weeks • {data.plans[0]?.campus?.name || 'Main Campus'}
 					</p>
 				</div>
 			</div>
@@ -56,7 +55,7 @@
 
 	<div class="flex-1 overflow-x-auto overflow-y-hidden p-6">
 		<div class="grid h-full min-w-[900px] grid-cols-3 gap-6">
-			{#each data.gatherings as gathering}
+			{#each data.plans as plan}
 				<div
 					class="flex h-full max-h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
 				>
@@ -64,95 +63,84 @@
 						<div class="mb-1 flex items-start justify-between">
 							<div class="flex flex-col">
 								<span class="text-xs font-bold tracking-wider text-gray-400 uppercase">
-									{new Date(gathering.date).toLocaleDateString('en-US', {
+									{new Date(plan.date).toLocaleDateString('en-US', {
 										weekday: 'long',
 										timeZone: 'UTC'
 									})}
 								</span>
 								<span class="text-2xl font-bold text-gray-900">
-									{formatDate(gathering.date)}
+									{formatDate(plan.date)}
 								</span>
 							</div>
 							<span class="h-2 w-2 rounded-full bg-green-500" title="Ready"></span>
 						</div>
-						<h3 class="truncate text-sm font-medium text-gray-600" title={gathering.title}>
-							{gathering.title}
+						<h3
+							class="truncate text-sm font-medium text-gray-600"
+							title={plan.name || 'Untitled Plan'}
+						>
+							{plan.name || 'Untitled Plan'}
 						</h3>
 					</div>
 
 					<div class="flex-1 space-y-2 overflow-y-auto bg-white p-2">
-						{#if gathering.plans[0]}
-							{#each gathering.plans[0].items as rawItem}
-								{@const item = rawItem as PlanItemWithLeader}
-								{#if item.type === 'header'}
-									<div
-										class="sticky top-0 z-10 mt-4 mb-2 border-b-2 border-gray-800 bg-white px-2 pb-1"
-									>
-										<span class="text-[10px] font-black tracking-widest text-gray-900 uppercase">
+						{#each plan.items as rawItem}
+							{@const item = rawItem as PlanItemWithLeader}
+							{#if item.song}
+								<div
+									class="group rounded-lg border border-blue-100 bg-blue-50/50 p-2 transition-colors hover:border-blue-300"
+								>
+									<div class="flex items-start justify-between">
+										<span class="text-sm leading-tight font-bold text-blue-900">
 											{item.title}
 										</span>
-									</div>
-								{:else if item.type === 'song'}
-									<div
-										class="group rounded-lg border border-blue-100 bg-blue-50/50 p-2 transition-colors hover:border-blue-300"
-									>
-										<div class="flex items-start justify-between">
-											<span class="text-sm leading-tight font-bold text-blue-900">
-												{item.title}
+										{#if item.song?.original_key}
+											<span
+												class="rounded border border-blue-100 bg-white px-1 font-mono text-[10px] text-blue-500"
+											>
+												{item.song.original_key}
 											</span>
-											{#if item.song?.original_key}
-												<span
-													class="rounded border border-blue-100 bg-white px-1 font-mono text-[10px] text-blue-500"
-												>
-													{item.song.original_key}
-												</span>
-											{/if}
+										{/if}
+									</div>
+									{#if item.leader_name}
+										<div class="mt-1 flex items-center gap-1 text-[10px] text-blue-600/80">
+											<User size={10} />
+											{item.leader_name}
+										</div>
+									{/if}
+								</div>
+							{:else}
+								<div
+									class="flex items-start justify-between rounded-lg border border-gray-100 bg-white p-2 transition-colors hover:border-gray-300"
+								>
+									<div>
+										<div class="text-sm leading-tight font-medium text-gray-700">
+											{item.title}
 										</div>
 										{#if item.leader_name}
-											<div class="mt-1 flex items-center gap-1 text-[10px] text-blue-600/80">
-												<User size={10} />
+											<div
+												class="mt-1 flex inline-block items-center gap-1 rounded bg-gray-50 px-1.5 py-0.5 text-[10px] font-bold text-gray-400"
+											>
 												{item.leader_name}
 											</div>
 										{/if}
 									</div>
-								{:else}
-									<div
-										class="flex items-start justify-between rounded-lg border border-gray-100 bg-white p-2 transition-colors hover:border-gray-300"
-									>
-										<div>
-											<div class="text-sm leading-tight font-medium text-gray-700">
-												{item.title}
-											</div>
-											{#if item.leader_name}
-												<div
-													class="mt-1 flex inline-block items-center gap-1 rounded bg-gray-50 px-1.5 py-0.5 text-[10px] font-bold text-gray-400"
-												>
-													{item.leader_name}
-												</div>
-											{/if}
-										</div>
-										<span
-											class="mt-0.5 text-[9px] font-bold tracking-wider text-gray-300 uppercase"
-										>
-											{item.type}
-										</span>
-									</div>
-								{/if}
-							{/each}
-
-							{#if gathering.plans[0].items.length === 0}
-								<div class="py-10 text-center text-sm text-gray-300 italic">Plan is empty</div>
+									<span class="mt-0.5 text-[9px] font-bold tracking-wider text-gray-300 uppercase">
+										{item.segment}
+									</span>
+								</div>
 							{/if}
-						{:else}
-							<div class="py-10 text-center text-sm text-red-300 italic">No plan found</div>
+						{/each}
+
+						{#if plan.items.length === 0}
+							<div class="py-10 text-center text-sm text-gray-300 italic">Plan is empty</div>
 						{/if}
 					</div>
 				</div>
 			{/each}
 
-			{#if data.gatherings.length === 0}
+			{#if data.plans.length === 0}
 				<div class="col-span-3 py-20 text-center text-gray-400">
-					No upcoming gatherings found to compare.
+					No upcoming plans found to compare.
 				</div>
 			{/if}
 		</div>

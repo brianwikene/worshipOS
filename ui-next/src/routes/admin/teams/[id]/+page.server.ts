@@ -107,6 +107,7 @@ export const actions = {
 
 		try {
 			await db.insert(team_members).values({
+				church_id: church.id,
 				team_id: params.id,
 				person_id: personId,
 				role: role || 'Member'

@@ -76,9 +76,8 @@
 										</div>
 										<div class="text-right">
 											<span class="rounded bg-blue-50 px-2 py-1 text-xs font-bold text-blue-700">
-												{event.role}
+												{event.role_name}
 											</span>
-											<div class="mt-1 text-[10px] text-stone-400">{event.team}</div>
 										</div>
 									</div>
 								{/each}
@@ -175,31 +174,11 @@
 						<Heart size={14} /> Prayer Needs
 					</h2>
 					<div class="space-y-3">
-						{#if leader.prayerWall.length > 0}
-							{#each leader.prayerWall as req}
-								<div class="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-									<p class="mb-2 text-sm text-slate-800">"{req.content}"</p>
-									<div class="flex items-center justify-between text-xs text-stone-400">
-										<span
-											>{req.created_at
-												? new Date(req.created_at).toLocaleDateString()
-												: 'Unknown'}</span
-										>
-										{#if req.is_private}
-											<span class="flex items-center gap-1 font-bold text-orange-600"
-												><Shield size={10} /> Private</span
-											>
-										{/if}
-									</div>
-								</div>
-							{/each}
-						{:else}
-							<div
-								class="rounded-lg border border-dashed border-stone-300 bg-white p-6 text-center text-xs text-stone-500"
-							>
-								No active prayer requests.
-							</div>
-						{/if}
+						<div
+							class="rounded-lg border border-dashed border-stone-300 bg-white p-6 text-center text-xs text-stone-500"
+						>
+							No active prayer requests.
+						</div>
 					</div>
 				</section>
 			</div>

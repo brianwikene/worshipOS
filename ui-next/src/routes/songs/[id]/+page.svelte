@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/stores';
 	import AuthorInput from '$lib/components/AuthorInput.svelte';
-	import { ArrowLeft, CircleHelp, Copy, Eye, Pencil, Save, Trash2, X } from '@lucide/svelte';
+	import { ArrowLeft, ChevronLeft, ChevronRight, CircleHelp, Copy, Eye, Pencil, Save, Trash2, X } from '@lucide/svelte';
 
 	// --- CONSTANTS ---
 	const SECTION_KEYWORDS =
@@ -13,9 +13,9 @@
 	// --- TYPES ---
 	type Arrangement = {
 		id: string;
-		name: string;
-		key: string | null;
-		bpm: string | null;
+		arrangement_name: string | null;
+		original_key: string | null;
+		bpm: number | null;
 		content: string | null;
 	};
 
@@ -73,12 +73,12 @@
 		currentArrangementId ? song.arrangements.find((a) => a.id === currentArrangementId) : null
 	);
 
-	let displayKey = $derived(currentArrangement?.key || song.original_key || 'C');
+	let displayKey = $derived(currentArrangement?.original_key || song.original_key || 'C');
 
 	// Sync dropdown when arrangement changes
 	$effect(() => {
-		if (currentArrangement?.key) {
-			selectedKey = currentArrangement.key;
+		if (currentArrangement?.original_key) {
+			selectedKey = currentArrangement.original_key;
 		} else {
 			selectedKey = song.original_key || 'C';
 		}
@@ -89,7 +89,7 @@
 	let displayAuthors = $derived(
 		song.authors && song.authors.length > 0
 			? song.authors.map((rel) => rel.author.name).join(', ')
-			: song.authors || 'Unknown Author'
+			: 'Unknown Author'
 	);
 
 	let displayContent = $derived(currentArrangement?.content || song.content);
@@ -98,6 +98,79 @@
 	// Derived Parsing
 	let songMap = $derived(generateSongMap(displayContent));
 	let parsedLines = $derived(parseChart(displayContent, selectedKey, notation));
+
+	// --- PAGINATION ---
+	type ParsedLine = (typeof parsedLines)[number];
+	type Segment = { label: string | null; lines: ParsedLine[] };
+
+	function groupIntoSegments(lines: ParsedLine[]): Segment[] {
+		const segments: Segment[] = [];
+		let current: Segment = { label: null, lines: [] };
+
+		for (const line of lines) {
+			if (line.type === 'section') {
+				// Push current segment if it has lines
+				if (current.lines.length > 0) segments.push(current);
+				current = { label: (line as { content: string }).content, lines: [line] };
+			} else {
+				current.lines.push(line);
+			}
+		}
+		if (current.lines.length > 0) segments.push(current);
+		return segments;
+	}
+
+	function estimateHeight(line: ParsedLine, chordsVisible: boolean): number {
+		if (line.type === 'section') return 40;
+		if (line.type === 'comment') return 36;
+		if (line.type === 'directive') return 36;
+		if (line.type === 'empty') return 16;
+		// lyric line
+		if (chordsVisible) return 44;
+		return 24;
+	}
+
+	function segmentHeight(segment: Segment, chordsVisible: boolean): number {
+		return segment.lines.reduce((sum, l) => sum + estimateHeight(l, chordsVisible), 0);
+	}
+
+	function paginateSegments(segments: Segment[], chordsVisible: boolean, cols: number): Segment[][] {
+		const PAGE1_BUDGET = 736;
+		const PAGEN_BUDGET = 916;
+		const multiplier = cols === 2 ? 2 : 1;
+
+		const pages: Segment[][] = [];
+		let currentPage: Segment[] = [];
+		let usedHeight = 0;
+		let budget = PAGE1_BUDGET * multiplier;
+
+		for (const seg of segments) {
+			const h = segmentHeight(seg, chordsVisible);
+			if (currentPage.length > 0 && usedHeight + h > budget) {
+				pages.push(currentPage);
+				currentPage = [seg];
+				usedHeight = h;
+				budget = PAGEN_BUDGET * multiplier;
+			} else {
+				currentPage.push(seg);
+				usedHeight += h;
+			}
+		}
+		if (currentPage.length > 0) pages.push(currentPage);
+		return pages.length > 0 ? pages : [[]];
+	}
+
+	let currentPageIndex = $state(0);
+	let parsedSegments = $derived(groupIntoSegments(parsedLines));
+	let pages = $derived(paginateSegments(parsedSegments, showChords, columnCount));
+	let totalPages = $derived(pages.length);
+
+	// Reset page when content/view changes
+	$effect(() => {
+		// Access dependencies to track them
+		pages;
+		currentPageIndex = 0;
+	});
 
 	// --- HELPERS ---
 
@@ -112,7 +185,7 @@
 		return idx2 - idx1;
 	}
 
-	function transposeChord(chord: string, semitones: number) {
+	function transposeChordSingle(chord: string, semitones: number) {
 		const match = chord.match(/^([A-G][#b]?)(.*)$/);
 		if (!match) return chord;
 
@@ -128,7 +201,15 @@
 		return KEYS[newIndex] + quality;
 	}
 
-	function noteToNumber(chord: string, key: string) {
+	function transposeChord(chord: string, semitones: number) {
+		if (chord.includes('/')) {
+			const [main, bass] = chord.split('/');
+			return transposeChordSingle(main, semitones) + '/' + transposeChordSingle(bass, semitones);
+		}
+		return transposeChordSingle(chord, semitones);
+	}
+
+	function noteToNumberSingle(chord: string, key: string) {
 		const match = chord.match(/^([A-G][#b]?)(.*)$/);
 		if (!match) return chord;
 
@@ -154,7 +235,19 @@
 			10: 'b7',
 			11: '7'
 		};
-		return (degrees[interval] || '?') + quality;
+		const degree = degrees[interval] || '?';
+		if (quality && /^\d/.test(quality)) {
+			return degree + '(' + quality + ')';
+		}
+		return degree + quality;
+	}
+
+	function noteToNumber(chord: string, key: string) {
+		if (chord.includes('/')) {
+			const [main, bass] = chord.split('/');
+			return noteToNumberSingle(main, key) + '/' + noteToNumberSingle(bass, key);
+		}
+		return noteToNumberSingle(chord, key);
 	}
 
 	// --- SMART LABELING (Verse -> Verse 1) ---
@@ -246,7 +339,7 @@
 					return { type: 'section' as const, content: smartLabel('Chorus', counters) };
 				if (['sov', 'start_of_verse'].includes(tag))
 					return { type: 'section' as const, content: smartLabel('Verse', counters) };
-				if (['eoc', 'end_of_chorus', 'eov', 'end_of_verse', 'flow', 'order'].includes(tag))
+				if (['eoc', 'end_of_chorus', 'eov', 'end_of_verse', 'flow', 'order', 'copyright', 'time', 'time_signature'].includes(tag))
 					return { type: 'empty' as const };
 
 				if (SECTION_KEYWORDS.test(dirMatch[1])) {
@@ -319,7 +412,7 @@
 							{song.title}
 							{#if currentArrangement}
 								<span class="text-base font-normal text-stone-400">
-									/ {currentArrangement.name}</span
+									/ {currentArrangement.arrangement_name}</span
 								>
 							{/if}
 						</h1>
@@ -383,7 +476,7 @@
 						type="button"
 						onclick={() => (currentArrangementId = version.id)}
 						class={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold ${currentArrangementId === version.id ? 'border-slate-800 bg-slate-800 text-white' : 'border-stone-200 bg-white text-stone-500'}`}
-						>{version.name}</button
+						>{version.arrangement_name}</button
 					>
 				{/each}
 			{/if}
@@ -427,11 +520,24 @@
 								<div>
 									<span class="mb-1 block text-xs font-medium text-slate-700">Author(s)</span>
 									<AuthorInput bind:selectedAuthors={localAuthors} />
+									<input type="hidden" name="authors_json" value={JSON.stringify(localAuthors)} />
 									<p class="mt-1 text-[10px] text-stone-400">
-										Type to search. Enter to create. Order matters.
+										Songwriters for copyright. Type to search. Enter to create.
 									</p>
 								</div>
-								<div class="grid grid-cols-2 gap-4">
+								<div>
+									<label for="artist" class="block text-xs font-medium text-slate-700">Recording Artist</label>
+									<input
+										type="text"
+										id="artist"
+										name="artist"
+										bind:value={song.artist}
+										placeholder="e.g. Hillsong Worship"
+										class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm"
+									/>
+									<p class="mt-1 text-[10px] text-stone-400">Reference recording (optional).</p>
+								</div>
+								<div class="grid grid-cols-3 gap-4">
 									<div>
 										<label for="key" class="block text-xs font-medium text-slate-700">Key</label
 										><select
@@ -452,6 +558,22 @@
 											bind:value={song.tempo}
 											class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm"
 										/>
+									</div>
+									<div>
+										<label for="time_signature" class="block text-xs font-medium text-slate-700">Time Sig.</label>
+										<select
+											name="time_signature"
+											id="time_signature"
+											bind:value={song.time_signature}
+											class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm"
+										>
+											<option value="4/4">4/4</option>
+											<option value="3/4">3/4</option>
+											<option value="6/8">6/8</option>
+											<option value="2/4">2/4</option>
+											<option value="9/8">9/8</option>
+											<option value="12/8">12/8</option>
+										</select>
 									</div>
 								</div>
 								<div>
@@ -476,6 +598,17 @@
 										class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm"
 									/>
 								</div>
+								<div>
+									<label for="copyright" class="block text-xs font-medium text-slate-700">Copyright</label>
+									<input
+										type="text"
+										id="copyright"
+										name="copyright"
+										bind:value={song.copyright}
+										placeholder="e.g. © 1998 Vineyard Songs"
+										class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm"
+									/>
+								</div>
 							{:else}
 								<div>
 									<label for="version_name_edit" class="block text-xs font-medium text-slate-700"
@@ -484,7 +617,7 @@
 										type="text"
 										id="version_name_edit"
 										name="name"
-										bind:value={currentArrangement.name}
+										bind:value={currentArrangement.arrangement_name}
 										class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm"
 									/>
 								</div>
@@ -626,12 +759,12 @@
 
 				<div class="lg:col-span-2">
 					<div
-						class="relative flex min-h-[1056px] flex-col rounded-xl border border-stone-200 bg-white px-12 py-10 shadow-sm print:min-h-[100vh] print:border-0 print:p-0 print:shadow-none"
+						class="relative flex min-h-[1056px] flex-col rounded-xl border border-stone-200 bg-white px-12 py-10 shadow-sm print:hidden"
 					>
 						<div
 							class="absolute top-6 right-8 rounded border border-stone-200 px-2 py-0.5 text-xs font-bold text-stone-300 print:border-stone-400 print:text-stone-500"
 						>
-							1 / 1
+							{currentPageIndex + 1} / {totalPages}
 						</div>
 
 						<div class="mb-6 border-b-2 border-slate-900 pb-4">
@@ -689,52 +822,54 @@
 
 						<div class={`flex-grow ${columnCount === 2 ? 'columns-1 gap-12 md:columns-2' : ''}`}>
 							{#if displayContent}
-								{#each parsedLines as line}
-									<div class="mb-2 break-inside-avoid">
-										{#if line.type === 'section'}
-											<h3
-												class="mt-4 mb-2 inline-block rounded-sm bg-slate-900 px-2 py-0.5 text-sm font-bold tracking-wider text-white uppercase print:border print:border-slate-900 print:bg-transparent print:text-slate-900"
-											>
-												{line.content}
-											</h3>
-										{:else if line.type === 'comment'}
-											<div
-												class="my-2 inline-block rounded border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-sm font-medium text-yellow-800 italic print:border-stone-300 print:bg-transparent print:text-stone-600 print:italic"
-											>
-												{line.content}
-											</div>
-										{:else if line.type === 'directive'}
-											<div class="my-2 flex items-center gap-2 font-sans text-sm">
-												<span
-													class="rounded border border-stone-200 bg-stone-100 px-2 py-0.5 text-xs font-bold tracking-wide text-stone-500 uppercase"
+								{#each pages[currentPageIndex] as segment}
+									{#each segment.lines as line}
+										<div class="mb-2 break-inside-avoid">
+											{#if line.type === 'section'}
+												<h3
+													class="mt-4 mb-2 inline-block rounded-sm bg-slate-900 px-2 py-0.5 text-sm font-bold tracking-wider text-white uppercase print:border print:border-slate-900 print:bg-transparent print:text-slate-900"
 												>
-													{line.label}
-												</span>
-												<span class="font-bold text-slate-900">{line.value}</span>
-											</div>
-										{:else if line.type === 'empty'}
-											<div class="h-4"></div>
-										{:else if line.pairs}
-											<div class="mb-1 flex flex-wrap items-end gap-0.5">
-												{#each line.pairs as pair}
-													<div class="flex flex-col">
-														{#if showChords}
+													{line.content}
+												</h3>
+											{:else if line.type === 'comment'}
+												<div
+													class="my-2 inline-block rounded border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-sm font-medium text-yellow-800 italic print:border-stone-300 print:bg-transparent print:text-stone-600 print:italic"
+												>
+													{line.content}
+												</div>
+											{:else if line.type === 'directive'}
+												<div class="my-2 flex items-center gap-2 font-sans text-sm">
+													<span
+														class="rounded border border-stone-200 bg-stone-100 px-2 py-0.5 text-xs font-bold tracking-wide text-stone-500 uppercase"
+													>
+														{line.label}
+													</span>
+													<span class="font-bold text-slate-900">{line.value}</span>
+												</div>
+											{:else if line.type === 'empty'}
+												<div class="h-4"></div>
+											{:else if line.pairs}
+												<div class="mt-3 mb-1 flex flex-wrap items-end gap-0.5">
+													{#each line.pairs as pair}
+														<div class="flex flex-col">
+															{#if showChords}
+																<div
+																	class="h-5 font-mono text-sm leading-none font-bold text-slate-900 select-none print:text-black"
+																>
+																	{pair.chord || '\u00A0'}
+																</div>
+															{/if}
 															<div
-																class="h-5 font-mono text-sm leading-none font-bold text-slate-900 select-none print:text-black"
+																class="font-sans text-base leading-normal font-medium whitespace-pre-wrap text-slate-800 print:text-black"
 															>
-																{pair.chord || '\u00A0'}
+																{pair.lyric}
 															</div>
-														{/if}
-														<div
-															class="font-sans text-base leading-normal font-medium whitespace-pre text-slate-800 print:text-black"
-														>
-															{pair.lyric}
 														</div>
-													</div>
-												{/each}
-											</div>
-										{/if}
-									</div>
+													{/each}
+												</div>
+											{/if}
+										</div>
+									{/each}
 								{/each}
 							{:else}
 								<div class="flex h-64 flex-col items-center justify-center text-stone-400">
@@ -743,12 +878,38 @@
 							{/if}
 						</div>
 
+						{#if totalPages > 1}
+							<div class="mt-6 flex items-center justify-center gap-4 print:hidden">
+								<button
+									type="button"
+									disabled={currentPageIndex === 0}
+									onclick={() => (currentPageIndex = Math.max(0, currentPageIndex - 1))}
+									class="rounded-md border border-stone-200 p-1.5 text-stone-500 hover:bg-stone-50 disabled:opacity-30"
+									aria-label="Previous page"
+								>
+									<ChevronLeft size={18} />
+								</button>
+								<span class="text-xs font-bold text-stone-500">
+									Page {currentPageIndex + 1} of {totalPages}
+								</span>
+								<button
+									type="button"
+									disabled={currentPageIndex >= totalPages - 1}
+									onclick={() => (currentPageIndex = Math.min(totalPages - 1, currentPageIndex + 1))}
+									class="rounded-md border border-stone-200 p-1.5 text-stone-500 hover:bg-stone-50 disabled:opacity-30"
+									aria-label="Next page"
+								>
+									<ChevronRight size={18} />
+								</button>
+							</div>
+						{/if}
+
 						<div
 							class="mt-8 flex items-end justify-between border-t border-stone-200 pt-4 text-[10px] text-stone-400 print:text-stone-500"
 						>
 							<div>
 								<p>
-									© {song.authors || 'Copyright Holder'}. {#if song.ccli_number}CCLI #{song.ccli_number}{/if}.
+									{#if song.copyright}{song.copyright}{:else}© {displayAuthors}{/if}. {#if song.ccli_number}CCLI #{song.ccli_number}{/if}.
 								</p>
 								<p class="mt-0.5">
 									Generated by WorshipOS for <span class="font-bold text-stone-600"
@@ -770,6 +931,74 @@
 								</p>
 							</div>
 						</div>
+					</div>
+
+					<!-- Print: render all pages sequentially with page breaks -->
+					<div class="hidden print:block">
+						{#each pages as pageSegments, pageIdx}
+							<div class="relative flex min-h-[100vh] flex-col p-0" style={pageIdx > 0 ? 'page-break-before: always' : ''}>
+								<div class="absolute top-6 right-8 rounded border border-stone-400 px-2 py-0.5 text-xs font-bold text-stone-500">
+									{pageIdx + 1} / {totalPages}
+								</div>
+
+								{#if pageIdx === 0}
+									<div class="mb-6 border-b-2 border-slate-900 pb-4">
+										<h1 class="mb-1 text-3xl font-bold tracking-tight text-slate-900 uppercase">{song.title}</h1>
+										<div class="flex items-center justify-between text-sm">
+											<div class="font-medium text-slate-600">{displayAuthors}</div>
+											<div class="flex items-center gap-4 font-bold text-slate-900">
+												<span class="text-xs font-normal text-stone-400 uppercase">Key</span> {selectedKey}
+												{#if displayTempo}
+													<span class="text-xs font-normal text-stone-400 uppercase">BPM</span> {displayTempo}
+												{/if}
+												<span class="text-xs font-normal text-stone-400 uppercase">Time</span> {song.time_signature || '4/4'}
+											</div>
+										</div>
+									</div>
+								{/if}
+
+								<div class="flex-grow">
+									{#each pageSegments as segment}
+										{#each segment.lines as line}
+											<div class="mb-2 break-inside-avoid">
+												{#if line.type === 'section'}
+													<h3 class="mt-4 mb-2 inline-block rounded-sm border border-slate-900 px-2 py-0.5 text-sm font-bold tracking-wider text-slate-900 uppercase">{line.content}</h3>
+												{:else if line.type === 'comment'}
+													<div class="my-2 inline-block rounded border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-600 italic">{line.content}</div>
+												{:else if line.type === 'directive'}
+													<div class="my-2 flex items-center gap-2 font-sans text-sm">
+														<span class="rounded border border-stone-200 bg-stone-100 px-2 py-0.5 text-xs font-bold tracking-wide text-stone-500 uppercase">{line.label}</span>
+														<span class="font-bold text-slate-900">{line.value}</span>
+													</div>
+												{:else if line.type === 'empty'}
+													<div class="h-4"></div>
+												{:else if line.pairs}
+													<div class="mt-3 mb-1 flex flex-wrap items-end gap-0.5">
+														{#each line.pairs as pair}
+															<div class="flex flex-col">
+																{#if showChords}
+																	<div class="h-5 font-mono text-sm leading-none font-bold text-black select-none">{pair.chord || '\u00A0'}</div>
+																{/if}
+																<div class="font-sans text-base leading-normal font-medium whitespace-pre-wrap text-black">{pair.lyric}</div>
+															</div>
+														{/each}
+													</div>
+												{/if}
+											</div>
+										{/each}
+									{/each}
+								</div>
+
+								<div class="mt-8 flex items-end justify-between border-t border-stone-200 pt-4 text-[10px] text-stone-500">
+									<div>
+										<p>{#if song.copyright}{song.copyright}{:else}© {displayAuthors}{/if}. {#if song.ccli_number}CCLI #{song.ccli_number}{/if}.</p>
+									</div>
+									<div class="text-right">
+										<p>{pageIdx + 1} / {totalPages}</p>
+									</div>
+								</div>
+							</div>
+						{/each}
 					</div>
 				</div>
 			</div>

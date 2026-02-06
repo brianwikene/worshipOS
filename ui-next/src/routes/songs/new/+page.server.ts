@@ -21,10 +21,13 @@ export const actions: Actions = {
 		const data = await request.formData();
 
 		const title = data.get('title') as string;
+		const artist = (data.get('artist') as string) || null;
 		const key = data.get('key') as string;
 		const tempo = data.get('tempo') as string;
+		const timeSig = (data.get('time_signature') as string) || '4/4';
 		const notes = data.get('performance_notes') as string;
 		const ccli = data.get('ccli') as string;
+		const copyrightVal = (data.get('copyright') as string) || null;
 		const content = data.get('content') as string;
 
 		// 1. Create the Song
@@ -33,12 +36,14 @@ export const actions: Actions = {
 			.values({
 				church_id: church.id,
 				title,
+				artist,
 				original_key: key,
 				tempo,
+				time_signature: timeSig,
 				performance_notes: notes,
 				ccli_number: ccli,
+				copyright: copyrightVal,
 				content
-				// REMOVED: author: '' (This was causing the error)
 			})
 			.returning({ id: songs.id });
 
@@ -70,6 +75,7 @@ export const actions: Actions = {
 			if (finalAuthorIds.length > 0) {
 				await db.insert(song_authors).values(
 					finalAuthorIds.map((authorId, index) => ({
+						church_id: church.id,
 						song_id: newSong.id,
 						author_id: authorId,
 						sequence: index

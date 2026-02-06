@@ -50,6 +50,32 @@ export const planPersonStatusEnum = pgEnum('plan_person_status', [
 	'declined'
 ]);
 
+export const planItemTypeEnum = pgEnum('plan_item_type', [
+	'header',
+	'song',
+	'sermon',
+	'announcement',
+	'prayer',
+	'reading',
+	'media',
+	'offering',
+	'communion',
+	'baptism',
+	'dedication',
+	'other'
+]);
+
+export const addressTypeEnum = pgEnum('address_type', [
+	'home',
+	'work',
+	'mailing',
+	'vacation', // Snowbirds / Seasonal
+	'school', // College kids
+	'meeting', // Small groups / Coffee shops
+	'business', // Vendors / Contacts
+	'other'
+]);
+
 // --- TENANCY & CORE TABLES ---
 
 export const churches = pgTable('churches', {
@@ -140,6 +166,7 @@ export const songs = pgTable('songs', {
 	arrangement_name: text('arrangement_name'), // e.g. "Acoustic Version"
 
 	ccli_number: text('ccli_number'),
+	copyright: text('copyright'),
 
 	// Musical details
 	original_key: text('original_key'),
@@ -235,15 +262,20 @@ export const plan_items = pgTable('plan_items', {
 		.notNull()
 		.references(() => plans.id),
 	segment: planSegmentEnum('segment').default('core').notNull(),
+	type: planItemTypeEnum('type').default('other').notNull(),
 
 	title: text('title').notNull(),
 	description: text('description'),
 	song_id: uuid('song_id').references(() => songs.id),
+	leader_id: uuid('leader_id').references(() => people.id),
 
 	duration: integer('duration').default(0),
 	actual_duration: integer('actual_duration'),
 	order: integer('order').notNull(),
 	is_audible: boolean('is_audible').default(false).notNull(),
+	// For pre/post segments: minutes before start (pre) or after end (post)
+	// Allows overlapping items instead of sequential timing
+	offset_minutes: integer('offset_minutes'),
 
 	created_at: timestamp('created_at').defaultNow(),
 	updated_at: timestamp('updated_at').defaultNow()
@@ -432,6 +464,33 @@ export const relationships = pgTable('relationships', {
 	created_at: timestamp('created_at').defaultNow()
 });
 
+export const addresses = pgTable('addresses', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	church_id: uuid('church_id')
+		.notNull()
+		.references(() => churches.id),
+	family_id: uuid('family_id').references(() => families.id),
+	person_id: uuid('person_id').references(() => people.id),
+	team_id: uuid('team_id').references(() => teams.id),
+	campus_id: uuid('campus_id').references(() => campuses.id),
+
+	company_name: text('company_name'),
+	street: text('street'),
+	city: text('city'),
+	state: text('state'),
+	zip: text('zip'),
+	country: text('country').default('US'),
+
+	type: addressTypeEnum('type').default('home'),
+	is_primary: boolean('is_primary').default(false),
+
+	description: text('description'),
+	start_date: timestamp('start_date'),
+	end_date: timestamp('end_date'),
+
+	created_at: timestamp('created_at').defaultNow()
+});
+
 // --- RELATIONS ---
 
 export const peopleRelations = relations(people, ({ one, many }) => ({
@@ -447,11 +506,34 @@ export const peopleRelations = relations(people, ({ one, many }) => ({
 	relatedToMe: many(relationships, { relationName: 'relatedToMe' }),
 	careLogsReceived: many(care_logs, { relationName: 'careLogReceiver' }),
 	careLogsAuthored: many(care_logs, { relationName: 'careLogAuthor' }),
-	planAssignments: many(plan_people)
+	planAssignments: many(plan_people),
+	personalAddresses: many(addresses)
+}));
+
+export const addressesRelations = relations(addresses, ({ one }) => ({
+	family: one(families, { fields: [addresses.family_id], references: [families.id] }),
+	person: one(people, { fields: [addresses.person_id], references: [people.id] }),
+	team: one(teams, { fields: [addresses.team_id], references: [teams.id] }),
+	campus: one(campuses, { fields: [addresses.campus_id], references: [campuses.id] })
+}));
+
+export const familiesRelations = relations(families, ({ one, many }) => ({
+	church: one(churches, {
+		fields: [families.church_id],
+		references: [churches.id]
+	}),
+	members: many(people),
+	addresses: many(addresses)
 }));
 
 export const teamsRelations = relations(teams, ({ many }) => ({
-	members: many(team_members)
+	members: many(team_members),
+	locations: many(addresses)
+}));
+
+export const campusesRelations = relations(campuses, ({ many }) => ({
+	gatherings: many(gatherings),
+	physicalAddress: many(addresses)
 }));
 
 export const teamMembersRelations = relations(team_members, ({ one }) => ({
@@ -506,7 +588,8 @@ export const plansRelations = relations(plans, ({ one, many }) => ({
 
 export const planItemsRelations = relations(plan_items, ({ one }) => ({
 	plan: one(plans, { fields: [plan_items.plan_id], references: [plans.id] }),
-	song: one(songs, { fields: [plan_items.song_id], references: [songs.id] })
+	song: one(songs, { fields: [plan_items.song_id], references: [songs.id] }),
+	leader: one(people, { fields: [plan_items.leader_id], references: [people.id] })
 }));
 
 export const planNeededPositionsRelations = relations(plan_needed_positions, ({ one }) => ({

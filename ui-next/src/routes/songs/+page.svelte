@@ -12,7 +12,7 @@
 		(data.songs || []).filter(
 			(s) =>
 				s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				(s.author && s.author.toLowerCase().includes(searchTerm.toLowerCase()))
+				(s.artist && s.artist.toLowerCase().includes(searchTerm.toLowerCase()))
 		)
 	);
 </script>
@@ -37,7 +37,7 @@
 </div>
 
 <div class="relative mb-6">
-	<label for="song-search" class="sr-only">Search songs by title, lyrics, or author</label>
+	<label for="song-search" class="sr-only">Search songs by title or artist</label>
 	<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
 		<Search size={20} />
 	</div>
@@ -45,7 +45,7 @@
 		id="song-search"
 		type="text"
 		bind:value={searchTerm}
-		placeholder="Search by title, lyrics, or author..."
+		placeholder="Search by title or artist..."
 		class="w-full rounded-xl border border-slate-200 px-4 py-3 pl-10 text-base shadow-sm transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
 	/>
 </div>
@@ -79,8 +79,8 @@
 				</div>
 			</div>
 
-			{#if song.author}
-				<p class="mb-4 line-clamp-1 text-sm text-slate-500">{song.author}</p>
+			{#if song.artist}
+				<p class="mb-4 line-clamp-1 text-sm text-slate-500">{song.artist}</p>
 			{/if}
 
 			<div

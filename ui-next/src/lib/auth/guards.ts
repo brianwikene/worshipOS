@@ -17,10 +17,10 @@ interface GuardContext {
  * Redirects to /login if not
  */
 export function requireAuth({ locals, url }: GuardContext) {
-	if (!locals.person) {
+	if (!locals.actor) {
 		throw redirect(303, `/login?redirect=${encodeURIComponent(url.pathname)}`);
 	}
-	return locals.person;
+	return locals.actor;
 }
 
 /**

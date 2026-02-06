@@ -40,10 +40,7 @@ export function logServerError(
 		...ctx,
 		status,
 		...extra,
-		error:
-			err instanceof Error
-				? { name: err.name, message: err.message, stack: err.stack }
-				: err
+		error: err instanceof Error ? { name: err.name, message: err.message, stack: err.stack } : err
 	};
 
 	console.error(`[RID:${ctx.rid}] [ERR] ${ctx.method} ${ctx.path} -> ${status}`, payload);

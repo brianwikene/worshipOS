@@ -3,7 +3,15 @@
     "allow": [
       "mcp__claude_ai_svelte__svelte-autofixer",
       "Bash(yarn typecheck:*)",
-      "Bash(npx svelte-kit:*)"
+      "Bash(npx svelte-kit:*)",
+      "Bash(yarn svelte-check:*)",
+      "Bash(npm run check:*)",
+      "Bash(npm run db:push:*)",
+      "Bash(npx drizzle-kit push:*)",
+      "Bash(yes:*)",
+      "Bash(curl:*)",
+      "Bash(npx svelte-check:*)",
+      "Bash(python3:*)"
     ]
   }
 }

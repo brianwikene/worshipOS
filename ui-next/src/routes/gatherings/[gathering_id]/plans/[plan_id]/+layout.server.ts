@@ -14,11 +14,16 @@ export const load: LayoutServerLoad = async ({ params, locals }) => {
 		throw error(400, 'Missing route parameters');
 	}
 
-	// Fetch the Plan with campus info
+	// Fetch the Plan with gathering and campus info
 	const planData = await db.query.plans.findFirst({
 		where: and(eq(plans.id, plan_id), eq(plans.church_id, church.id)),
 		with: {
-			campus: true
+			campus: true,
+			gathering: {
+				with: {
+					campus: true
+				}
+			}
 		}
 	});
 

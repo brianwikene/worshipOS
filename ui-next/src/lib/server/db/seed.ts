@@ -322,8 +322,18 @@ const main = async () => {
 		console.log('🤝 Assigning Team Members...');
 		await db.insert(schema.team_members).values([
 			// Worship Team
-			{ church_id: churchId, team_id: teamIds.worship, person_id: personIds.sarah, role: 'Worship Leader' },
-			{ church_id: churchId, team_id: teamIds.worship, person_id: personIds.kevin, role: 'Worship Leader' },
+			{
+				church_id: churchId,
+				team_id: teamIds.worship,
+				person_id: personIds.sarah,
+				role: 'Worship Leader'
+			},
+			{
+				church_id: churchId,
+				team_id: teamIds.worship,
+				person_id: personIds.kevin,
+				role: 'Worship Leader'
+			},
 			// Band
 			{ church_id: churchId, team_id: teamIds.band, person_id: personIds.emily, role: 'Keys' },
 			{ church_id: churchId, team_id: teamIds.band, person_id: personIds.lisa, role: 'Drums' },
@@ -332,8 +342,18 @@ const main = async () => {
 			{ church_id: churchId, team_id: teamIds.vocals, person_id: personIds.maria, role: 'Soprano' },
 			{ church_id: churchId, team_id: teamIds.vocals, person_id: personIds.sarah, role: 'Alto' },
 			// Production
-			{ church_id: churchId, team_id: teamIds.production, person_id: personIds.david, role: 'Sound Engineer' },
-			{ church_id: churchId, team_id: teamIds.production, person_id: personIds.rachel, role: 'Video Director' }
+			{
+				church_id: churchId,
+				team_id: teamIds.production,
+				person_id: personIds.david,
+				role: 'Sound Engineer'
+			},
+			{
+				church_id: churchId,
+				team_id: teamIds.production,
+				person_id: personIds.rachel,
+				role: 'Video Director'
+			}
 		]);
 		console.log('   ✓ 9 team memberships created\n');
 
@@ -391,7 +411,13 @@ const main = async () => {
 		// =====================================================
 		console.log('🎯 Assigning Person Capabilities...');
 		await db.insert(schema.person_capabilities).values([
-			{ church_id: churchId, person_id: personIds.sarah, capability_id: capabilityIds.vocals, rating: 5, preference: 5 },
+			{
+				church_id: churchId,
+				person_id: personIds.sarah,
+				capability_id: capabilityIds.vocals,
+				rating: 5,
+				preference: 5
+			},
 			{
 				church_id: churchId,
 				person_id: personIds.sarah,
@@ -399,9 +425,27 @@ const main = async () => {
 				rating: 4,
 				preference: 3
 			},
-			{ church_id: churchId, person_id: personIds.emily, capability_id: capabilityIds.keys, rating: 5, preference: 5 },
-			{ church_id: churchId, person_id: personIds.emily, capability_id: capabilityIds.vocals, rating: 3, preference: 2 },
-			{ church_id: churchId, person_id: personIds.lisa, capability_id: capabilityIds.drums, rating: 5, preference: 5 },
+			{
+				church_id: churchId,
+				person_id: personIds.emily,
+				capability_id: capabilityIds.keys,
+				rating: 5,
+				preference: 5
+			},
+			{
+				church_id: churchId,
+				person_id: personIds.emily,
+				capability_id: capabilityIds.vocals,
+				rating: 3,
+				preference: 2
+			},
+			{
+				church_id: churchId,
+				person_id: personIds.lisa,
+				capability_id: capabilityIds.drums,
+				rating: 5,
+				preference: 5
+			},
 			{
 				church_id: churchId,
 				person_id: personIds.lisa,
@@ -409,7 +453,13 @@ const main = async () => {
 				rating: 4,
 				preference: 4
 			},
-			{ church_id: churchId, person_id: personIds.james, capability_id: capabilityIds.bass, rating: 4, preference: 5 },
+			{
+				church_id: churchId,
+				person_id: personIds.james,
+				capability_id: capabilityIds.bass,
+				rating: 4,
+				preference: 5
+			},
 			{
 				church_id: churchId,
 				person_id: personIds.james,
@@ -431,8 +481,20 @@ const main = async () => {
 				rating: 5,
 				preference: 5
 			},
-			{ church_id: churchId, person_id: personIds.maria, capability_id: capabilityIds.vocals, rating: 4, preference: 5 },
-			{ church_id: churchId, person_id: personIds.kevin, capability_id: capabilityIds.vocals, rating: 4, preference: 4 },
+			{
+				church_id: churchId,
+				person_id: personIds.maria,
+				capability_id: capabilityIds.vocals,
+				rating: 4,
+				preference: 5
+			},
+			{
+				church_id: churchId,
+				person_id: personIds.kevin,
+				capability_id: capabilityIds.vocals,
+				rating: 4,
+				preference: 4
+			},
 			{
 				church_id: churchId,
 				person_id: personIds.kevin,
@@ -570,14 +632,44 @@ const main = async () => {
 
 		// Link songs to authors with sequence
 		await db.insert(schema.song_authors).values([
-			{ church_id: churchId, song_id: songIds.wayMaker, author_id: authorIds.maverick, sequence: 0 },
+			{
+				church_id: churchId,
+				song_id: songIds.wayMaker,
+				author_id: authorIds.maverick,
+				sequence: 0
+			},
 			{ church_id: churchId, song_id: songIds.oceans, author_id: authorIds.hillsong, sequence: 0 },
-			{ church_id: churchId, song_id: songIds.blessings, author_id: authorIds.elevation, sequence: 0 },
+			{
+				church_id: churchId,
+				song_id: songIds.blessings,
+				author_id: authorIds.elevation,
+				sequence: 0
+			},
 			{ church_id: churchId, song_id: songIds.goodness, author_id: authorIds.bethel, sequence: 0 },
-			{ church_id: churchId, song_id: songIds.raiseAHallelujah, author_id: authorIds.bethel, sequence: 0 },
-			{ church_id: churchId, song_id: songIds.amazing, author_id: authorIds.traditional, sequence: 0 },
-			{ church_id: churchId, song_id: songIds.holySpirit, author_id: authorIds.hillsong, sequence: 0 },
-			{ church_id: churchId, song_id: songIds.greatAreYou, author_id: authorIds.bethel, sequence: 0 }
+			{
+				church_id: churchId,
+				song_id: songIds.raiseAHallelujah,
+				author_id: authorIds.bethel,
+				sequence: 0
+			},
+			{
+				church_id: churchId,
+				song_id: songIds.amazing,
+				author_id: authorIds.traditional,
+				sequence: 0
+			},
+			{
+				church_id: churchId,
+				song_id: songIds.holySpirit,
+				author_id: authorIds.hillsong,
+				sequence: 0
+			},
+			{
+				church_id: churchId,
+				song_id: songIds.greatAreYou,
+				author_id: authorIds.bethel,
+				sequence: 0
+			}
 		]);
 		console.log('   ✓ 5 authors and 8 songs created\n');
 

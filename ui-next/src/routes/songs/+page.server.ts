@@ -1,20 +1,20 @@
 import { db } from '$lib/server/db';
-import { songs } from '$lib/server/db/schema';
+import { authors, song_authors, songs } from '$lib/server/db/schema';
 import { error } from '@sveltejs/kit';
-import { desc, eq } from 'drizzle-orm'; // <--- ADDED 'eq' HERE
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 // 1. LOAD FUNCTION
 export const load: PageServerLoad = async ({ locals }) => {
-	// --- THE GUARD CLAUSE ---
 	if (!locals.church) {
 		throw error(404, 'Church not found');
 	}
-	const { church } = locals; // TypeScript now knows 'church' is safe!
+	const { church } = locals;
 
-	// Fetch songs for this church
+	// Only root songs — arrangements are accessed via their parent
 	const allSongs = await db.query.songs.findMany({
-		where: (s, { eq }) => eq(s.church_id, church.id),
+		where: (s, { and, eq, isNull }) =>
+			and(eq(s.church_id, church.id), isNull(s.original_song_id)),
 		orderBy: [desc(songs.updated_at)]
 	});
 
@@ -177,14 +177,41 @@ export const actions: Actions = {
 			}
 		];
 
-		// C. INSERT CLEAN
+		// C. INSERT CLEAN — create songs, upsert authors, link via song_authors
 		try {
-			for (const song of seedSongs) {
-				await db.insert(songs).values({
-					church_id: church.id,
-					...song,
-					lyrics: 'Lyrics available in public domain.'
-				});
+			for (const seed of seedSongs) {
+				const { author, ...songData } = seed as any;
+
+				const [newSong] = await db
+					.insert(songs)
+					.values({
+						church_id: church.id,
+						...songData,
+						content: 'Lyrics available in public domain.'
+					})
+					.returning({ id: songs.id });
+
+				// Upsert author and link
+				if (author) {
+					let authorRow = await db.query.authors.findFirst({
+						where: (a, { and, eq }) =>
+							and(eq(a.church_id, church.id), eq(a.name, author))
+					});
+
+					if (!authorRow) {
+						[authorRow] = await db
+							.insert(authors)
+							.values({ church_id: church.id, name: author })
+							.returning();
+					}
+
+					await db.insert(song_authors).values({
+						church_id: church.id,
+						song_id: newSong.id,
+						author_id: authorRow.id,
+						sequence: 0
+					});
+				}
 			}
 			console.log('✅ Library Reset Complete');
 			return { success: true };

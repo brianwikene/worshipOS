@@ -16,7 +16,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			authors: {
 				with: { author: true },
 				orderBy: (sa, { asc }) => [asc(sa.sequence)]
-			}
+			},
+			arrangements: true
 		}
 	});
 
@@ -39,11 +40,13 @@ export const actions: Actions = {
 			.update(songs)
 			.set({
 				title: data.get('title') as string,
+				artist: (data.get('artist') as string) || null,
 				original_key: data.get('key') as string,
 				tempo: data.get('tempo') as string,
 				bpm: data.get('bpm') ? parseInt(data.get('bpm') as string) : null,
 				time_signature: (data.get('time_signature') as string) || '4/4',
 				ccli_number: data.get('ccli') as string,
+				copyright: (data.get('copyright') as string) || null,
 				performance_notes: data.get('performance_notes') as string,
 				lyrics: data.get('lyrics') as string,
 				content: data.get('content') as string,
@@ -113,6 +116,96 @@ export const actions: Actions = {
 		const songId = params.id;
 
 		await db.delete(songs).where(and(eq(songs.id, songId), eq(songs.church_id, church.id)));
+
+		return { success: true };
+	},
+
+	createArrangement: async ({ request, params, locals }) => {
+		if (!locals.church) throw error(401, 'Church not found');
+		if (!params.id) throw error(400, 'Song ID required');
+
+		const { church } = locals;
+		const parentId = params.id;
+		const data = await request.formData();
+
+		// Get parent song to inherit artist
+		const parentSong = await db.query.songs.findFirst({
+			where: (s, { and, eq }) => and(eq(s.id, parentId), eq(s.church_id, church.id))
+		});
+
+		if (!parentSong) throw error(404, 'Parent song not found');
+
+		const versionName = (data.get('version_name') as string) || 'Untitled Version';
+		const key = (data.get('key') as string) || parentSong.original_key;
+		const content = (data.get('content') as string) || parentSong.content;
+
+		const [arrangement] = await db
+			.insert(songs)
+			.values({
+				church_id: church.id,
+				original_song_id: parentId,
+				title: parentSong.title,
+				arrangement_name: versionName,
+				artist: parentSong.artist, // Inherit from parent
+				original_key: key,
+				tempo: parentSong.tempo,
+				bpm: parentSong.bpm,
+				time_signature: parentSong.time_signature,
+				ccli_number: parentSong.ccli_number,
+				content
+			})
+			.returning({ id: songs.id });
+
+		return { success: true, arrangement };
+	},
+
+	updateArrangement: async ({ request, params, locals }) => {
+		if (!locals.church) throw error(401, 'Church not found');
+		if (!params.id) throw error(400, 'Song ID required');
+
+		const { church } = locals;
+		const data = await request.formData();
+		const arrangementId = data.get('arrangement_id') as string;
+
+		if (!arrangementId) throw error(400, 'Arrangement ID required');
+
+		await db
+			.update(songs)
+			.set({
+				arrangement_name: data.get('name') as string,
+				content: data.get('content') as string,
+				updated_at: new Date()
+			})
+			.where(
+				and(
+					eq(songs.id, arrangementId),
+					eq(songs.church_id, church.id),
+					eq(songs.original_song_id, params.id)
+				)
+			);
+
+		return { success: true };
+	},
+
+	deleteArrangement: async ({ request, params, locals }) => {
+		if (!locals.church) throw error(401, 'Church not found');
+		if (!params.id) throw error(400, 'Song ID required');
+
+		const { church } = locals;
+		const data = await request.formData();
+		const arrangementId = data.get('arrangement_id') as string;
+
+		if (!arrangementId) throw error(400, 'Arrangement ID required');
+
+		await db
+			.delete(songs)
+			.where(
+				and(
+					eq(songs.id, arrangementId),
+					eq(songs.church_id, church.id),
+					eq(songs.original_song_id, params.id)
+				)
+			);
 
 		return { success: true };
 	}

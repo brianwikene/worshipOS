@@ -21,13 +21,10 @@
 	let isCreatingTeam = $state(false);
 	let formError = $state<string | null>(null);
 
-	// 1. Filter Lists
-	let activeMemberships = $derived(
-		(person.teamMemberships || []).filter((m) => m.status === 'active')
-	);
-	let inactiveMemberships = $derived(
-		(person.teamMemberships || []).filter((m) => m.status !== 'active')
-	);
+	// All memberships are active (no status column in team_members)
+	let activeMemberships = $derived(person.teamMemberships || []);
+	// No inactive memberships since there's no status tracking
+	let inactiveMemberships: TeamMembership[] = [];
 
 	// 2. Grouping Function
 	function groupMemberships(list: TeamMembership[]) {

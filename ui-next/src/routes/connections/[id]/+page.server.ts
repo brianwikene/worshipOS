@@ -2,6 +2,8 @@
 
 import { db } from '$lib/server/db';
 import {
+	addressTypeEnum,
+	addresses,
 	care_logs,
 	families,
 	people,
@@ -18,31 +20,24 @@ import { v4 as uuidv4 } from 'uuid';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-	if (!locals.church) {
-		throw error(404, 'Church not found');
-	}
+	if (!locals.church) throw error(404, 'Church not found');
+
 	const { church } = locals;
 	const { id } = params;
 
-	// 1. Fetch Person Details WITH Relations
+	// Person + relations (no careLogs here; loaded separately as "careNotes")
 	const person = await db.query.people.findFirst({
 		where: (p, { and, eq }) => and(eq(p.id, id), eq(p.church_id, church.id)),
 		with: {
 			family: true,
 			teamMemberships: {
-				with: {
-					team: true
-				}
+				with: { team: true }
 			},
 			relationships: {
-				with: {
-					relatedPerson: true
-				}
+				with: { relatedPerson: true }
 			},
 			capabilities: {
-				with: {
-					capability: true
-				}
+				with: { capability: true }
 			},
 			preferredCampus: true
 		}
@@ -50,7 +45,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	if (!person) throw error(404, 'Person not found');
 
-	// 2. Fetch Care Notes (History) - care_logs doesn't have 'date', use created_at
+	// Care Notes: schema has created_at, not date
 	const careNotes = await db
 		.select({
 			id: care_logs.id,
@@ -67,7 +62,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.where(and(eq(care_logs.person_id, id), eq(care_logs.church_id, church.id)))
 		.orderBy(desc(care_logs.created_at));
 
-	// 3. Fetch Teams (for Drawer)
+	// Teams this person is a member of (for drawer)
 	const myTeams = await db
 		.select({
 			id: teams.id,
@@ -76,9 +71,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		})
 		.from(team_members)
 		.innerJoin(teams, eq(team_members.team_id, teams.id))
-		.where(eq(team_members.person_id, id));
+		.where(and(eq(team_members.person_id, id), eq(team_members.church_id, church.id)));
 
-	// 4. Fetch Upcoming Schedule - simplified since plan_people uses role_name not role
+	// Upcoming Schedule: plan_people has role_name (not role), no team_id join
 	const schedule = await db
 		.select({
 			date: plans.date,
@@ -87,26 +82,29 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		})
 		.from(plan_people)
 		.innerJoin(plans, eq(plan_people.plan_id, plans.id))
-		.where(and(eq(plan_people.person_id, id), gte(plans.date, new Date())))
+		.where(
+			and(
+				eq(plan_people.person_id, id),
+				eq(plan_people.church_id, church.id),
+				gte(plans.date, new Date())
+			)
+		)
 		.orderBy(plans.date)
 		.limit(5);
 
-	// 5. Fetch All Families (for Drawer)
+	// Drawer lists
 	const allFamilies = await db.query.families.findMany({
 		where: (f, { eq }) => eq(f.church_id, church.id)
 	});
 
-	// 6. Fetch All Teams (for Drawer)
 	const allTeams = await db.query.teams.findMany({
 		where: (t, { eq }) => eq(t.church_id, church.id)
 	});
 
-	// 7. Fetch All Campuses (for Drawer)
 	const allCampuses = await db.query.campuses.findMany({
 		where: (c, { eq }) => eq(c.church_id, church.id)
 	});
 
-	// 8. Fetch All Capabilities (for adding to person)
 	const allCapabilities = await db.query.capabilities.findMany({
 		where: (c, { eq }) => eq(c.church_id, church.id)
 	});
@@ -127,10 +125,12 @@ export const actions: Actions = {
 	addCareNote: async ({ request, params, locals }) => {
 		if (!locals.church) throw error(401, 'Church not found');
 		if (!params.id) throw error(400, 'Person ID required');
+
 		const { church } = locals;
 		const personId = params.id;
 		const formData = await request.formData();
 
+		// Temporary author selection: first admin person in this church
 		const author = await db.query.people.findFirst({
 			where: (p, { and, eq }) => and(eq(p.church_id, church.id), eq(p.role, 'admin'))
 		});
@@ -142,8 +142,9 @@ export const actions: Actions = {
 			person_id: personId,
 			author_id: author.id,
 			type: (formData.get('category') as string) || 'General',
-			content: formData.get('content') as string,
+			content: (formData.get('content') as string) || '',
 			is_private: true
+			// NOTE: no "date" column; created_at should be defaulted by DB
 		});
 
 		return { success: true };
@@ -152,17 +153,18 @@ export const actions: Actions = {
 	updateProfile: async ({ request, params, locals }) => {
 		if (!locals.church) throw error(401, 'Church not found');
 		if (!params.id) throw error(400, 'Person ID required');
+
 		const { church } = locals;
 		const personId = params.id;
 		const data = await request.formData();
 
 		const first_name = (data.get('first_name') as string)?.trim();
 		const last_name = (data.get('last_name') as string)?.trim();
-		const email = data.get('email') as string;
-		const phone = data.get('phone') as string;
-		const bio = data.get('bio') as string;
-		const occupation = data.get('occupation') as string;
-		const capacity_note = data.get('capacity_note') as string;
+		const email = (data.get('email') as string) || null;
+		const phone = (data.get('phone') as string) || null;
+		const bio = (data.get('bio') as string) || null;
+		const occupation = (data.get('occupation') as string) || null;
+		const capacity_note = (data.get('capacity_note') as string) || null;
 		const rawCampusId = data.get('preferred_campus_id') as string;
 		const preferred_campus_id = rawCampusId ? rawCampusId : null;
 
@@ -191,6 +193,7 @@ export const actions: Actions = {
 	connectFamily: async ({ request, params, locals }) => {
 		if (!locals.church) throw error(401, 'Church not found');
 		if (!params.id) throw error(400, 'Person ID required');
+
 		const { church } = locals;
 		const personId = params.id;
 		const data = await request.formData();
@@ -207,14 +210,13 @@ export const actions: Actions = {
 	createFamily: async ({ request, params, locals }) => {
 		if (!locals.church) throw error(401, 'Church not found');
 		if (!params.id) throw error(400, 'Person ID required');
+
 		const { church } = locals;
 		const personId = params.id;
 		const data = await request.formData();
 		const name = (data.get('name') as string)?.trim();
 
-		if (!name) {
-			return fail(400, { error: 'Family name is required' });
-		}
+		if (!name) return fail(400, { error: 'Family name is required' });
 
 		const newFamilyId = uuidv4();
 
@@ -223,6 +225,7 @@ export const actions: Actions = {
 				id: newFamilyId,
 				church_id: church.id,
 				name
+				// NOTE: no address_city
 			});
 
 			await tx
@@ -237,6 +240,7 @@ export const actions: Actions = {
 	updateHouseholdDetails: async ({ request, params, locals }) => {
 		if (!locals.church) throw error(401, 'Church not found');
 		if (!params.id) throw error(400, 'Person ID required');
+
 		const { church } = locals;
 		const personId = params.id;
 		const data = await request.formData();
@@ -275,15 +279,15 @@ export const actions: Actions = {
 
 	addCapability: async ({ request, params, locals }) => {
 		if (!locals.church) throw error(401, 'Church not found');
-		const { church } = locals;
-
 		if (!params.id) throw error(400, 'Person ID required');
+
+		const { church } = locals;
 		const personId = params.id;
 
 		const data = await request.formData();
 		const capability_id = data.get('capability_id') as string;
-		const rating = parseInt(data.get('rating') as string) || 3;
-		const preference = parseInt(data.get('preference') as string) || 3;
+		const rating = parseInt((data.get('rating') as string) || '3', 10) || 3;
+		const preference = parseInt((data.get('preference') as string) || '3', 10) || 3;
 
 		if (!capability_id) return fail(400, { error: 'Capability is required' });
 
@@ -303,12 +307,17 @@ export const actions: Actions = {
 		const { church } = locals;
 
 		const data = await request.formData();
-		const capability_id = data.get('capability_id') as string;
+		const person_capability_id = data.get('person_capability_id') as string;
+
+		if (!person_capability_id) throw error(400, 'Person capability ID required');
 
 		await db
 			.delete(person_capabilities)
 			.where(
-				and(eq(person_capabilities.id, capability_id), eq(person_capabilities.church_id, church.id))
+				and(
+					eq(person_capabilities.id, person_capability_id),
+					eq(person_capabilities.church_id, church.id)
+				)
 			);
 
 		return { success: true };
@@ -317,6 +326,7 @@ export const actions: Actions = {
 	createTeam: async ({ request, locals }) => {
 		if (!locals.church) throw error(401, 'Church not found');
 		const { church } = locals;
+
 		const data = await request.formData();
 		const name = (data.get('name') as string)?.trim();
 
@@ -333,9 +343,9 @@ export const actions: Actions = {
 
 	joinTeam: async ({ request, params, locals }) => {
 		if (!locals.church) throw error(401, 'Church not found');
-		const { church } = locals;
-
 		if (!params.id) throw error(400, 'Person ID required');
+
+		const { church } = locals;
 		const personId = params.id;
 
 		const data = await request.formData();
@@ -360,6 +370,7 @@ export const actions: Actions = {
 				person_id: personId,
 				team_id,
 				role
+				// NOTE: no "status" column
 			});
 		}
 
@@ -373,9 +384,114 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const membership_id = data.get('membership_id') as string;
 
+		if (!membership_id) throw error(400, 'Membership ID required');
+
 		await db
 			.delete(team_members)
 			.where(and(eq(team_members.id, membership_id), eq(team_members.church_id, church.id)));
+
+		return { success: true };
+	},
+
+	saveAddress: async ({ request, params, locals }) => {
+		if (!locals.church) throw error(401, 'Church not found');
+		if (!params.id) throw error(400, 'Person ID required');
+
+		const { church } = locals;
+		const personId = params.id;
+		const data = await request.formData();
+
+		const addressId = (data.get('address_id') as string) || null;
+
+		const street = (data.get('street') as string) || null;
+		const city = (data.get('city') as string) || null;
+		const state = (data.get('state') as string) || null;
+		const zip = (data.get('zip') as string) || null;
+		const country = (data.get('country') as string) || 'US';
+		const description = (data.get('description') as string) || null;
+
+		// ✅ enum-safe type
+		type AddressType = (typeof addressTypeEnum.enumValues)[number];
+		const rawType = ((data.get('type') as string) || 'home').toLowerCase();
+		const isAddressType = (v: string): v is AddressType =>
+			(addressTypeEnum.enumValues as readonly string[]).includes(v);
+		const type: AddressType = isAddressType(rawType) ? rawType : 'home';
+
+		const isPrimaryRaw = data.get('is_primary');
+		const is_primary = isPrimaryRaw === 'true' || isPrimaryRaw === 'on' || isPrimaryRaw === '1';
+
+		if (!street && !city && !state && !zip) {
+			return fail(400, { message: 'Address is empty.' });
+		}
+
+		// Enforce only 1 primary per person
+		if (is_primary) {
+			await db
+				.update(addresses)
+				.set({ is_primary: false })
+				.where(and(eq(addresses.church_id, church.id), eq(addresses.person_id, personId)));
+		}
+
+		if (addressId) {
+			await db
+				.update(addresses)
+				.set({
+					street,
+					city,
+					state,
+					zip,
+					country,
+					type,
+					description,
+					is_primary
+				})
+				.where(
+					and(
+						eq(addresses.id, addressId),
+						eq(addresses.church_id, church.id),
+						eq(addresses.person_id, personId)
+					)
+				);
+
+			return { success: true };
+		}
+
+		await db.insert(addresses).values({
+			church_id: church.id,
+			person_id: personId,
+			street,
+			city,
+			state,
+			zip,
+			country,
+			type,
+			description,
+			is_primary
+		});
+
+		return { success: true };
+	},
+
+	deleteAddress: async ({ request, params, locals }) => {
+		if (!locals.church) throw error(401, 'Church not found');
+		if (!params.id) throw error(400, 'Person ID required');
+
+		const { church } = locals;
+		const personId = params.id;
+		const data = await request.formData();
+
+		const addressId = data.get('address_id') as string;
+		if (!addressId) throw error(400, 'Address ID required');
+
+		await db
+			.delete(addresses)
+			.where(
+				and(
+					eq(addresses.id, addressId),
+					eq(addresses.church_id, church.id),
+					eq(addresses.person_id, personId)
+				)
+			);
 
 		return { success: true };
 	}

@@ -14,11 +14,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	// 2. Fetch Next 3 Plans with FULL Details
 	const matrixData = await db.query.plans.findMany({
-		where: and(
-			eq(plans.church_id, church.id),
-			gte(plans.date, today),
-			isNull(plans.deleted_at)
-		),
+		where: and(eq(plans.church_id, church.id), gte(plans.date, today), isNull(plans.deleted_at)),
 		orderBy: [asc(plans.date)],
 		limit: 3,
 		with: {

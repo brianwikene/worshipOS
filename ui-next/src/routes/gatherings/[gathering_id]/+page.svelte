@@ -103,28 +103,36 @@
 		{/each}
 	</div>
 
-	<h2 class="mb-4 mt-12 text-sm font-bold tracking-wider text-gray-500 uppercase">Summary Views</h2>
+	<h2 class="mt-12 mb-4 text-sm font-bold tracking-wider text-gray-500 uppercase">Summary Views</h2>
 	<div class="grid gap-4 sm:grid-cols-2">
 		<a
 			href={`/gatherings/${data.gathering.id}/order`}
 			class="flex flex-col rounded-xl border border-gray-200 bg-white p-6 transition-all hover:border-stone-400 hover:shadow-md"
 		>
-			<div class="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-stone-100 text-stone-600">
+			<div
+				class="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-stone-100 text-stone-600"
+			>
 				<List size={20} />
 			</div>
 			<h3 class="text-lg font-bold text-gray-900">Service Flow</h3>
-			<p class="mt-1 text-sm text-gray-500">View the complete combined order of service for all plans.</p>
+			<p class="mt-1 text-sm text-gray-500">
+				View the complete combined order of service for all plans.
+			</p>
 		</a>
 
 		<a
 			href={`/gatherings/${data.gathering.id}/rehearse`}
 			class="flex flex-col rounded-xl border border-gray-200 bg-white p-6 transition-all hover:border-purple-400 hover:shadow-md"
 		>
-			<div class="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+			<div
+				class="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50 text-purple-600"
+			>
 				<Music size={20} />
 			</div>
 			<h3 class="text-lg font-bold text-gray-900">Musician View</h3>
-			<p class="mt-1 text-sm text-gray-500">Quick access to songs, keys, and setlist details for rehearsal.</p>
+			<p class="mt-1 text-sm text-gray-500">
+				Quick access to songs, keys, and setlist details for rehearsal.
+			</p>
 		</a>
 	</div>
 </div>

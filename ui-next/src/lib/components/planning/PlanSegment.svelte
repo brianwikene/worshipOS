@@ -5,15 +5,20 @@
 	import PlanItem from '$lib/components/planning/PlanItem.svelte';
 
 	type Segment = 'pre' | 'core' | 'post';
+	type ItemType = 'header' | 'song' | 'sermon' | 'announcement' | 'prayer' | 'reading' | 'media' | 'offering' | 'communion' | 'baptism' | 'dedication' | 'other';
 	type PlanItemShape = {
 		id: string;
 		title: string;
-		duration: number;
+		duration: number | null;
 		segment: Segment;
+		type: ItemType;
 		order: number;
 		song_id?: string | null;
+		leader_id?: string | null;
 		is_audible?: boolean;
-		song?: { title?: string | null } | null;
+		offset_minutes?: number | null;
+		song?: { title?: string | null; original_key?: string | null } | null;
+		leader?: { id: string; first_name: string; last_name: string | null } | null;
 		timeLabel?: string;
 	};
 
@@ -38,15 +43,34 @@
 
 	let draftTitle = $state('');
 
-	let localItems = $state<PlanItemShape[]>(items ?? []);
+	let localItems = $state<PlanItemShape[]>([]);
 
 	$effect(() => {
 		localItems = items ?? [];
 	});
 
-	let totalDuration = $derived(
-		localItems.reduce((acc, item) => acc + (item.duration ?? 0), 0)
-	);
+	// For pre/post: total is the span based on offsets, not sum of durations
+	// For core: total is sum of sequential durations
+	let totalDuration = $derived.by(() => {
+		if (segment === 'pre') {
+			// Pre: max offset in minutes, converted to seconds
+			const maxOffset = Math.max(...localItems.map((item) => item.offset_minutes ?? 0), 0);
+			return maxOffset * 60;
+		} else if (segment === 'post') {
+			// Post: max of (offset + duration) to find when last item ends
+			const maxEnd = Math.max(
+				...localItems.map((item) => {
+					const offsetSec = (item.offset_minutes ?? 0) * 60;
+					return offsetSec + (item.duration ?? 0);
+				}),
+				0
+			);
+			return maxEnd;
+		} else {
+			// Core: sequential, sum of durations
+			return localItems.reduce((acc, item) => acc + (item.duration ?? 0), 0);
+		}
+	});
 
 	function formatDuration(seconds: number) {
 		const mins = Math.floor(seconds / 60);
@@ -70,7 +94,7 @@
 				<Lock size={14} class="text-gray-400" />
 			{/if}
 		</div>
-		<span class="text-xs font-mono text-gray-500">{formatDuration(totalDuration)}</span>
+		<span class="font-mono text-xs text-gray-500">{formatDuration(totalDuration)}</span>
 	</header>
 
 	<div

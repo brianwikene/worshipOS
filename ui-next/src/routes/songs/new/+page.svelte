@@ -9,9 +9,12 @@
 
 	// Form Bindings
 	let title = $state('');
+	let artist = $state('');
 	let key = $state('C');
 	let tempo = $state('');
+	let timeSignature = $state('4/4');
 	let ccli = $state('');
+	let copyright = $state('');
 	let notes = $state('');
 	let content = $state('');
 
@@ -21,10 +24,72 @@
 	let pasteAreaOpen = $state(true); // Open by default for quick access
 	let pasteContent = $state('');
 
+	const CHORD_TOKEN = /^[A-G][#b]?[a-zA-Z0-9/()]*$/;
+
+	function isChordLine(line: string) {
+		const tokens = line.trim().split(/\s+/);
+		return tokens.length > 0 && tokens.every((t) => CHORD_TOKEN.test(t));
+	}
+
+	function mergeChordLineIntoLyric(chordLine: string, lyricLine: string) {
+		const tokens: { chord: string; col: number }[] = [];
+		const regex = /\S+/g;
+		let m: RegExpExecArray | null;
+		while ((m = regex.exec(chordLine)) !== null) {
+			tokens.push({ chord: m[0], col: m.index });
+		}
+
+		// Insert chords at their character positions in the lyric line
+		let result = '';
+		let lastIdx = 0;
+		for (const { chord, col } of tokens) {
+			const insertAt = Math.min(col, lyricLine.length);
+			result += lyricLine.slice(lastIdx, insertAt) + '[' + chord + ']';
+			lastIdx = insertAt;
+		}
+		result += lyricLine.slice(lastIdx);
+		return result;
+	}
+
+	function preProcessChordLines(lines: string[]) {
+		const result: string[] = [];
+		let i = 0;
+		while (i < lines.length) {
+			const line = lines[i];
+			if (isChordLine(line) && line.trim().length > 0) {
+				const nextLine = i + 1 < lines.length ? lines[i + 1] : '';
+				if (nextLine.trim() && !isChordLine(nextLine)) {
+					// Chord line followed by lyric line — merge
+					result.push(mergeChordLineIntoLyric(line, nextLine));
+					i += 2;
+				} else {
+					// Chord-only line (intro, interlude) — wrap each token
+					result.push(line.replace(/\S+/g, (token) => '[' + token + ']'));
+					i += 1;
+				}
+			} else {
+				result.push(line);
+				i += 1;
+			}
+		}
+		return result;
+	}
+
+	function normalizeCopyright(raw: string) {
+		let val = raw.trim();
+		// Convert (c) → ©
+		val = val.replace(/\(c\)/gi, '©');
+		// Prepend © if missing
+		if (!val.startsWith('©')) val = '© ' + val;
+		return val;
+	}
+
 	function magicParse() {
 		if (!pasteContent.trim()) return;
 
-		const lines = pasteContent.split('\n');
+		// Pre-process: detect chord-above-lyric format and merge
+		const rawLines = pasteContent.split('\n');
+		const lines = preProcessChordLines(rawLines);
 		const remainingLines: string[] = [];
 
 		lines.forEach((line) => {
@@ -39,7 +104,7 @@
 				handled = true;
 			}
 
-			// 2. Author detection
+			// 2. Author detection (songwriters/copyright)
 			const authorMatch =
 				trim.match(/^\{(?:a|author|st|subtitle):\s*(.*?)\}$/i) || trim.match(/^Author:\s*(.*)$/i);
 			if (authorMatch) {
@@ -52,6 +117,15 @@
 						localAuthors.push({ name });
 					}
 				});
+				handled = true;
+			}
+
+			// 2b. Artist detection (recording artist reference)
+			const artistMatch =
+				trim.match(/^\{(?:ar|artist):\s*(.*?)\}$/i) ||
+				trim.match(/^(?:Artist|Recording Artist):\s*(.*)$/i);
+			if (artistMatch) {
+				artist = artistMatch[1].trim();
 				handled = true;
 			}
 
@@ -77,6 +151,23 @@
 				trim.match(/^\{(?:ccli):\s*(.*?)\}$/i) || trim.match(/^CCLI:?\s*#?\s*(\d+)/i);
 			if (ccliMatch) {
 				ccli = ccliMatch[1];
+				handled = true;
+			}
+
+			// 6. Time signature detection
+			const timeMatch =
+				trim.match(/^\{(?:time|time_signature):\s*(.*?)\}$/i) ||
+				trim.match(/^(?:Time|Time Signature):\s*(.*)$/i);
+			if (timeMatch) {
+				timeSignature = timeMatch[1].trim();
+				handled = true;
+			}
+
+			// 7. Copyright detection
+			const copyrightMatch =
+				trim.match(/^\{(?:copyright|c):\s*(.*?)\}$/i) || trim.match(/^Copyright:\s*(.*)$/i);
+			if (copyrightMatch) {
+				copyright = normalizeCopyright(copyrightMatch[1]);
 				handled = true;
 			}
 
@@ -162,9 +253,23 @@
 						<span class="mb-1 block text-xs font-medium text-slate-700">Author(s)</span>
 						<AuthorInput bind:selectedAuthors={localAuthors} />
 						<input type="hidden" name="authors_json" value={JSON.stringify(localAuthors)} />
+						<p class="mt-1 text-[10px] text-stone-400">Songwriters for copyright attribution.</p>
 					</div>
 
-					<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label for="artist" class="block text-xs font-medium text-slate-700">Recording Artist</label>
+						<input
+							type="text"
+							id="artist"
+							name="artist"
+							bind:value={artist}
+							placeholder="e.g. Hillsong Worship"
+							class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm focus:border-slate-500 focus:ring-slate-500"
+						/>
+						<p class="mt-1 text-[10px] text-stone-400">Reference recording (optional).</p>
+					</div>
+
+					<div class="grid grid-cols-3 gap-4">
 						<div>
 							<label for="key" class="block text-xs font-medium text-slate-700">Original Key</label>
 							<select
@@ -189,6 +294,22 @@
 								class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm focus:border-slate-500 focus:ring-slate-500"
 							/>
 						</div>
+						<div>
+							<label for="time_signature" class="block text-xs font-medium text-slate-700">Time Sig.</label>
+							<select
+								id="time_signature"
+								name="time_signature"
+								bind:value={timeSignature}
+								class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm focus:border-slate-500 focus:ring-slate-500"
+							>
+								<option value="4/4">4/4</option>
+								<option value="3/4">3/4</option>
+								<option value="6/8">6/8</option>
+								<option value="2/4">2/4</option>
+								<option value="9/8">9/8</option>
+								<option value="12/8">12/8</option>
+							</select>
+						</div>
 					</div>
 
 					<div>
@@ -212,6 +333,18 @@
 							id="ccli"
 							name="ccli"
 							bind:value={ccli}
+							class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm focus:border-slate-500 focus:ring-slate-500"
+						/>
+					</div>
+
+					<div>
+						<label for="copyright" class="block text-xs font-medium text-slate-700">Copyright</label>
+						<input
+							type="text"
+							id="copyright"
+							name="copyright"
+							bind:value={copyright}
+							placeholder="e.g. © 1998 Vineyard Songs"
 							class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm focus:border-slate-500 focus:ring-slate-500"
 						/>
 					</div>

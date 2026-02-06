@@ -153,7 +153,7 @@
 		</div>
 	{/if}
 
-	<div class="flex flex-1 overflow-hidden">
+	<div class="flex min-h-0 flex-1">
 		<aside class="hidden w-64 flex-col border-r border-stone-200 bg-stone-50 md:flex">
 			<nav class="flex-1 space-y-1 p-4">
 				{#each navItems as item}

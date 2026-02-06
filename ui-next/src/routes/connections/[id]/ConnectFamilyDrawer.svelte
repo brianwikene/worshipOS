@@ -84,12 +84,6 @@
 					>
 						<div>
 							<div class="font-bold text-gray-900">{family.name}</div>
-							{#if family.address_city}
-								<div class="flex items-center gap-1 text-xs text-gray-500">
-									<MapPin size={10} />
-									{family.address_city}
-								</div>
-							{/if}
 						</div>
 						{#if selectedFamilyId === family.id}
 							<div
