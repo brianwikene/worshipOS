@@ -29,7 +29,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const person = await db.query.people.findFirst({
 		where: (p, { and, eq }) => and(eq(p.id, id), eq(p.church_id, church.id)),
 		with: {
-			family: true,
+			family: {
+				with: { addresses: true, members: true }
+			},
 			teamMemberships: {
 				with: { team: true }
 			},
@@ -39,7 +41,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			capabilities: {
 				with: { capability: true }
 			},
-			preferredCampus: true
+			preferredCampus: true,
+			personalAddresses: true
 		}
 	});
 

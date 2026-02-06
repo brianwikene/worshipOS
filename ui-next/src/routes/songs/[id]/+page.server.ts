@@ -2,7 +2,7 @@
 
 import { db } from '$lib/server/db';
 import { authors, song_authors, songs } from '$lib/server/db/schema';
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -47,6 +47,8 @@ export const actions: Actions = {
 				time_signature: (data.get('time_signature') as string) || '4/4',
 				ccli_number: data.get('ccli') as string,
 				copyright: (data.get('copyright') as string) || null,
+				youtube_url: (data.get('youtube_url') as string) || null,
+				spotify_url: (data.get('spotify_url') as string) || null,
 				performance_notes: data.get('performance_notes') as string,
 				lyrics: data.get('lyrics') as string,
 				content: data.get('content') as string,
@@ -118,6 +120,21 @@ export const actions: Actions = {
 		await db.delete(songs).where(and(eq(songs.id, songId), eq(songs.church_id, church.id)));
 
 		return { success: true };
+	},
+
+	archiveSong: async ({ params, locals }) => {
+		if (!locals.church) throw error(401, 'Church not found');
+		if (!params.id) throw error(400, 'Song ID required');
+
+		const { church } = locals;
+		const songId = params.id;
+
+		await db
+			.update(songs)
+			.set({ deleted_at: new Date() })
+			.where(and(eq(songs.id, songId), eq(songs.church_id, church.id)));
+
+		throw redirect(303, '/songs');
 	},
 
 	createArrangement: async ({ request, params, locals }) => {

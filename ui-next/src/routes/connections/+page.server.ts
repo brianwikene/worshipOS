@@ -16,7 +16,13 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const connectionsList = await db.query.people.findMany({
 		where: eq(people.church_id, church.id),
 		with: {
-			family: true
+			family: {
+				with: { addresses: true }
+			},
+			teamMemberships: {
+				with: { team: true }
+			},
+			personalAddresses: true
 		},
 		orderBy: [asc(people.last_name), asc(people.first_name)]
 	});

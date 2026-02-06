@@ -11,7 +11,8 @@
       "Bash(yes:*)",
       "Bash(curl:*)",
       "Bash(npx svelte-check:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(ls:*)"
     ]
   }
 }

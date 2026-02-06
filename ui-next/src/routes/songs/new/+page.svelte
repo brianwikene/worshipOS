@@ -15,6 +15,8 @@
 	let timeSignature = $state('4/4');
 	let ccli = $state('');
 	let copyright = $state('');
+	let youtubeUrl = $state('');
+	let spotifyUrl = $state('');
 	let notes = $state('');
 	let content = $state('');
 
@@ -168,6 +170,22 @@
 				trim.match(/^\{(?:copyright|c):\s*(.*?)\}$/i) || trim.match(/^Copyright:\s*(.*)$/i);
 			if (copyrightMatch) {
 				copyright = normalizeCopyright(copyrightMatch[1]);
+				handled = true;
+			}
+
+			// 8. YouTube detection
+			const youtubeMatch =
+				trim.match(/^\{(?:youtube|yt):\s*(.*?)\}$/i) || trim.match(/^YouTube:\s*(.*)$/i);
+			if (youtubeMatch) {
+				youtubeUrl = youtubeMatch[1].trim();
+				handled = true;
+			}
+
+			// 9. Spotify detection
+			const spotifyMatch =
+				trim.match(/^\{(?:spotify|sp):\s*(.*?)\}$/i) || trim.match(/^Spotify:\s*(.*)$/i);
+			if (spotifyMatch) {
+				spotifyUrl = spotifyMatch[1].trim();
 				handled = true;
 			}
 
@@ -345,6 +363,30 @@
 							name="copyright"
 							bind:value={copyright}
 							placeholder="e.g. © 1998 Vineyard Songs"
+							class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm focus:border-slate-500 focus:ring-slate-500"
+						/>
+					</div>
+
+					<div>
+						<label for="youtube_url" class="block text-xs font-medium text-slate-700">YouTube URL</label>
+						<input
+							type="url"
+							id="youtube_url"
+							name="youtube_url"
+							bind:value={youtubeUrl}
+							placeholder="https://youtube.com/watch?v=..."
+							class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm focus:border-slate-500 focus:ring-slate-500"
+						/>
+					</div>
+
+					<div>
+						<label for="spotify_url" class="block text-xs font-medium text-slate-700">Spotify URL</label>
+						<input
+							type="url"
+							id="spotify_url"
+							name="spotify_url"
+							bind:value={spotifyUrl}
+							placeholder="https://open.spotify.com/track/..."
 							class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm focus:border-slate-500 focus:ring-slate-500"
 						/>
 					</div>

@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/stores';
 	import AuthorInput from '$lib/components/AuthorInput.svelte';
-	import { ArrowLeft, ChevronLeft, ChevronRight, CircleHelp, Copy, Eye, Pencil, Save, Trash2, X } from '@lucide/svelte';
+	import { ArrowLeft, ChevronLeft, ChevronRight, CircleHelp, Copy, ExternalLink, Eye, Pencil, Save, Trash2, X } from '@lucide/svelte';
 
 	// --- CONSTANTS ---
 	const SECTION_KEYWORDS =
@@ -609,6 +609,42 @@
 										class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm"
 									/>
 								</div>
+								<div>
+									<label for="youtube_url" class="block text-xs font-medium text-slate-700">YouTube URL</label>
+									<input
+										type="url"
+										id="youtube_url"
+										name="youtube_url"
+										bind:value={song.youtube_url}
+										placeholder="https://youtube.com/watch?v=..."
+										class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm"
+									/>
+								</div>
+								<div>
+									<label for="spotify_url" class="block text-xs font-medium text-slate-700">Spotify URL</label>
+									<input
+										type="url"
+										id="spotify_url"
+										name="spotify_url"
+										bind:value={song.spotify_url}
+										placeholder="https://open.spotify.com/track/..."
+										class="mt-1 block w-full rounded-md border-stone-300 text-sm shadow-sm"
+									/>
+								</div>
+								<div class="mt-2 border-t border-stone-100 pt-4">
+									<button
+										type="submit"
+										formaction="?/archiveSong"
+										onclick={(e) => {
+											if (!confirm('Archive this song? It can be restored later.')) {
+												e.preventDefault();
+											}
+										}}
+										class="flex w-full items-center justify-center gap-2 rounded-md border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 hover:text-red-700"
+									>
+										<Trash2 size={14} /> Archive Song
+									</button>
+								</div>
 							{:else}
 								<div>
 									<label for="version_name_edit" class="block text-xs font-medium text-slate-700"
@@ -754,6 +790,34 @@
 								<span class="font-mono text-xs text-slate-600">{song.ccli_number || '-'}</span>
 							</div>
 						</div>
+
+						{#if song.youtube_url || song.spotify_url}
+							<div class="mt-4 space-y-2 border-t border-blue-100 pt-4">
+								<span class="block text-xs font-bold text-stone-400 uppercase">Links</span>
+								{#if song.youtube_url}
+									<a
+										href={song.youtube_url}
+										target="_blank"
+										rel="noopener noreferrer"
+										class="flex items-center gap-2 rounded-md border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+									>
+										<ExternalLink size={14} />
+										YouTube
+									</a>
+								{/if}
+								{#if song.spotify_url}
+									<a
+										href={song.spotify_url}
+										target="_blank"
+										rel="noopener noreferrer"
+										class="flex items-center gap-2 rounded-md border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:border-green-200 hover:bg-green-50 hover:text-green-700"
+									>
+										<ExternalLink size={14} />
+										Spotify
+									</a>
+								{/if}
+							</div>
+						{/if}
 					</div>
 				</div>
 

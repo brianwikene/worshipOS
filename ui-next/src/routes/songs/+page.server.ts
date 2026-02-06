@@ -1,28 +1,74 @@
+import { hasPermission } from '$lib/auth/roles';
 import { db } from '$lib/server/db';
 import { authors, song_authors, songs } from '$lib/server/db/schema';
 import { error } from '@sveltejs/kit';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 // 1. LOAD FUNCTION
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.church) {
 		throw error(404, 'Church not found');
 	}
 	const { church } = locals;
 
+	const filter = url.searchParams.get('filter') || 'active';
+	const canDelete = hasPermission(locals.actor?.role, 'songs:delete');
+
 	// Only root songs — arrangements are accessed via their parent
 	const allSongs = await db.query.songs.findMany({
-		where: (s, { and, eq, isNull }) =>
-			and(eq(s.church_id, church.id), isNull(s.original_song_id)),
+		where: (s, { and, eq, isNull: isNul, isNotNull: isNotNul }) => {
+			const base = and(eq(s.church_id, church.id), isNul(s.original_song_id));
+			if (filter === 'archived') return and(base, isNotNul(s.deleted_at));
+			if (filter === 'all') return base;
+			return and(base, isNul(s.deleted_at));
+		},
+		with: {
+			authors: {
+				with: { author: true }
+			}
+		},
 		orderBy: [desc(songs.updated_at)]
 	});
 
-	return { songs: allSongs };
+	return { songs: allSongs, canDelete, filter };
 };
 
 // 2. ACTIONS
 export const actions: Actions = {
+	archiveSong: async ({ request, locals }) => {
+		const { church } = locals;
+		if (!church) throw error(401, 'Unauthorized');
+		const data = await request.formData();
+		const songId = data.get('song_id') as string;
+		if (!songId) throw error(400, 'Song ID required');
+
+		await db
+			.update(songs)
+			.set({ deleted_at: new Date() })
+			.where(and(eq(songs.id, songId), eq(songs.church_id, church.id)));
+
+		return { success: true };
+	},
+
+	restoreSong: async ({ request, locals }) => {
+		const { church } = locals;
+		if (!church) throw error(401, 'Unauthorized');
+		if (!hasPermission(locals.actor?.role, 'songs:delete')) {
+			throw error(403, 'Insufficient permissions');
+		}
+		const data = await request.formData();
+		const songId = data.get('song_id') as string;
+		if (!songId) throw error(400, 'Song ID required');
+
+		await db
+			.update(songs)
+			.set({ deleted_at: null })
+			.where(and(eq(songs.id, songId), eq(songs.church_id, church.id)));
+
+		return { success: true };
+	},
+
 	// SEED LIBRARY (Was resetLibrary)
 	seedLibrary: async ({ locals }) => {
 		const { church } = locals;

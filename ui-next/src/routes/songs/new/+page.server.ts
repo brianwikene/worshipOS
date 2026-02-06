@@ -28,6 +28,8 @@ export const actions: Actions = {
 		const notes = data.get('performance_notes') as string;
 		const ccli = data.get('ccli') as string;
 		const copyrightVal = (data.get('copyright') as string) || null;
+		const youtubeUrl = (data.get('youtube_url') as string) || null;
+		const spotifyUrl = (data.get('spotify_url') as string) || null;
 		const content = data.get('content') as string;
 
 		// 1. Create the Song
@@ -43,6 +45,8 @@ export const actions: Actions = {
 				performance_notes: notes,
 				ccli_number: ccli,
 				copyright: copyrightVal,
+				youtube_url: youtubeUrl,
+				spotify_url: spotifyUrl,
 				content
 			})
 			.returning({ id: songs.id });
