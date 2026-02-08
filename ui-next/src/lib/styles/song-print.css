@@ -108,6 +108,10 @@
 		column-count: 2;
 		column-gap: 2rem;
 	}
+	/* Two-column: sections still don't break (inherited, but explicit for clarity) */
+	.song-body.two-column .song-section {
+		break-inside: avoid; /* Same as above, just being explicit */
+	}
 
 	/* Hide screen-only elements */
 	.toolbar,
