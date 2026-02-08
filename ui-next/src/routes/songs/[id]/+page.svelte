@@ -16,35 +16,15 @@
 		X
 	} from '@lucide/svelte';
 
-	// --- CONSTANTS ---
-	const SECTION_KEYWORDS =
-		/^(Verse|Chorus|Bridge|Pre-Chorus|PreChorus|Pre Chorus|Intro|Outro|Tag|Interlude|Instrumental|Hook|Ending|V\d|C\d|B\d)/i;
-
-	const KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
-
-	const NOTE_TO_SEMITONE: Record<string, number> = {
-		C: 0,
-		'B#': 0,
-		'C#': 1,
-		Db: 1,
-		D: 2,
-		'D#': 3,
-		Eb: 3,
-		E: 4,
-		Fb: 4,
-		F: 5,
-		'E#': 5,
-		'F#': 6,
-		Gb: 6,
-		G: 7,
-		'G#': 8,
-		Ab: 8,
-		A: 9,
-		'A#': 10,
-		Bb: 10,
-		B: 11,
-		Cb: 11
-	};
+	import {
+		KEYS,
+		generateSongMap,
+		parseChart,
+		groupIntoSegments,
+		paginateSegments,
+		type ParsedLine,
+		type Segment
+	} from '$lib/songs/parser';
 
 	// --- TYPES ---
 	type Arrangement = {
@@ -133,72 +113,7 @@
 
 	// Derived Parsing
 	let songMap = $derived(generateSongMap(displayContent));
-	let parsedLines = $derived(parseChart(displayContent, selectedKey, notation));
-
-	// --- PAGINATION ---
-	type ParsedLine = (typeof parsedLines)[number];
-	type Segment = { label: string | null; lines: ParsedLine[] };
-
-	function groupIntoSegments(lines: ParsedLine[]): Segment[] {
-		const segments: Segment[] = [];
-		let current: Segment = { label: null, lines: [] };
-
-		for (const line of lines) {
-			if (line.type === 'section') {
-				// Push current segment if it has lines
-				if (current.lines.length > 0) segments.push(current);
-				current = { label: (line as { content: string }).content, lines: [line] };
-			} else {
-				current.lines.push(line);
-			}
-		}
-		if (current.lines.length > 0) segments.push(current);
-		return segments;
-	}
-
-	function estimateHeight(line: ParsedLine, chordsVisible: boolean): number {
-		if (line.type === 'section') return 40;
-		if (line.type === 'comment') return 36;
-		if (line.type === 'directive') return 36;
-		if (line.type === 'empty') return 16;
-		// lyric line
-		if (chordsVisible) return 44;
-		return 24;
-	}
-
-	function segmentHeight(segment: Segment, chordsVisible: boolean): number {
-		return segment.lines.reduce((sum, l) => sum + estimateHeight(l, chordsVisible), 0);
-	}
-
-	function paginateSegments(
-		segments: Segment[],
-		chordsVisible: boolean,
-		cols: number
-	): Segment[][] {
-		const PAGE1_BUDGET = 700;
-		const PAGEN_BUDGET = 916;
-		const multiplier = cols === 2 ? 2 : 1;
-
-		const pages: Segment[][] = [];
-		let currentPage: Segment[] = [];
-		let usedHeight = 0;
-		let budget = PAGE1_BUDGET * multiplier;
-
-		for (const seg of segments) {
-			const h = segmentHeight(seg, chordsVisible);
-			if (currentPage.length > 0 && usedHeight + h > budget) {
-				pages.push(currentPage);
-				currentPage = [seg];
-				usedHeight = h;
-				budget = PAGEN_BUDGET * multiplier;
-			} else {
-				currentPage.push(seg);
-				usedHeight += h;
-			}
-		}
-		if (currentPage.length > 0) pages.push(currentPage);
-		return pages.length > 0 ? pages : [[]];
-	}
+	let parsedLines = $derived(parseChart(displayContent, displayKey, selectedKey, notation));
 
 	let currentPageIndex = $state(0);
 	let parsedSegments = $derived(groupIntoSegments(parsedLines));
@@ -211,233 +126,6 @@
 		pages;
 		currentPageIndex = 0;
 	});
-
-	// --- HELPERS ---
-
-	function normalizeKey(k: string) {
-		return k.replace('♯', '#').replace('♭', 'b');
-	}
-
-	function getSemitoneShift(original: string, target: string) {
-		const idx1 = NOTE_TO_SEMITONE[normalizeKey(original)];
-		const idx2 = NOTE_TO_SEMITONE[normalizeKey(target)];
-		if (idx1 === undefined || idx2 === undefined) return 0;
-		return idx2 - idx1;
-	}
-
-	function transposeChordSingle(chord: string, semitones: number) {
-		const match = chord.match(/^([A-G][#b]?)(.*)$/);
-		if (!match) return chord;
-
-		const root = normalizeKey(match[1]);
-		const quality = match[2];
-		const rootIndex = NOTE_TO_SEMITONE[root];
-
-		if (rootIndex === undefined) return chord;
-
-		let newIndex = (rootIndex + semitones) % 12;
-		if (newIndex < 0) newIndex += 12;
-
-		return KEYS[newIndex] + quality;
-	}
-
-	function transposeChord(chord: string, semitones: number) {
-		if (chord.includes('/')) {
-			const [main, bass] = chord.split('/');
-			return transposeChordSingle(main, semitones) + '/' + transposeChordSingle(bass, semitones);
-		}
-		return transposeChordSingle(chord, semitones);
-	}
-
-	function noteToNumberSingle(chord: string, key: string) {
-		const match = chord.match(/^([A-G][#b]?)(.*)$/);
-		if (!match) return chord;
-
-		const root = normalizeKey(match[1]);
-		const quality = match[2];
-
-		const keyIndex = NOTE_TO_SEMITONE[normalizeKey(key)];
-		const rootIndex = NOTE_TO_SEMITONE[root];
-		if (keyIndex === undefined || rootIndex === undefined) return chord;
-
-		let interval = (rootIndex - keyIndex + 12) % 12;
-		const degrees: Record<number, string> = {
-			0: '1',
-			1: '1#',
-			2: '2',
-			3: 'b3',
-			4: '3',
-			5: '4',
-			6: 'b5',
-			7: '5',
-			8: 'b6',
-			9: '6',
-			10: 'b7',
-			11: '7'
-		};
-		const degree = degrees[interval] || '?';
-		if (quality && /^\d/.test(quality)) {
-			return degree + '(' + quality + ')';
-		}
-		return degree + quality;
-	}
-
-	function noteToNumber(chord: string, key: string) {
-		if (chord.includes('/')) {
-			const [main, bass] = chord.split('/');
-			return noteToNumberSingle(main, key) + '/' + noteToNumberSingle(bass, key);
-		}
-		return noteToNumberSingle(chord, key);
-	}
-
-	// --- SMART LABELING (Verse -> Verse 1) ---
-	function smartLabel(raw: string, counters: Record<string, number>) {
-		let label = raw.trim();
-		const lower = label.toLowerCase();
-
-		// 1. If it already has a number ("Verse 2", "V3"), keep it.
-		if (/\d/.test(label)) return label;
-
-		// 2. Normalize common types for counting
-		let type = '';
-		if (lower.startsWith('verse') || lower.startsWith('v')) type = 'Verse';
-		else if (lower.startsWith('chorus') || lower.startsWith('c')) type = 'Chorus';
-		else if (lower.startsWith('bridge') || lower.startsWith('b')) type = 'Bridge';
-
-		// 3. Auto-increment
-		if (type) {
-			counters[type] = (counters[type] || 0) + 1;
-			// Only append number for Verses by default
-			if (type === 'Verse') return `${type} ${counters[type]}`;
-		}
-
-		return label;
-	}
-
-	// --- PARSERS ---
-
-	function generateSongMap(content: string | null) {
-		if (!content) return [];
-
-		// 1. Check for explicit Manual Flow
-		const flowMatch = content.match(/\{(?:flow|order|sequence):\s*(.*?)\}/i);
-		if (flowMatch) {
-			return flowMatch[1].split(',').map((s) => s.trim());
-		}
-
-		const map: string[] = [];
-		const counters: Record<string, number> = {};
-		const lines = content.split('\n');
-
-		for (const line of lines) {
-			const trim = line.trim();
-			if (!trim) continue;
-
-			// [Verse]
-			const bracketMatch = trim.match(/^\[([^\[\]]+)\]\s*$/);
-			if (bracketMatch && SECTION_KEYWORDS.test(bracketMatch[1])) {
-				map.push(smartLabel(bracketMatch[1], counters));
-			}
-
-			// {Verse} or {soc}
-			const braceMatch = trim.match(/^\{(.*?)(?::\s*(.*?))?\}$/);
-			if (braceMatch) {
-				const tag = braceMatch[1].toLowerCase();
-				const value = braceMatch[2];
-
-				if (['soc', 'start_of_chorus', 'chorus'].includes(tag))
-					map.push(smartLabel('Chorus', counters));
-				else if (['sov', 'start_of_verse'].includes(tag)) map.push(smartLabel('Verse', counters));
-				else if (SECTION_KEYWORDS.test(tag))
-					map.push(smartLabel(tag + (value ? ' ' + value : ''), counters));
-			}
-		}
-		return map;
-	}
-
-	function parseChart(
-		text: string | null,
-		targetKey: string,
-		currentNotation: 'chords' | 'numbers'
-	) {
-		if (!text) return [];
-		const original = displayKey || 'C';
-		const semitones = getSemitoneShift(original, targetKey);
-		const counters: Record<string, number> = {};
-
-		return text.split('\n').map((line) => {
-			const trimmed = line.trim();
-			if (!trimmed) return { type: 'empty' as const };
-
-			// 1. DIRECTIVES
-			const dirMatch = trimmed.match(/^\{(.*?)(?::\s*(.*?))?\}$/);
-			if (dirMatch) {
-				const tag = dirMatch[1].toLowerCase();
-				const value = dirMatch[2] || '';
-
-				if (['soc', 'start_of_chorus', 'chorus'].includes(tag))
-					return { type: 'section' as const, content: smartLabel('Chorus', counters) };
-				if (['sov', 'start_of_verse'].includes(tag))
-					return { type: 'section' as const, content: smartLabel('Verse', counters) };
-				if (
-					[
-						'eoc',
-						'end_of_chorus',
-						'eov',
-						'end_of_verse',
-						'flow',
-						'order',
-						'copyright',
-						'time',
-						'time_signature'
-					].includes(tag)
-				)
-					return { type: 'empty' as const };
-
-				if (SECTION_KEYWORDS.test(dirMatch[1])) {
-					return {
-						type: 'section' as const,
-						content: smartLabel(dirMatch[1] + (value ? ' ' + value : ''), counters)
-					};
-				}
-
-				if (['c', 'comment', 'cb'].includes(tag))
-					return { type: 'comment' as const, content: value };
-
-				return { type: 'directive' as const, label: tag, value: value };
-			}
-
-			// 2. HEADERS [Verse]
-			const bracketMatch = trimmed.match(/^\[([^\[\]]+)\]\s*$/);
-			if (bracketMatch && SECTION_KEYWORDS.test(bracketMatch[1])) {
-				return { type: 'section' as const, content: smartLabel(bracketMatch[1], counters) };
-			}
-
-			// 3. LYRICS/CHORDS
-			const rawChunks = line.split('[');
-			const pairs: { chord: string | null; lyric: string }[] = [];
-			rawChunks.forEach((chunk, index) => {
-				if (index === 0) {
-					if (chunk) pairs.push({ chord: null, lyric: chunk });
-				} else {
-					const parts = chunk.split(']');
-					if (parts.length === 2) {
-						const rawChord = parts[0];
-						const lyric = parts[1];
-						let finalChord = rawChord;
-
-						if (semitones !== 0) finalChord = transposeChord(rawChord, semitones);
-						if (currentNotation === 'numbers') finalChord = noteToNumber(finalChord, targetKey);
-
-						pairs.push({ chord: finalChord, lyric: lyric });
-					} else {
-						pairs.push({ chord: null, lyric: '[' + chunk });
-					}
-				}
-			});
-			return { type: 'lyric' as const, pairs };
-		});
-	}
 
 	// --- ACTIONS ---
 	// (Your save logic usually lives here, but it's handled by form actions in SvelteKit usually)
@@ -887,12 +575,6 @@
 					<div
 						class="relative flex min-h-[1056px] flex-col rounded-xl border border-stone-200 bg-white px-12 py-10 shadow-sm print:hidden"
 					>
-						<div
-							class="absolute top-6 right-8 rounded border border-stone-200 px-2 py-0.5 text-xs font-bold text-stone-300 print:border-stone-400 print:text-stone-500"
-						>
-							{currentPageIndex + 1} / {totalPages}
-						</div>
-
 						<div class="mb-6 border-b-2 border-slate-900 pb-4">
 							<div class="flex items-start justify-between">
 								<h1 class="mb-1 text-3xl font-bold tracking-tight text-slate-900 uppercase">
@@ -946,7 +628,9 @@
 							{/if}
 						</div>
 
-						<div class={`song-content-columns flex-grow ${columnCount === 2 ? 'columns-1 gap-12 md:columns-2' : ''}`}>
+						<div
+							class={`song-content-columns flex-grow ${columnCount === 2 ? 'columns-1 gap-12 md:columns-2' : ''}`}
+						>
 							{#if displayContent}
 								{#each pages[currentPageIndex] as segment}
 									{#each segment.lines as line}
@@ -977,19 +661,18 @@
 											{:else if line.pairs}
 												<div class="mt-3 mb-1 flex flex-wrap items-end gap-0.5">
 													{#each line.pairs as pair}
-														<div class="flex flex-col whitespace-nowrap">
+														<div class="flex flex-col">
 															{#if showChords}
-																<div
-																	class="h-5 font-mono text-sm leading-none font-bold text-slate-900 select-none print:text-black"
-																>
-																	{pair.chord || '\u00A0'}
-																</div>
+																{@const hasChord = pair.chord && pair.chord.trim() !== ''}
+																{#if hasChord}
+																	<div class="h-5 font-mono text-sm font-bold text-black">
+																		{pair.chord}
+																	</div>
+																{:else if line.pairs.some((p) => p.chord && p.chord.trim() !== '')}
+																	<div class="h-5">&nbsp;</div>
+																{/if}
 															{/if}
-															<div
-																class="font-sans text-base leading-normal font-medium text-slate-800 print:text-black"
-															>
-																{pair.lyric}
-															</div>
+															<div class="font-sans text-base">{pair.lyric}</div>
 														</div>
 													{/each}
 												</div>
@@ -1061,43 +744,33 @@
 						</div>
 					</div>
 
-					<!-- Print: paginated with per-page headers, footers, and column support -->
+					<!-- Print: single continuous flow – browser handles page breaks -->
 					<div class="hidden print:block">
 						{#each pages as pageSegments, pageIdx}
 							<div
 								class="relative flex min-h-[100vh] flex-col p-0"
 								style={pageIdx > 0 ? 'page-break-before: always' : ''}
 							>
-								<!-- Page 1: full banner header -->
 								{#if pageIdx === 0}
 									<div class="mb-6 border-b-2 border-slate-900 pb-4">
-										<h1
-											class="mb-1 text-3xl font-bold tracking-tight text-slate-900 uppercase"
-										>
+										<h1 class="mb-1 text-3xl font-bold tracking-tight text-slate-900 uppercase">
 											{song.title}
 										</h1>
 										<div class="flex items-center justify-between text-sm">
 											<div class="font-medium text-slate-600">{displayAuthors}</div>
 											<div class="flex items-center gap-4 font-bold text-slate-900">
-												<span class="text-xs font-normal text-stone-400 uppercase"
-													>Key</span
-												>
+												<span class="text-xs font-normal text-stone-400 uppercase">Key</span>
 												{selectedKey}
 												{#if displayTempo}
-													<span class="text-xs font-normal text-stone-400 uppercase"
-														>BPM</span
-													>
+													<span class="text-xs font-normal text-stone-400 uppercase">BPM</span>
 													{displayTempo}
 												{/if}
-												<span class="text-xs font-normal text-stone-400 uppercase"
-													>Time</span
-												>
+												<span class="text-xs font-normal text-stone-400 uppercase">Time</span>
 												{song.time_signature || '4/4'}
 											</div>
 										</div>
 									</div>
 								{:else}
-									<!-- Page 2+: compact "Continued" header -->
 									<div
 										class="mb-4 flex items-center justify-between border-b border-stone-300 pb-2"
 									>
@@ -1106,103 +779,55 @@
 										</h2>
 										<div class="flex items-center gap-3 text-xs text-stone-500 italic">
 											<span>{selectedKey}</span>
-											{#if displayTempo}<span>{displayTempo} BPM</span>{/if}
-											<span>p. {pageIdx + 1}/{totalPages}</span>
+											<span>p. {pageIdx + 1} / {totalPages}</span>
 										</div>
 									</div>
 								{/if}
 
-								<!-- Song content with column support -->
-								<div
-									class="song-content-columns flex-grow"
-									style="column-count: {columnCount}; column-gap: 2em;"
-								>
+								<div class="song-content-columns flex-grow">
 									{#each pageSegments as segment}
-										<div
-											class="break-inside-avoid"
-											style="page-break-inside: avoid;"
-										>
+										<section class="song-segment">
+											{#if segment.label}
+												<header class="section-header-compact">{segment.label}</header>
+											{/if}
+
 											{#each segment.lines as line}
-												{#if line.type === 'section'}
-													<h3
-														class="lyric-line mt-4 mb-2 inline-block rounded-sm border border-slate-900 px-2 py-0.5 text-sm font-bold tracking-wider text-slate-900 uppercase"
-													>
-														{line.content}
-													</h3>
-												{:else if line.type === 'comment'}
-													<div
-														class="lyric-line my-2 inline-block rounded border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-600 italic"
-													>
-														{line.content}
-													</div>
-												{:else if line.type === 'directive'}
-													<div
-														class="lyric-line my-2 flex items-center gap-2 font-sans text-sm"
-													>
-														<span
-															class="rounded border border-stone-200 bg-stone-100 px-2 py-0.5 text-xs font-bold tracking-wide text-stone-500 uppercase"
-															>{line.label}</span
-														>
-														<span class="font-bold text-slate-900"
-															>{line.value}</span
-														>
-													</div>
-												{:else if line.type === 'lyric' && line.pairs}
-													<div
-														class="lyric-line mt-3 mb-1 flex flex-wrap items-end gap-0.5"
-													>
+												<div class="mb-1 flex flex-wrap items-end">
+													{#if line.type === 'lyric' && line.pairs}
 														{#each line.pairs as pair}
-															<div class="flex flex-col whitespace-nowrap">
+															<span class="chord-wrapper">
 																{#if showChords}
-																	<div
-																		class="h-5 font-mono text-sm leading-none font-bold text-black select-none"
-																	>
-																		{pair.chord || '\u00A0'}
-																	</div>
+																	{@const hasChord = pair.chord && pair.chord.trim() !== ''}
+																	{#if hasChord}
+																		<strong class="chord-top">{pair.chord}</strong>
+																	{:else if line.pairs.some((p: { chord: string | null }) => p.chord?.trim())}
+																		<span class="chord-spacer">&nbsp;</span>
+																	{/if}
 																{/if}
-																<div
-																	class="font-sans text-base leading-normal font-medium text-black"
-																>
-																	{pair.lyric}
-																</div>
-															</div>
+																<span class="lyric-text">{pair.lyric || '\u00A0'}</span>
+															</span>
 														{/each}
-													</div>
-												{/if}
+													{/if}
+												</div>
 											{/each}
-										</div>
+										</section>
 									{/each}
 								</div>
 
-								<!-- Attribution pinned to bottom via mt-auto -->
 								<div
 									class="mt-auto flex items-end justify-between border-t border-stone-200 pt-4 text-[10px] text-stone-500"
 								>
 									<div>
 										<p>
-											{#if song.copyright}{song.copyright}{:else}©
-												{displayAuthors}{/if}.
+											{#if song.copyright}{song.copyright}{:else}© {displayAuthors}{/if}.
 											{#if song.ccli_number}CCLI #{song.ccli_number}{/if}.
 										</p>
 										<p class="mt-0.5">
-											Generated by WorshipOS for <span
-												class="font-bold text-stone-600"
-												>{$page.data.church?.name || 'Your Church'}</span
-											>.
+											Generated by WorshipOS for {$page.data.church?.name || 'Your Church'}.
 										</p>
 									</div>
 									<div class="text-right">
 										<p>{pageIdx + 1} / {totalPages}</p>
-										<p>
-											Last Updated:
-											{new Date(
-												song.updated_at || song.created_at || new Date()
-											).toLocaleDateString('en-US', {
-												year: 'numeric',
-												month: 'short',
-												day: 'numeric'
-											})}
-										</p>
 									</div>
 								</div>
 							</div>
@@ -1353,23 +978,81 @@
 {/if}
 
 <style>
+	/* Base Container */
 	.song-content-columns {
-		word-break: normal;
-		overflow-wrap: normal;
-		hyphens: none;
+		width: 100%;
+		line-height: 1.1;
+		font-family:
+			ui-sans-serif,
+			system-ui,
+			-apple-system,
+			sans-serif;
 	}
 
-	.lyric-line {
-		white-space: nowrap;
-		break-inside: avoid-column;
-		-webkit-column-break-inside: avoid;
+	/* Segment Wrapper: Prevent Verse/Chorus from splitting across pages */
+	.song-segment {
+		break-inside: avoid;
 		page-break-inside: avoid;
+		margin-bottom: 1.5rem;
+		display: block;
+	}
+
+	/* Section Headers: Small, bold, and clean */
+	.section-header-compact {
+		font-size: 0.8rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		color: #64748b; /* Slate 500 */
+		border-bottom: 1px solid #e2e8f0;
+		margin-bottom: 0.5rem;
+		padding-bottom: 2px;
+		display: block;
+	}
+
+	/* The "Chord-on-top" wrapper */
+	.chord-wrapper {
+		display: inline-flex;
+		flex-direction: column;
+		vertical-align: bottom;
+		margin-right: 0.15rem;
+	}
+
+	.chord-top {
+		font-weight: 700;
+		font-size: 0.9em;
+		color: #1e293b;
+		height: 1.1em; /* Tight vertical gap */
+		line-height: 1;
+		display: block;
+	}
+
+	.chord-spacer {
+		height: 1.1em;
+		display: block;
+	}
+
+	.lyric-text {
+		font-size: 1.15rem;
+		line-height: 1.2;
+		white-space: pre; /* Keeps word spacing perfect */
 	}
 
 	@media print {
+		@page {
+			margin: 0.75in;
+		}
+
+		.lyric-text {
+			font-size: 13pt;
+		}
+		.chord-top {
+			font-size: 10pt;
+		}
+
+		/* Ensure we stay 1-column for MVP stability */
 		.song-content-columns {
+			column-count: 1 !important;
 			display: block !important;
-			column-fill: auto;
 		}
 	}
 </style>

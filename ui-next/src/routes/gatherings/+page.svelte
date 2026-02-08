@@ -6,6 +6,7 @@
 	let { data } = $props();
 	let showModal = $state(false);
 	let isSeriesMode = $state(false);
+	let submitting = $state(false);
 
 	const gatherings = $derived(data?.gatherings ?? []);
 
@@ -57,7 +58,7 @@
 	</div>
 
 	<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-		{#each data.gatherings as gathering}
+		{#each gatherings as gathering}
 			<div
 				class="group block overflow-hidden rounded-xl border border-gray-200 bg-white transition-all hover:border-blue-300 hover:shadow-md"
 			>
@@ -156,10 +157,11 @@
 				method="POST"
 				action="?/createGathering"
 				use:enhance={() => {
+					submitting = true;
 					return async ({ result, update }) => {
 						await update();
+						submitting = false;
 						if (result.type === 'success') showModal = false;
-						else console.error('Form submission failed:', result);
 					};
 				}}
 			>
@@ -260,15 +262,21 @@
 					<button
 						type="button"
 						onclick={() => (showModal = false)}
-						class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+						disabled={submitting}
+						class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50"
 					>
 						Cancel
 					</button>
 					<button
 						type="submit"
-						class="rounded-lg bg-gray-900 px-6 py-2 text-sm font-bold text-white shadow-sm hover:bg-gray-800"
+						disabled={submitting}
+						class="rounded-lg bg-gray-900 px-6 py-2 text-sm font-bold text-white shadow-sm hover:bg-gray-800 disabled:opacity-50"
 					>
-						{isSeriesMode ? 'Generate Series' : 'Create Gathering'}
+						{#if submitting}
+							Creating…
+						{:else}
+							{isSeriesMode ? 'Generate Series' : 'Create Gathering'}
+						{/if}
 					</button>
 				</div>
 			</form>

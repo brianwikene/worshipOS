@@ -4,6 +4,7 @@
 
 	let { data } = $props();
 	let showModal = $state(false);
+	let submitting = $state(false);
 
 	function asDate(v: unknown): Date {
 		if (v instanceof Date) return v;
@@ -11,7 +12,7 @@
 		return new Date(NaN);
 	}
 
-	let dateStr = $derived(() => {
+	let dateStr = $derived.by(() => {
 		const d = asDate(data.gathering.date);
 		if (Number.isNaN(d.getTime())) return 'Invalid Date';
 		return d.toLocaleDateString('en-US', {
@@ -27,7 +28,7 @@
 <div class="mx-auto max-w-4xl px-4 py-8">
 	<a
 		href="/gatherings"
-		class="mb-6 inline-flex items-center gap-2 text-sm text-gray-500 transition hover:text-gray-900"
+		class="mb-6 inline-flex items-center gap-2 text-sm text-stone-500 transition hover:text-stone-900"
 	>
 		<ArrowLeft size={16} />
 		Back to Gatherings
@@ -100,6 +101,20 @@
 					<ChevronRight size={24} />
 				</div>
 			</a>
+		{:else}
+			<div
+				class="rounded-xl border border-dashed border-gray-300 bg-white py-16 text-center shadow-sm"
+			>
+				<div
+					class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-50"
+				>
+					<List size={32} class="text-gray-300" />
+				</div>
+				<h3 class="text-lg font-bold text-gray-900">No plans yet</h3>
+				<p class="mx-auto mt-2 max-w-xs text-gray-500">
+					Add a plan to start building the order of service for this gathering.
+				</p>
+			</div>
 		{/each}
 	</div>
 
@@ -116,7 +131,7 @@
 			</div>
 			<h3 class="text-lg font-bold text-gray-900">Service Flow</h3>
 			<p class="mt-1 text-sm text-gray-500">
-				View the complete combined order of service for all plans.
+				The complete order of service across all plans, start to finish.
 			</p>
 		</a>
 
@@ -129,9 +144,9 @@
 			>
 				<Music size={20} />
 			</div>
-			<h3 class="text-lg font-bold text-gray-900">Musician View</h3>
+			<h3 class="text-lg font-bold text-gray-900">Songs & Rehearsal</h3>
 			<p class="mt-1 text-sm text-gray-500">
-				Quick access to songs, keys, and setlist details for rehearsal.
+				Songs, keys, and setlist order at a glance for rehearsal prep.
 			</p>
 		</a>
 	</div>
@@ -160,8 +175,10 @@
 				method="POST"
 				action="?/addPlan"
 				use:enhance={() => {
+					submitting = true;
 					return async ({ update }) => {
 						await update();
+						submitting = false;
 						showModal = false;
 					};
 				}}
@@ -183,15 +200,17 @@
 					<button
 						type="button"
 						onclick={() => (showModal = false)}
-						class="text-sm font-medium text-gray-500"
+						disabled={submitting}
+						class="text-sm font-medium text-gray-500 disabled:opacity-50"
 					>
 						Cancel
 					</button>
 					<button
 						type="submit"
-						class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
+						disabled={submitting}
+						class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-bold text-white hover:bg-gray-800 disabled:opacity-50"
 					>
-						Add Plan
+						{#if submitting}Adding…{:else}Add Plan{/if}
 					</button>
 				</div>
 			</form>

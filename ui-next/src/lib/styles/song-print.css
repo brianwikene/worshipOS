@@ -1,0 +1,119 @@
+/* Modern print styles - no scaling hacks */
+
+@media print {
+	@page {
+		size: letter;
+		margin: 0.5in 0.75in;
+	}
+
+	/* Reset body */
+	body {
+		margin: 0;
+		padding: 0;
+		font-family: 'Times New Roman', serif;
+	}
+
+	/* NO TRANSFORM/SCALE HACKS */
+	html {
+		width: 100%;
+		transform: none;
+		overflow-y: visible;
+	}
+
+	/* Header */
+	.song-header {
+		margin-bottom: 1.5rem;
+	}
+
+	.song-title {
+		font-size: 18pt;
+		font-weight: bold;
+		margin-bottom: 0.25rem;
+	}
+
+	.song-authors {
+		font-size: 9pt;
+		color: #333;
+		margin-bottom: 0.5rem;
+	}
+
+	.song-meta {
+		font-size: 10pt;
+		font-weight: 600;
+		margin-bottom: 1rem;
+	}
+
+	/* Body */
+	.song-body {
+		font-size: 12pt;
+		line-height: 1.4;
+	}
+
+	/* Sections - prevent page breaks inside */
+	.song-section {
+		break-inside: avoid;
+		margin-bottom: 1.5rem;
+	}
+
+	.section-label {
+		font-weight: bold;
+		text-transform: uppercase;
+		font-size: 11pt;
+		margin-bottom: 0.5rem;
+		display: block;
+	}
+
+	/* Lines with chords */
+	.song-line {
+		margin-bottom: 0.25rem;
+		display: block;
+	}
+
+	.chord-pair {
+		display: inline-block;
+		position: relative;
+		white-space: nowrap;
+	}
+
+	.chord {
+		font-weight: bold;
+		font-size: 10pt;
+		display: block;
+		margin-bottom: -0.25rem;
+	}
+
+	.lyric {
+		display: block;
+	}
+
+	/* Footer - FIXED POSITION */
+	.song-footer {
+		position: fixed;
+		bottom: 0;
+		left: 0.75in;
+		right: 0.75in;
+		padding-top: 1rem;
+		border-top: 1px solid #ccc;
+		font-size: 8pt;
+		text-align: center;
+	}
+
+	/* Reserve space for footer */
+	.song-body {
+		padding-bottom: 3rem;
+	}
+
+	/* Two-column layout */
+	.song-body.two-column {
+		column-count: 2;
+		column-gap: 2rem;
+	}
+
+	/* Hide screen-only elements */
+	.toolbar,
+	.edit-button,
+	nav,
+	header {
+		display: none !important;
+	}
+}
