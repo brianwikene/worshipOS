@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { X } from '@lucide/svelte';
 
 	// Props
@@ -12,6 +13,8 @@
 	let searchTimeout: NodeJS.Timeout;
 
 	async function handleInput(e: Event) {
+		if (!browser) return;
+
 		const val = (e.target as HTMLInputElement).value;
 		inputValue = val;
 
@@ -24,7 +27,7 @@
 		// Debounce search
 		searchTimeout = setTimeout(async () => {
 			try {
-				const res = await fetch(`/api/authors?q=${encodeURIComponent(val)}`);
+				const res = await window.fetch(`/api/authors?q=${encodeURIComponent(val)}`);
 				if (res.ok) {
 					suggestions = await res.json();
 				} else {

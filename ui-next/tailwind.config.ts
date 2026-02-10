@@ -10,84 +10,84 @@ export default {
 			// 1. NEUTRALS: Your "Calm" Foundation
 			colors: {
 				gray: {
-					25: '#f9fafc', // Surface Muted
-					50: '#f6f7fb', // UI BG
-					100: '#f3f4f6', // Hover
-					200: '#e0e6f0', // Border
-					300: '#d1d5db', // Border Strong
-					400: '#9ca3af',
-					500: '#6b7280',
-					600: '#4b5563', // Text Muted
-					700: '#374151',
-					800: '#1f2937',
-					900: '#111827', // Text Strong
-					950: '#030712'
+					25: '#f8f7f4', // Surface Muted
+					50: '#f4f3f0', // UI BG
+					100: '#eeece7', // Hover
+					200: '#d8d5cf', // Border
+					300: '#c3bfb8', // Border Strong
+					400: '#a39f97',
+					500: '#7f7b73',
+					600: '#5f5b54', // Text Muted
+					700: '#44413b',
+					800: '#2e2b26',
+					900: '#1f1c18', // Text Strong
+					950: '#12100d'
 				},
 				// 2. THE BIOMES (Your Posture System)
 				meadow: {
-					50: '#ecfdf0', // Whisper Green (Legacy)
-					100: '#d1fae5',
-					200: '#a7f3d0',
-					300: '#6ee7b7',
-					400: '#34d399',
-					500: '#10b981',
-					600: '#4f7c67', // Legacy Families Accent (Grounded Green)
-					700: '#047857',
-					800: '#065f46',
-					900: '#064e3b',
-					950: '#022c22'
+					50: '#f2f6f1', // Whisper Green (Legacy)
+					100: '#e4ede1',
+					200: '#ccd9c6',
+					300: '#b1c2aa',
+					400: '#8ea488',
+					500: '#6f856a',
+					600: '#596a55', // Legacy Families Accent (Grounded Green)
+					700: '#465343',
+					800: '#354034',
+					900: '#2a3228',
+					950: '#1a1f1a'
 				},
 				forest: {
-					50: '#f2f8f5',
-					100: '#e6f4ea',
-					200: '#ccebd6',
-					300: '#99d6b3',
-					400: '#5fb386',
-					500: '#368f63',
-					600: '#26704b',
-					700: '#1e593d',
-					800: '#1a4731', // Deep Pine
-					900: '#143828',
-					950: '#0a1f16'
+					50: '#f1f4f2',
+					100: '#e1e8e4',
+					200: '#c4d1cb',
+					300: '#a2b3a6',
+					400: '#7e9283',
+					500: '#65796a',
+					600: '#4f5f53',
+					700: '#3d4a41',
+					800: '#2e3831', // Deep Pine
+					900: '#242c27',
+					950: '#171c19'
 				},
 				river: {
-					50: '#e0fbff', // Whisper Teal (Legacy)
-					100: '#cbf6ff',
-					200: '#a8edff',
-					300: '#75e2ff',
-					400: '#39d0fc',
-					500: '#0ea5e9',
-					600: '#0f766e', // Legacy Care Accent (Teal-ish)
-					700: '#0e615a',
-					800: '#115e59',
-					900: '#134e4a',
-					950: '#042f2e'
+					50: '#f1f5f7', // Whisper Teal (Legacy)
+					100: '#e3eaee',
+					200: '#c7d3da',
+					300: '#a7b6bf',
+					400: '#869aa6',
+					500: '#6b808c',
+					600: '#546672', // Legacy Care Accent (Teal-ish)
+					700: '#43535c',
+					800: '#334047',
+					900: '#273238',
+					950: '#171e22'
 				},
 				hearth: {
-					50: '#fff1f2', // Whisper Rose (Legacy)
-					100: '#ffe4e6',
-					200: '#fecdd3',
-					300: '#fda4af',
-					400: '#fb7185',
-					500: '#f43f5e',
-					600: '#be123c', // Legacy Tend Accent
-					700: '#9f1239',
-					800: '#881337',
-					900: '#71102f',
-					950: '#4c0519'
+					50: '#f7f1f1', // Whisper Rose (Legacy)
+					100: '#f0e2e3',
+					200: '#e0c7ca',
+					300: '#caa8ad',
+					400: '#b1878e',
+					500: '#936a72',
+					600: '#76545b', // Legacy Tend Accent
+					700: '#5f4348',
+					800: '#473236',
+					900: '#362628',
+					950: '#221618'
 				},
 				sky: {
-					50: '#eff6ff', // Whisper Blue (Legacy)
-					100: '#dbeafe',
-					200: '#bfdbfe',
-					300: '#93c5fd',
-					400: '#60a5fa',
-					500: '#3b82f6',
-					600: '#4a6fa5', // Legacy People Accent (Soft Blue)
-					700: '#1d4ed8',
-					800: '#1e40af',
-					900: '#1e3a8a',
-					950: '#172554'
+					50: '#f2f4f8', // Whisper Blue (Legacy)
+					100: '#e4e8f0',
+					200: '#ccd5e2',
+					300: '#b0bdd0',
+					400: '#8e9fb8',
+					500: '#7282a0',
+					600: '#5b6884', // Legacy People Accent (Soft Blue)
+					700: '#485369',
+					800: '#364051',
+					900: '#2a323f',
+					950: '#1a1f28'
 				}
 			},
 			borderRadius: {

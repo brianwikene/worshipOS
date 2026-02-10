@@ -1,11 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import DevToolbar from '$lib/components/dev/DevToolbar.svelte';
 	import { installClientErrorCapture } from '$lib/client/error-capture';
+	import DevToolbar from '$lib/components/dev/DevToolbar.svelte';
 	import { initTenant } from '$lib/tenant.svelte';
-	import type { LayoutData } from './$types';
-	import type { Snippet } from 'svelte';
-	import { onMount } from 'svelte';
 	import {
 		Calendar,
 		Check,
@@ -18,6 +15,9 @@
 		Users,
 		X
 	} from '@lucide/svelte';
+	import type { Snippet } from 'svelte';
+	import { onMount } from 'svelte';
+	import type { LayoutData } from './$types';
 
 	import { slide } from 'svelte/transition';
 	import '../app.css';
@@ -93,7 +93,7 @@
 					<div class="h-4 w-px bg-slate-700"></div>
 				</div>
 
-				<span class="hidden sm:inline">Building for</span>
+				<span class="hidden sm:inline">Viewing </span>
 
 				<button
 					class="font-bold text-blue-400 decoration-blue-400/30 underline-offset-4 transition hover:text-blue-300 hover:underline"

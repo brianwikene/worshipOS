@@ -1,9 +1,19 @@
 <!-- src/routes/gatherings/[gathering_id]/rehearse/+page.svelte -->
 <!-- Read-only rehearse view - songs only, musician-focused -->
 <script lang="ts">
+	import { parseChart } from '$lib/songs/parser';
+	import '$lib/styles/song-print.css';
 	import { ArrowLeft, List, Music } from '@lucide/svelte';
 
 	let { data } = $props();
+
+	let expandedSongIds = $state<string[]>([]);
+
+	function toggleSong(songId: string) {
+		expandedSongIds = expandedSongIds.includes(songId)
+			? expandedSongIds.filter((id) => id !== songId)
+			: [...expandedSongIds, songId];
+	}
 
 	function formatDate(v: unknown): string {
 		const d = v instanceof Date ? v : new Date(String(v));
@@ -108,6 +118,45 @@
 								{#if song.artist}
 									<p class="mt-0.5 text-stone-500">{song.artist}</p>
 								{/if}
+
+								<div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+									<button
+										type="button"
+										onclick={() => toggleSong(song.id)}
+										class="rounded-lg border border-stone-200 bg-white px-3 py-1.5 font-medium text-stone-700 hover:border-stone-300 hover:bg-stone-50"
+									>
+										{expandedSongIds.includes(song.id) ? 'Hide Chart' : 'Show Chart'}
+									</button>
+
+									<a
+										href={`/songs/${song.id}`}
+										class="rounded-lg border border-stone-200 px-3 py-1.5 font-medium text-stone-700 hover:border-stone-300 hover:bg-stone-50"
+									>
+										Open Song
+									</a>
+
+									{#if song.spotifyUrl}
+										<a
+											href={song.spotifyUrl}
+											target="_blank"
+											rel="noreferrer"
+											class="rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 font-medium text-green-700 hover:border-green-300"
+										>
+											Spotify
+										</a>
+									{/if}
+
+									{#if song.youtubeUrl}
+										<a
+											href={song.youtubeUrl}
+											target="_blank"
+											rel="noreferrer"
+											class="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 font-medium text-red-700 hover:border-red-300"
+										>
+											YouTube
+										</a>
+									{/if}
+								</div>
 							</div>
 
 							<!-- Key badge -->
@@ -124,6 +173,41 @@
 						{#if song.duration}
 							<div class="border-t border-stone-100 bg-stone-50 px-5 py-2">
 								<span class="text-sm text-stone-400">{formatDuration(song.duration)}</span>
+							</div>
+						{/if}
+
+						{#if expandedSongIds.includes(song.id)}
+							{@const lines = parseChart(
+								song.content ?? '',
+								song.key ?? 'C',
+								song.key ?? 'C',
+								'chords'
+							)}
+							<div class="border-t border-stone-100 bg-stone-50 px-5 py-4">
+								{#if song.content}
+									<div class="song-body text-sm">
+										{#each lines as line}
+											{#if line.type === 'section'}
+												<h3 class="section-label">{line.content}</h3>
+											{:else if line.type === 'lyric'}
+												<div class="song-line flex flex-wrap items-end gap-x-1">
+													{#each line.pairs as pair}
+														<div class="chord-pair">
+															{#if pair.chord}
+																<span class="chord">{pair.chord}</span>
+															{/if}
+															<span class="lyric">{pair.lyric || ' '}</span>
+														</div>
+													{/each}
+												</div>
+											{:else if line.type === 'comment'}
+												<div class="song-comment text-stone-500">{line.content}</div>
+											{/if}
+										{/each}
+									</div>
+								{:else}
+									<div class="text-sm text-stone-500">No chart content for this song yet.</div>
+								{/if}
 							</div>
 						{/if}
 					</div>

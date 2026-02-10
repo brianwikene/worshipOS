@@ -13,6 +13,9 @@ export interface RehearseSong {
 	title: string;
 	artist: string | null;
 	key: string | null;
+	content: string | null;
+	spotifyUrl: string | null;
+	youtubeUrl: string | null;
 	duration: number | null;
 	position: number;
 	planTitle: string;
@@ -62,7 +65,10 @@ export async function getGatheringRehearse(
 							id: true,
 							title: true,
 							artist: true,
-							original_key: true
+							original_key: true,
+							content: true,
+							spotify_url: true,
+							youtube_url: true
 						}
 					}
 				}
@@ -86,6 +92,9 @@ export async function getGatheringRehearse(
 					title: item.song.title,
 					artist: item.song.artist,
 					key: item.song.original_key,
+					content: item.song.content,
+					spotifyUrl: item.song.spotify_url,
+					youtubeUrl: item.song.youtube_url,
 					duration: item.duration,
 					position: globalPosition,
 					planTitle

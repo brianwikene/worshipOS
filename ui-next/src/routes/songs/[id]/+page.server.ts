@@ -23,7 +23,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	if (!song) throw error(404, 'Song not found');
 
-	return { song, churchName: church.name };
+	return { song, churchName: church.name ?? null };
 };
 
 export const actions: Actions = {

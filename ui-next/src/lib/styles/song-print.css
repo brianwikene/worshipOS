@@ -1,4 +1,291 @@
-/* Modern print styles - no scaling hacks */
+/* WorshipOS song chart layout: modern, deterministic spacing for screen + print */
+
+:root {
+	--chart-ink: #0f172a;
+	--chart-muted: #334155;
+	--chart-subtle: #94a3b8;
+	--chart-border: #d1d5db;
+	--chart-panel-border: #e5e7eb;
+	--chart-panel-bg: #ffffff;
+	--chart-chip-bg: #f3f4f6;
+	--chart-chip-border: #e5e7eb;
+
+	/* SongSelect-inspired rhythm, slightly larger than legacy defaults */
+	--chart-lyric-size-screen: 1.1rem;
+	--chart-chord-size-screen: 0.9rem;
+	--chart-lyric-size-print: 11pt;
+	--chart-chord-size-print: 10pt;
+
+	--chart-chord-gap-screen: 0.1em;
+	--chart-chord-gap-print: 0.1em;
+	--chart-line-gap-screen: 0.5rem;
+	--chart-line-gap-print: 0.5rem;
+	--chart-lyric-line-height: 1.27;
+}
+
+.song-print-container {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	min-height: 1056px;
+	padding: 2.5rem 3rem;
+	border: 1px solid var(--chart-panel-border);
+	border-radius: 0.75rem;
+	background: var(--chart-panel-bg);
+	box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
+	color: var(--chart-ink);
+}
+
+.song-header .song-title,
+.song-title {
+	margin: 0;
+	font-size: 2.35rem;
+	font-weight: 800;
+	letter-spacing: 0.01em;
+	color: var(--chart-ink);
+}
+
+.song-header .song-subtitle,
+.song-subtitle {
+	margin: 0.2rem 0 0;
+	font-size: 1rem;
+	font-weight: 500;
+	line-height: 1.35;
+	color: var(--chart-muted);
+}
+
+.song-header .song-meta,
+.song-meta {
+	margin: 0.45rem 0 0;
+	font-size: 1.12rem;
+	font-weight: 600;
+	line-height: 1.3;
+	color: var(--chart-ink);
+}
+
+.song-meta-strong {
+	font-weight: 700;
+}
+
+.song-header-divider,
+.print-header-divider {
+	height: 1px;
+	margin-top: 0.85rem;
+	background: var(--chart-border);
+}
+
+.song-map {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.3rem;
+	margin-top: 0.9rem;
+}
+
+.song-map--header {
+	margin-bottom: 0.2rem;
+}
+
+.song-map-label {
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--chart-subtle);
+}
+
+.song-map-item {
+	padding: 0.12rem 0.5rem;
+	border: 1px solid var(--chart-chip-border);
+	background: var(--chart-chip-bg);
+	font-size: 0.76rem;
+	font-weight: 700;
+	line-height: 1.2;
+	color: var(--chart-ink);
+}
+
+.song-body {
+	flex: 1 1 auto;
+	line-height: 1.4;
+}
+
+.song-body.two-column {
+	column-count: 2;
+	column-gap: 2.1rem;
+}
+
+.song-body.two-column .song-section {
+	break-inside: avoid;
+}
+
+.song-section {
+	break-inside: avoid;
+	margin-bottom: 1.75rem;
+}
+
+.section-label {
+	display: inline-block;
+	margin: 1rem 0 0.5rem;
+	padding: 0.14rem 0.52rem;
+	background: var(--chart-ink);
+	font-size: 0.97rem;
+	font-weight: 700;
+	line-height: 1.1;
+	text-transform: uppercase;
+	letter-spacing: 0.01em;
+	color: #fff;
+}
+
+.song-line {
+	display: block;
+	margin: 0 0 var(--chart-line-gap-screen);
+	line-height: 1;
+}
+
+.chord-pair {
+	display: inline-grid;
+	grid-template-rows: auto auto;
+	align-items: end;
+	vertical-align: bottom;
+	white-space: pre;
+	margin-right: 0;
+}
+
+.chord-pair.chord-only {
+	display: inline-flex;
+	margin-right: 0.5ch;
+}
+
+.chord {
+	display: block;
+	margin: 0 0 var(--chart-chord-gap-screen);
+	font-family: inherit;
+	font-size: var(--chart-chord-size-screen);
+	font-weight: 700;
+	line-height: 1;
+	letter-spacing: 0.01em;
+	color: var(--chart-ink);
+	white-space: nowrap;
+}
+
+.lyric {
+	display: block;
+	font-size: var(--chart-lyric-size-screen);
+	font-weight: 400;
+	line-height: var(--chart-lyric-line-height);
+	white-space: pre;
+	color: var(--chart-ink);
+}
+
+.song-notes {
+	margin-top: 0.75rem;
+	padding: 0.5rem;
+	border-left: 4px solid var(--chart-border);
+	background: #fafaf9;
+	font-size: 0.875rem;
+	font-style: italic;
+	color: #64748b;
+}
+
+.song-comment {
+	display: inline-block;
+	margin: 0.5rem 0;
+	padding: 0.375rem 0.75rem;
+	background: #fef3c7;
+	font-size: 0.875rem;
+	font-style: italic;
+	color: #92400e;
+}
+
+.song-directive {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0.5rem 0;
+	font-size: 0.875rem;
+}
+
+.directive-label {
+	padding: 0.125rem 0.5rem;
+	background: #f3f4f6;
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.directive-value {
+	font-weight: 700;
+	color: var(--chart-ink);
+}
+
+.song-footer {
+	margin-top: auto;
+	padding-top: 0.75rem;
+	border-top: 1px solid var(--chart-chip-border);
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	font-size: 0.8rem;
+	color: var(--chart-muted);
+}
+
+.song-footer-line {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 1rem;
+}
+
+.btn-primary {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	border-radius: 0.375rem;
+	background-color: #0f172a;
+	padding: 0.375rem 1rem;
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: #fff;
+	transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+	background-color: #1e293b;
+}
+
+.btn-secondary {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	border-radius: 0.375rem;
+	border: 1px solid #e7e5e4;
+	padding: 0.375rem 0.75rem;
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: #57534e;
+	background-color: transparent;
+	transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+	background-color: #fafaf9;
+}
+
+@media (max-width: 1024px) {
+	.song-print-container {
+		padding: 1.5rem 1.25rem;
+		min-height: 0;
+	}
+
+	.song-header .song-title,
+	.song-title {
+		font-size: 1.7rem;
+	}
+
+	.song-body.two-column {
+		column-count: 1;
+	}
+}
 
 @media print {
 	@page {
@@ -6,118 +293,190 @@
 		margin: 0.5in 0.75in;
 	}
 
-	/* Reset body */
+	html,
 	body {
 		margin: 0;
 		padding: 0;
-		font-family: 'Times New Roman', serif;
 	}
 
-	/* NO TRANSFORM/SCALE HACKS */
-	html {
-		width: 100%;
-		transform: none;
-		overflow-y: visible;
+	body {
+		font-family: inherit;
+		color: #000;
 	}
 
-	/* Header */
-	.song-header {
-		margin-bottom: 1.5rem;
-	}
-
-	.song-title {
-		font-size: 18pt;
-		font-weight: bold;
-		margin-bottom: 0.25rem;
-	}
-
-	.song-authors {
-		font-size: 9pt;
-		color: #333;
-		margin-bottom: 0.5rem;
-	}
-
-	.song-meta {
-		font-size: 10pt;
-		font-weight: 600;
-		margin-bottom: 1rem;
-	}
-
-	/* Body */
-	.song-body {
-		font-size: 12pt;
-		line-height: 1.4;
-	}
-
-	/* Sections - prevent page breaks inside */
-	.song-section {
-		break-inside: avoid;
-		margin-bottom: 1.5rem;
-	}
-
-	.section-label {
-		font-weight: bold;
-		text-transform: uppercase;
-		font-size: 11pt;
-		margin-bottom: 0.5rem;
-		display: block;
-	}
-
-	/* Lines with chords */
-	.song-line {
-		margin-bottom: 0.25rem;
-		display: block;
-	}
-
-	.chord-pair {
-		display: inline-block;
-		position: relative;
-		white-space: nowrap;
-	}
-
-	.chord {
-		font-weight: bold;
-		font-size: 10pt;
-		display: block;
-		margin-bottom: -0.25rem;
-	}
-
-	.lyric {
-		display: block;
-	}
-
-	/* Footer - FIXED POSITION */
-	.song-footer {
-		position: fixed;
-		bottom: 0;
-		left: 0.75in;
-		right: 0.75in;
-		padding-top: 1rem;
-		border-top: 1px solid #ccc;
-		font-size: 8pt;
-		text-align: center;
-	}
-
-	/* Reserve space for footer */
-	.song-body {
-		padding-bottom: 3rem;
-	}
-
-	/* Two-column layout */
-	.song-body.two-column {
-		column-count: 2;
-		column-gap: 2rem;
-	}
-	/* Two-column: sections still don't break (inherited, but explicit for clarity) */
-	.song-body.two-column .song-section {
-		break-inside: avoid; /* Same as above, just being explicit */
-	}
-
-	/* Hide screen-only elements */
 	.toolbar,
 	.edit-button,
 	nav,
-	header {
+	header.site-header,
+	header.app-header,
+	header.page-header,
+	.sticky,
+	.print\:hidden {
 		display: none !important;
+	}
+
+	.song-print-container {
+		border: none;
+		border-radius: 0;
+		box-shadow: none;
+		padding: 0;
+		min-height: 0;
+		background: #fff;
+		overflow: visible !important;
+	}
+
+	.song-header {
+		margin-bottom: 1.35rem;
+	}
+
+	.song-header .song-title,
+	.song-title {
+		font-size: 24pt;
+		font-weight: 800;
+	}
+
+	.song-header .song-subtitle,
+	.song-subtitle {
+		font-size: 13pt;
+		font-weight: 500;
+		line-height: 1.25;
+	}
+
+	.song-header .song-meta,
+	.song-meta {
+		font-size: 14pt;
+		font-weight: 700;
+		line-height: 1.2;
+	}
+
+	.song-map-label {
+		font-size: 8pt;
+	}
+
+	.song-map-item {
+		font-size: 10pt;
+		padding: 0.08rem 0.34rem;
+	}
+
+	.section-label {
+		background: transparent;
+		padding: 0;
+		margin-top: 0.9rem;
+		margin-bottom: 0.38rem;
+		font-size: 12.5pt;
+		font-weight: 700;
+		color: #000;
+	}
+
+	.song-line {
+		margin-bottom: var(--chart-line-gap-print);
+		line-height: 1;
+	}
+
+	.chord {
+		font-size: var(--chart-chord-size-print);
+		margin-bottom: var(--chart-chord-gap-print);
+		line-height: 1;
+		font-weight: 700;
+	}
+
+	.lyric {
+		font-size: var(--chart-lyric-size-print);
+		line-height: 1.24;
+	}
+
+	.song-body.two-column {
+		column-count: 2;
+		column-gap: 1.6rem;
+	}
+
+	.song-body,
+	.print-page main.song-body,
+	.print\:block,
+	.print\:block > * {
+		overflow: visible !important;
+	}
+
+	.print-page {
+		display: flex;
+		flex-direction: column;
+		/* Keep safely under printable height to avoid blank pages from rounding */
+		min-height: 9.4in;
+		margin: 0;
+		padding: 0;
+		box-sizing: border-box;
+	}
+
+	/* Page boundary only after real pages, never before first or after last */
+	.print-page:not(:last-child) {
+		break-after: page;
+		page-break-after: always;
+	}
+
+	.print-page-header {
+		margin-bottom: 1.15rem;
+	}
+
+	.print-page-title {
+		font-size: 28pt;
+		font-weight: 800;
+		margin: 0;
+	}
+
+	.print-page-subtitle {
+		font-size: 13pt;
+		font-weight: 500;
+		margin: 0.22rem 0 0;
+		line-height: 1.25;
+	}
+
+	.print-page-meta {
+		font-size: 14pt;
+		font-weight: 700;
+		margin: 0.4rem 0 0;
+		line-height: 1.2;
+	}
+
+	.print-page-contd {
+		font-size: 11pt;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.02em;
+	}
+
+	.print-page main.song-body {
+		flex: 1 1 auto;
+	}
+
+	.print-page-footer {
+		margin-top: auto;
+		padding-top: 0.45rem;
+		border-top: 1px solid #ccc;
+		font-size: 9pt;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		break-inside: avoid;
+		page-break-inside: avoid;
+	}
+
+	.print-footer-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.75rem;
+		break-inside: avoid;
+		page-break-inside: avoid;
+	}
+
+	.print-footer-right {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.1rem;
+	}
+
+	.print-page-count {
+		font-weight: 700;
 	}
 }

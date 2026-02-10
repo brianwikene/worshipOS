@@ -240,11 +240,25 @@ export function parseChart(
 	const semitones = getSemitoneShift(originalKey, targetKey);
 	const counters: Record<string, number> = {};
 
+	// "Chord-looking" token matcher for chord-only lines (Intro, Turnarounds, etc.)
+	// Handles: G, Bm7, C2, D/F#, G/B, Asus, F#dim7, Bbmaj7, etc.
+	const isChordToken = (tok: string) =>
+		/^[A-G](?:#|b)?(?:maj|min|m|dim|aug|sus|add)?(?:\d+)?(?:\([^)]*\))?(?:\/[A-G](?:#|b)?)?$/.test(
+			tok
+		);
+
+	const formatChord = (rawChord: string) => {
+		let c = rawChord;
+		if (semitones !== 0) c = transposeChord(c, semitones);
+		if (currentNotation === 'numbers') c = noteToNumber(c, targetKey);
+		return c;
+	};
+
 	return text.split('\n').map((line) => {
 		const trimmed = line.trim();
 		if (!trimmed) return { type: 'empty' as const };
 
-		// 1. DIRECTIVES
+		// 1) DIRECTIVES
 		const dirMatch = trimmed.match(/^\{(.*?)(?::\s*(.*?))?\}$/);
 		if (dirMatch) {
 			const tag = dirMatch[1].toLowerCase();
@@ -281,35 +295,50 @@ export function parseChart(
 			return { type: 'directive' as const, label: tag, value: value };
 		}
 
-		// 2. HEADERS [Verse]
+		// 2) HEADERS [Verse]
 		const bracketMatch = trimmed.match(/^\[([^\]]+)\]\s*$/);
 		if (bracketMatch && SECTION_KEYWORDS.test(bracketMatch[1])) {
 			return { type: 'section' as const, content: smartLabel(bracketMatch[1], counters) };
 		}
 
-		// 3. LYRICS/CHORDS
-		const rawChunks = line.split('[');
-		const pairs: ChordPair[] = [];
-		rawChunks.forEach((chunk, index) => {
-			if (index === 0) {
-				if (chunk) pairs.push({ chord: null, lyric: chunk });
-			} else {
-				const parts = chunk.split(']');
-				if (parts.length === 2) {
-					const rawChord = parts[0];
-					const lyric = parts[1];
-					let finalChord = rawChord;
-
-					if (semitones !== 0) finalChord = transposeChord(rawChord, semitones);
-					if (currentNotation === 'numbers') finalChord = noteToNumber(finalChord, targetKey);
-
-					pairs.push({ chord: finalChord, lyric: lyric });
+		// 3) ChordPro bracketed chords path (your existing behavior)
+		if (line.includes('[') && line.includes(']')) {
+			const rawChunks = line.split('[');
+			const pairs: ChordPair[] = [];
+			rawChunks.forEach((chunk, index) => {
+				if (index === 0) {
+					if (chunk) pairs.push({ chord: null, lyric: chunk });
 				} else {
-					pairs.push({ chord: null, lyric: '[' + chunk });
+					const parts = chunk.split(']');
+					if (parts.length === 2) {
+						const rawChord = parts[0];
+						const lyric = parts[1];
+						const finalChord = formatChord(rawChord);
+						pairs.push({ chord: finalChord, lyric });
+					} else {
+						pairs.push({ chord: null, lyric: '[' + chunk });
+					}
 				}
-			}
-		});
-		return { type: 'lyric' as const, pairs };
+			});
+			return { type: 'lyric' as const, pairs };
+		}
+
+		// 4) NEW: Plain-text chord-only lines (Intro progressions, etc.)
+		// If the line is basically "chords separated by spaces", convert them too.
+		const tokens = trimmed.split(/\s+/).filter(Boolean);
+		const chordy = tokens.length > 0 && tokens.every(isChordToken);
+
+		if (chordy) {
+			const pairs: ChordPair[] = tokens.map((t) => ({
+				chord: formatChord(t),
+				// Chord-only lines should not render a synthetic lyric row.
+				lyric: ''
+			}));
+			return { type: 'lyric' as const, pairs };
+		}
+
+		// 5) Plain lyric line with no bracketed chords
+		return { type: 'lyric' as const, pairs: [{ chord: null, lyric: line }] };
 	});
 }
 
@@ -339,9 +368,9 @@ export function estimateHeight(line: ParsedLine, chordsVisible: boolean): number
 
 	const hasChords = line.type === 'lyric' && line.pairs?.some((p) => p.chord?.trim());
 
-	// Compact spacing: 38px for chords+lyrics, 20px for lyrics only
-	if (chordsVisible && hasChords) return 38;
-	return 20;
+	// Updated to match the modernized chart rhythm/typography.
+	if (chordsVisible && hasChords) return 42;
+	return 24;
 }
 
 /** Total estimated pixel height of a segment. */
