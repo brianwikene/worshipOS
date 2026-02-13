@@ -1,6 +1,33 @@
 /* stylelint-disable at-rule-no-unknown */
 @import 'tailwindcss';
 
+:root {
+	/* Background: Off-white/Cool Grey (Not stark white, easier on eyes) */
+	--bg: #f8fafc;
+	--accent-bg: #e2e8f0;
+
+	/* Text: Dark Slate (Softer than pure black) */
+	--text: #334155;
+	--text-light: #64748b;
+
+	/* Primary Action: Muted Indigo (Trustworthy, calm, distinct) */
+	--primary: #475569;
+	--primary-hover: #1e293b;
+
+	/* Borders: Very subtle */
+	--border: #cbd5e1;
+}
+
+body {
+	background-color: var(--bg);
+	color: var(--text);
+	font-family:
+		system-ui,
+		-apple-system,
+		sans-serif; /* The cleanest font is the one the user already knows */
+	line-height: 1.6; /* Extra height = extra calm */
+}
+
 @media print {
 	/* 1. Header Logic */
 	.large-banner {
